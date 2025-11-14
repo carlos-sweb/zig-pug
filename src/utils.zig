@@ -34,3 +34,63 @@ test "utils - digit" {
     try std.testing.expect(isDigit('5'));
     try std.testing.expect(!isDigit('a'));
 }
+
+// Error handling system
+pub const ZigPugError = error{
+    // Tokenizer errors
+    UnexpectedCharacter,
+    InvalidIndentation,
+    UnterminatedString,
+
+    // Parser errors
+    UnexpectedToken,
+    ExpectedToken,
+    InvalidSyntax,
+    InvalidNesting,
+
+    // Compiler errors
+    UndefinedVariable,
+    TypeError,
+
+    // Runtime errors
+    DivisionByZero,
+    NullPointerAccess,
+
+    // IO errors
+    FileNotFound,
+    AccessDenied,
+
+    // Memory errors
+    OutOfMemory,
+
+    // Not yet implemented
+    NotImplemented,
+};
+
+pub const ErrorInfo = struct {
+    err: ZigPugError,
+    message: []const u8,
+    line: usize,
+    column: usize,
+    source_line: ?[]const u8,
+};
+
+pub fn reportError(info: ErrorInfo) void {
+    var stdout_buffer: [4096]u8 = undefined;
+    var stdout_writer = std.fs.File.stderr().writer(&stdout_buffer);
+    const stderr = &stdout_writer.interface;
+
+    stderr.print("Error at line {d}, column {d}: {s}\n", .{ info.line, info.column, info.message }) catch {};
+
+    if (info.source_line) |line| {
+        stderr.print("  {s}\n", .{line}) catch {};
+        // Print caret pointing to error position
+        var i: usize = 0;
+        while (i < info.column - 1) : (i += 1) {
+            stderr.print(" ", .{}) catch {};
+        }
+        stderr.print("^\n", .{}) catch {};
+    }
+
+    stderr.flush() catch {};
+}

@@ -1,10 +1,66 @@
 const std = @import("std");
 
-// Tokenizer module - To be implemented in Step 3
-// See: 03-tokenizer-base.md
+// Tokenizer module - Lexical analysis
+// Converts source text into a stream of tokens
 
 pub const TokenType = enum {
-    // TODO: Define token types
+    // Identificadores
+    Ident,
+    Class, // .classname
+    Id, // #idname
+
+    // Literales
+    String,
+    Number,
+    Boolean,
+
+    // Símbolos
+    LParen, // (
+    RParen, // )
+    LBracket, // [
+    RBracket, // ]
+    LBrace, // {
+    RBrace, // }
+    Dot, // .
+    Hash, // #
+    Comma, // ,
+    Colon, // :
+    Pipe, // |
+
+    // Operadores
+    Assign, // =
+    NotEqual, // !=
+    Plus, // +
+    Minus, // -
+
+    // Keywords
+    If,
+    Else,
+    Unless,
+    Each,
+    While,
+    Case,
+    When,
+    Default,
+    Mixin,
+    Include,
+    Extends,
+    Block,
+    Append,
+    Prepend,
+
+    // Especiales
+    Indent,
+    Dedent,
+    Newline,
+    BufferedComment, // //
+    UnbufferedComment, // //-
+    BufferedCode, // =
+    UnbufferedCode, // -
+    UnescapedCode, // !=
+    EscapedInterpol, // #{...}
+    UnescapedInterpol, // !{...}
+
     Eof,
 };
 
@@ -13,27 +69,586 @@ pub const Token = struct {
     value: []const u8,
     line: usize,
     column: usize,
+
+    pub fn init(token_type: TokenType, value: []const u8, line: usize, column: usize) Token {
+        return .{
+            .type = token_type,
+            .value = value,
+            .line = line,
+            .column = column,
+        };
+    }
+};
+
+pub const TokenizerError = error{
+    UnexpectedCharacter,
+    UnterminatedString,
+    InvalidNumber,
+    OutOfMemory,
 };
 
 pub const Tokenizer = struct {
     source: []const u8,
     pos: usize,
+    line: usize,
+    column: usize,
+    allocator: std.mem.Allocator,
+    indent_stack: std.ArrayListUnmanaged(usize),
+    pending_tokens: std.ArrayListUnmanaged(Token),
+    at_line_start: bool,
 
-    pub fn init(source: []const u8) Tokenizer {
-        return .{
+    pub fn init(allocator: std.mem.Allocator, source: []const u8) !Tokenizer {
+        var tokenizer = Tokenizer{
             .source = source,
             .pos = 0,
+            .line = 1,
+            .column = 1,
+            .allocator = allocator,
+            .indent_stack = .{},
+            .pending_tokens = .{},
+            .at_line_start = true,
         };
+        try tokenizer.indent_stack.append(allocator, 0); // Base level
+        return tokenizer;
     }
 
-    pub fn next(self: *Tokenizer) !?Token {
-        // TODO: Implement tokenization
-        _ = self;
-        return null;
+    pub fn deinit(self: *Tokenizer) void {
+        self.indent_stack.deinit(self.allocator);
+        self.pending_tokens.deinit(self.allocator);
+    }
+
+    // Peek current character without advancing
+    fn peekChar(self: *Tokenizer) ?u8 {
+        if (self.pos >= self.source.len) return null;
+        return self.source[self.pos];
+    }
+
+    // Peek ahead n characters
+    fn peekAhead(self: *Tokenizer, offset: usize) ?u8 {
+        const pos = self.pos + offset;
+        if (pos >= self.source.len) return null;
+        return self.source[pos];
+    }
+
+    // Advance and return current character
+    fn advance(self: *Tokenizer) ?u8 {
+        if (self.pos >= self.source.len) return null;
+        const ch = self.source[self.pos];
+        self.pos += 1;
+        if (ch == '\n') {
+            self.line += 1;
+            self.column = 1;
+        } else {
+            self.column += 1;
+        }
+        return ch;
+    }
+
+    // Skip whitespace except newlines
+    fn skipWhitespaceExceptNewline(self: *Tokenizer) void {
+        while (self.peekChar()) |ch| {
+            if (ch == ' ' or ch == '\t' or ch == '\r') {
+                _ = self.advance();
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Handle indentation at start of line
+    fn handleIndentation(self: *Tokenizer) !void {
+        if (!self.at_line_start) return;
+
+        var indent: usize = 0;
+        while (self.peekChar()) |ch| {
+            if (ch == ' ') {
+                indent += 1;
+                _ = self.advance();
+            } else if (ch == '\t') {
+                return error.InvalidIndentation; // No permitir tabs
+            } else {
+                break;
+            }
+        }
+
+        // Skip empty lines
+        if (self.peekChar()) |ch| {
+            if (ch == '\n') {
+                self.at_line_start = true;
+                return;
+            }
+        }
+
+        const current_indent = self.indent_stack.items[self.indent_stack.items.len - 1];
+
+        if (indent > current_indent) {
+            try self.indent_stack.append(self.allocator, indent);
+            try self.pending_tokens.append(self.allocator, Token.init(.Indent, "", self.line, 1));
+        } else if (indent < current_indent) {
+            while (self.indent_stack.items.len > 0 and
+                self.indent_stack.items[self.indent_stack.items.len - 1] > indent)
+            {
+                _ = self.indent_stack.pop();
+                try self.pending_tokens.append(self.allocator, Token.init(.Dedent, "", self.line, 1));
+            }
+
+            if (self.indent_stack.items.len == 0 or
+                self.indent_stack.items[self.indent_stack.items.len - 1] != indent)
+            {
+                return error.InvalidIndentation;
+            }
+        }
+
+        self.at_line_start = false;
+    }
+
+    // Scan comment (// or //-)
+    fn scanComment(self: *Tokenizer) !Token {
+        const start_line = self.line;
+        const start_col = self.column;
+
+        _ = self.advance(); // First /
+        _ = self.advance(); // Second /
+
+        const is_unbuffered = if (self.peekChar()) |ch| ch == '-' else false;
+        if (is_unbuffered) {
+            _ = self.advance(); // -
+        }
+
+        // Skip space after comment marker
+        if (self.peekChar()) |ch| {
+            if (ch == ' ') _ = self.advance();
+        }
+
+        const start = self.pos;
+        while (self.peekChar()) |ch| {
+            if (ch == '\n') break;
+            _ = self.advance();
+        }
+
+        const value = self.source[start..self.pos];
+        const token_type = if (is_unbuffered) TokenType.UnbufferedComment else TokenType.BufferedComment;
+
+        return Token.init(token_type, value, start_line, start_col);
+    }
+
+    // Scan interpolation #{...} or !{...}
+    fn scanInterpolation(self: *Tokenizer) !Token {
+        const start_line = self.line;
+        const start_col = self.column;
+
+        const first_ch = self.advance().?; // # or !
+        const is_unescaped = first_ch == '!';
+
+        if (self.peekChar() != '{') {
+            return error.UnexpectedCharacter;
+        }
+        _ = self.advance(); // {
+
+        const start = self.pos;
+        var brace_count: usize = 1;
+
+        while (self.peekChar()) |ch| {
+            if (ch == '{') {
+                brace_count += 1;
+            } else if (ch == '}') {
+                brace_count -= 1;
+                if (brace_count == 0) {
+                    const value = self.source[start..self.pos];
+                    _ = self.advance(); // }
+                    const token_type = if (is_unescaped) TokenType.UnescapedInterpol else TokenType.EscapedInterpol;
+                    return Token.init(token_type, value, start_line, start_col);
+                }
+            }
+            _ = self.advance();
+        }
+
+        return error.UnterminatedString;
+    }
+
+    // Scan identifier or keyword
+    fn scanIdentifier(self: *Tokenizer) !Token {
+        const start = self.pos;
+        const start_line = self.line;
+        const start_col = self.column;
+
+        while (self.peekChar()) |ch| {
+            if (std.ascii.isAlphanumeric(ch) or ch == '_' or ch == '-') {
+                _ = self.advance();
+            } else {
+                break;
+            }
+        }
+
+        const value = self.source[start..self.pos];
+
+        // Check for keywords
+        const token_type = getKeyword(value) orelse .Ident;
+        return Token.init(token_type, value, start_line, start_col);
+    }
+
+    // Scan string literal
+    fn scanString(self: *Tokenizer, quote: u8) !Token {
+        const start_line = self.line;
+        const start_col = self.column;
+        _ = self.advance(); // Skip opening quote
+
+        const start = self.pos;
+        while (self.peekChar()) |ch| {
+            if (ch == quote) {
+                const value = self.source[start..self.pos];
+                _ = self.advance(); // Skip closing quote
+                return Token.init(.String, value, start_line, start_col);
+            }
+            if (ch == '\\') {
+                _ = self.advance(); // Skip escape
+                _ = self.advance(); // Skip escaped char
+            } else {
+                _ = self.advance();
+            }
+        }
+
+        return error.UnterminatedString;
+    }
+
+    // Scan number
+    fn scanNumber(self: *Tokenizer) !Token {
+        const start = self.pos;
+        const start_line = self.line;
+        const start_col = self.column;
+
+        while (self.peekChar()) |ch| {
+            if (std.ascii.isDigit(ch) or ch == '.') {
+                _ = self.advance();
+            } else {
+                break;
+            }
+        }
+
+        const value = self.source[start..self.pos];
+        return Token.init(.Number, value, start_line, start_col);
+    }
+
+    // Scan symbol or special shorthand (.class, #id)
+    fn scanSymbol(self: *Tokenizer) !Token {
+        const start_line = self.line;
+        const start_col = self.column;
+        const ch = self.peekChar().?;
+
+        // Handle .class shorthand
+        if (ch == '.') {
+            _ = self.advance();
+            if (self.peekChar()) |next_ch| {
+                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-') {
+                    const start = self.pos;
+                    while (self.peekChar()) |c| {
+                        if (std.ascii.isAlphanumeric(c) or c == '_' or c == '-') {
+                            _ = self.advance();
+                        } else {
+                            break;
+                        }
+                    }
+                    const value = self.source[start..self.pos];
+                    return Token.init(.Class, value, start_line, start_col);
+                }
+            }
+            const value = self.source[self.pos - 1 .. self.pos];
+            return Token.init(.Dot, value, start_line, start_col);
+        }
+
+        // Handle #id shorthand
+        if (ch == '#') {
+            _ = self.advance();
+            if (self.peekChar()) |next_ch| {
+                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-') {
+                    const start = self.pos;
+                    while (self.peekChar()) |c| {
+                        if (std.ascii.isAlphanumeric(c) or c == '_' or c == '-') {
+                            _ = self.advance();
+                        } else {
+                            break;
+                        }
+                    }
+                    const value = self.source[start..self.pos];
+                    return Token.init(.Id, value, start_line, start_col);
+                }
+            }
+            const value = self.source[self.pos - 1 .. self.pos];
+            return Token.init(.Hash, value, start_line, start_col);
+        }
+
+        _ = self.advance();
+
+        // Check for multi-character operators
+        if (ch == '!' and self.peekChar() == '=') {
+            _ = self.advance();
+            const value = self.source[self.pos - 2 .. self.pos];
+            return Token.init(.UnescapedCode, value, start_line, start_col);
+        }
+
+        const token_type: TokenType = switch (ch) {
+            '(' => .LParen,
+            ')' => .RParen,
+            '[' => .LBracket,
+            ']' => .RBracket,
+            '{' => .LBrace,
+            '}' => .RBrace,
+            ',' => .Comma,
+            ':' => .Colon,
+            '|' => .Pipe,
+            '=' => .BufferedCode,
+            '+' => .Plus,
+            '-' => .UnbufferedCode,
+            '!' => .Ident, // Treat standalone ! as unexpected (will be handled as text)
+            else => {
+                // For any other character, treat as unexpected
+                std.debug.print("Unexpected character at {d}:{d}: '{c}' (0x{x})\n", .{ start_line, start_col, ch, ch });
+                return error.UnexpectedCharacter;
+            },
+        };
+
+        const value = self.source[self.pos - 1 .. self.pos];
+        return Token.init(token_type, value, start_line, start_col);
+    }
+
+    // Main tokenization function
+    pub fn next(self: *Tokenizer) !Token {
+        // Check for pending tokens first (INDENT/DEDENT)
+        if (self.pending_tokens.items.len > 0) {
+            return self.pending_tokens.orderedRemove(0);
+        }
+
+        // Handle indentation at line start
+        try self.handleIndentation();
+
+        // Check again for pending tokens after handling indentation
+        // This ensures INDENT/DEDENT tokens are emitted BEFORE content
+        if (self.pending_tokens.items.len > 0) {
+            return self.pending_tokens.orderedRemove(0);
+        }
+
+        // Skip whitespace (except newlines which are significant)
+        self.skipWhitespaceExceptNewline();
+
+        const ch = self.peekChar() orelse {
+            // Emit remaining DEDENT tokens at EOF
+            if (self.indent_stack.items.len > 1) {
+                _ = self.indent_stack.pop();
+                return Token.init(.Dedent, "", self.line, self.column);
+            }
+            return Token.init(.Eof, "", self.line, self.column);
+        };
+
+        // Newline
+        if (ch == '\n') {
+            self.at_line_start = true;
+            const line = self.line;
+            _ = self.advance();
+            return Token.init(.Newline, "\n", line, 1);
+        }
+
+        // Comments //
+        if (ch == '/' and self.peekAhead(1) == '/') {
+            return self.scanComment();
+        }
+
+        // Interpolation #{...}
+        if (ch == '#' and self.peekAhead(1) == '{') {
+            return self.scanInterpolation();
+        }
+
+        // Interpolation !{...}
+        if (ch == '!' and self.peekAhead(1) == '{') {
+            return self.scanInterpolation();
+        }
+
+        // Strings
+        if (ch == '"' or ch == '\'') {
+            return self.scanString(ch);
+        }
+
+        // Numbers
+        if (std.ascii.isDigit(ch)) {
+            return self.scanNumber();
+        }
+
+        // Identifiers and keywords
+        if (std.ascii.isAlphabetic(ch) or ch == '_') {
+            return self.scanIdentifier();
+        }
+
+        // Symbols (including .class, #id, code markers)
+        return self.scanSymbol();
     }
 };
 
-test "tokenizer stub" {
-    var tokenizer = Tokenizer.init("test");
-    _ = try tokenizer.next();
+// Helper function to identify keywords
+fn getKeyword(ident: []const u8) ?TokenType {
+    const keywords = std.StaticStringMap(TokenType).initComptime(.{
+        .{ "if", .If },
+        .{ "else", .Else },
+        .{ "unless", .Unless },
+        .{ "each", .Each },
+        .{ "while", .While },
+        .{ "case", .Case },
+        .{ "when", .When },
+        .{ "default", .Default },
+        .{ "mixin", .Mixin },
+        .{ "include", .Include },
+        .{ "extends", .Extends },
+        .{ "block", .Block },
+        .{ "append", .Append },
+        .{ "prepend", .Prepend },
+        .{ "true", .Boolean },
+        .{ "false", .Boolean },
+    });
+    return keywords.get(ident);
+}
+
+// Tests
+test "tokenizer - identifiers" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "div hello world123");
+    defer tokenizer.deinit();
+
+    const token1 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Ident, token1.type);
+    try std.testing.expectEqualStrings("div", token1.value);
+
+    const token2 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Ident, token2.type);
+    try std.testing.expectEqualStrings("hello", token2.value);
+
+    const token3 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Ident, token3.type);
+    try std.testing.expectEqualStrings("world123", token3.value);
+}
+
+test "tokenizer - keywords" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "if else mixin");
+    defer tokenizer.deinit();
+
+    try std.testing.expectEqual(TokenType.If, (try tokenizer.next()).type);
+    try std.testing.expectEqual(TokenType.Else, (try tokenizer.next()).type);
+    try std.testing.expectEqual(TokenType.Mixin, (try tokenizer.next()).type);
+}
+
+test "tokenizer - strings" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "\"hello world\" 'test'");
+    defer tokenizer.deinit();
+
+    const token1 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.String, token1.type);
+    try std.testing.expectEqualStrings("hello world", token1.value);
+
+    const token2 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.String, token2.type);
+    try std.testing.expectEqualStrings("test", token2.value);
+}
+
+test "tokenizer - numbers" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "123 45.67");
+    defer tokenizer.deinit();
+
+    const token1 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Number, token1.type);
+    try std.testing.expectEqualStrings("123", token1.value);
+
+    const token2 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Number, token2.type);
+    try std.testing.expectEqualStrings("45.67", token2.value);
+}
+
+test "tokenizer - symbols" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "()[]{}");
+    defer tokenizer.deinit();
+
+    try std.testing.expectEqual(TokenType.LParen, (try tokenizer.next()).type);
+    try std.testing.expectEqual(TokenType.RParen, (try tokenizer.next()).type);
+    try std.testing.expectEqual(TokenType.LBracket, (try tokenizer.next()).type);
+    try std.testing.expectEqual(TokenType.RBracket, (try tokenizer.next()).type);
+    try std.testing.expectEqual(TokenType.LBrace, (try tokenizer.next()).type);
+    try std.testing.expectEqual(TokenType.RBrace, (try tokenizer.next()).type);
+}
+
+test "tokenizer - code markers" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "= != -");
+    defer tokenizer.deinit();
+
+    try std.testing.expectEqual(TokenType.BufferedCode, (try tokenizer.next()).type);
+    try std.testing.expectEqual(TokenType.UnescapedCode, (try tokenizer.next()).type);
+    try std.testing.expectEqual(TokenType.UnbufferedCode, (try tokenizer.next()).type);
+}
+
+test "tokenizer - class and id" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, ".container #main");
+    defer tokenizer.deinit();
+
+    const class_token = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Class, class_token.type);
+    try std.testing.expectEqualStrings("container", class_token.value);
+
+    const id_token = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Id, id_token.type);
+    try std.testing.expectEqualStrings("main", id_token.value);
+}
+
+test "tokenizer - comments" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "// comment\n//- unbuffered");
+    defer tokenizer.deinit();
+
+    const comment1 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.BufferedComment, comment1.type);
+    try std.testing.expectEqualStrings("comment", comment1.value);
+
+    _ = try tokenizer.next(); // newline
+
+    const comment2 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.UnbufferedComment, comment2.type);
+    try std.testing.expectEqualStrings("unbuffered", comment2.value);
+}
+
+test "tokenizer - interpolation" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "p #{name} !{html}");
+    defer tokenizer.deinit();
+
+    _ = try tokenizer.next(); // p
+
+    const escaped = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.EscapedInterpol, escaped.type);
+    try std.testing.expectEqualStrings("name", escaped.value);
+
+    const unescaped = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.UnescapedInterpol, unescaped.type);
+    try std.testing.expectEqualStrings("html", unescaped.value);
+}
+
+test "tokenizer - indentation" {
+    const source =
+        \\div
+        \\  p hello
+        \\  p world
+        \\span
+    ;
+    var tokenizer = try Tokenizer.init(std.testing.allocator, source);
+    defer tokenizer.deinit();
+
+    try std.testing.expectEqual(TokenType.Ident, (try tokenizer.next()).type); // div
+    try std.testing.expectEqual(TokenType.Newline, (try tokenizer.next()).type); // \n
+    try std.testing.expectEqual(TokenType.Indent, (try tokenizer.next()).type); // INDENT
+    try std.testing.expectEqual(TokenType.Ident, (try tokenizer.next()).type); // p
+    try std.testing.expectEqual(TokenType.Ident, (try tokenizer.next()).type); // hello
+    try std.testing.expectEqual(TokenType.Newline, (try tokenizer.next()).type); // \n
+    try std.testing.expectEqual(TokenType.Ident, (try tokenizer.next()).type); // p
+    try std.testing.expectEqual(TokenType.Ident, (try tokenizer.next()).type); // world
+    try std.testing.expectEqual(TokenType.Newline, (try tokenizer.next()).type); // \n
+    try std.testing.expectEqual(TokenType.Dedent, (try tokenizer.next()).type); // DEDENT
+    try std.testing.expectEqual(TokenType.Ident, (try tokenizer.next()).type); // span
+}
+
+test "tokenizer - eof" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "");
+    defer tokenizer.deinit();
+
+    const token = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Eof, token.type);
 }
