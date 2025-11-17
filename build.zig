@@ -1,11 +1,59 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    // Use system libc (Android Bionic in Termux)
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Ejecutable principal
+    // ========================================================================
+    // Static Library (.a) - Optional, requires libc
+    // Note: Won't build in Termux/Android due to libc requirement
+    // ========================================================================
+    const lib_static_step = b.step("lib-static", "Build static library (.a) - requires libc");
+    {
+        const lib_static = b.addLibrary(.{
+            .name = "zig-pug",
+            .linkage = .static,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/lib.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        });
+        lib_static.linkLibC();
+        const install_lib_static = b.addInstallArtifact(lib_static, .{});
+        lib_static_step.dependOn(&install_lib_static.step);
+    }
+
+    // ========================================================================
+    // Shared Library (.so / .dll / .dylib) - Optional, requires libc
+    // Note: Won't build in Termux/Android due to libc requirement
+    // ========================================================================
+    const lib_shared_step = b.step("lib-shared", "Build shared library (.so/.dll/.dylib) - requires libc");
+    {
+        const lib_shared = b.addLibrary(.{
+            .name = "zig-pug",
+            .linkage = .dynamic,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/lib.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        });
+        lib_shared.linkLibC();
+        const install_lib_shared = b.addInstallArtifact(lib_shared, .{});
+        lib_shared_step.dependOn(&install_lib_shared.step);
+    }
+
+    // ========================================================================
+    // Build all libraries at once - Optional, requires libc
+    // ========================================================================
+    const lib_all_step = b.step("lib", "Build both static and shared libraries - requires libc");
+    lib_all_step.dependOn(lib_static_step);
+    lib_all_step.dependOn(lib_shared_step);
+
+    // ========================================================================
+    // Executable (CLI tool)
+    // ========================================================================
     const exe = b.addExecutable(.{
         .name = "zig-pug",
         .root_module = b.createModule(.{
@@ -15,17 +63,6 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    // Note: QuickJS integration disabled in Termux/Android environment
-    // The pre-compiled libquickjs.a exists but Zig has issues with Android Bionic libc
-    // Uncomment these lines when running on standard Linux/Mac:
-    //
-    // exe.linkSystemLibrary("c");
-    // exe.addIncludePath(b.path("vendor/quickjs"));
-    // exe.addObjectFile(b.path("vendor/quickjs/libquickjs.a"));
-    // exe.linkSystemLibrary("m");   // math library
-    // exe.linkSystemLibrary("dl");  // dynamic loader
-    // exe.linkSystemLibrary("pthread"); // threads
-
     b.installArtifact(exe);
 
     // Run command
@@ -34,10 +71,12 @@ pub fn build(b: *std.Build) void {
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
-    const run_step = b.step("run", "Run the app");
+    const run_step = b.step("run", "Run the CLI app");
     run_step.dependOn(&run_cmd.step);
 
+    // ========================================================================
     // Tests
+    // ========================================================================
     const tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
@@ -45,8 +84,6 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-
-    // QuickJS integration disabled for tests too (same Termux/Android issue)
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
