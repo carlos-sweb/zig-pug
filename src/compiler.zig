@@ -15,6 +15,8 @@ pub const CompilerError = error{
     IncludeFileNotFound,
     IncludeParseError,
     LoopIterableNotArray,
+    ExtendsFileNotFound,
+    ExtendsParseError,
 };
 
 pub const Compiler = struct {
@@ -26,6 +28,7 @@ pub const Compiler = struct {
     mixins: std.StringHashMap(*ast.AstNode), // Store mixin definitions
     base_path: ?[]const u8, // Base path for resolving includes
     template_cache: ?*cache.TemplateCache, // Optional template cache
+    child_blocks: std.StringHashMap(std.ArrayListUnmanaged(*ast.AstNode)), // Blocks from child template
 
     const Self = @This();
 
@@ -40,6 +43,7 @@ pub const Compiler = struct {
             .mixins = std.StringHashMap(*ast.AstNode).init(allocator),
             .base_path = null,
             .template_cache = null,
+            .child_blocks = std.StringHashMap(std.ArrayListUnmanaged(*ast.AstNode)).init(allocator),
         };
         return compiler;
     }
@@ -57,6 +61,7 @@ pub const Compiler = struct {
     pub fn deinit(self: *Self) void {
         self.output.deinit(self.allocator);
         self.mixins.deinit();
+        self.child_blocks.deinit();
         self.allocator.destroy(self);
     }
 
@@ -79,8 +84,8 @@ pub const Compiler = struct {
             .MixinDef => try self.registerMixin(node),
             .MixinCall => try self.compileMixinCall(node),
             .Include => try self.compileInclude(node),
-            .Block => {}, // TODO: Implement blocks (template inheritance)
-            .Extends => {}, // TODO: Implement extends (template inheritance)
+            .Block => try self.compileBlock(node),
+            .Extends => {}, // Handled by compileDocument
             .Case => try self.compileCase(node),
             .When => {}, // Handled by Case
         }
@@ -93,16 +98,87 @@ pub const Compiler = struct {
     fn compileDocument(self: *Self, node: *ast.AstNode) !void {
         const doc = &node.data.Document;
 
-        // First pass: register all mixins
+        // First pass: register all mixins and check for extends
+        var extends_path: ?[]const u8 = null;
         for (doc.children.items) |child| {
             if (child.type == .MixinDef) {
                 try self.registerMixin(child);
+            } else if (child.type == .Extends) {
+                extends_path = child.data.Extends.path;
+            } else if (child.type == .Block) {
+                // Collect blocks from child template
+                const block_data = &child.data.Block;
+                try self.child_blocks.put(block_data.name, block_data.body);
             }
         }
 
-        // Second pass: compile everything else
+        // If extends, load and compile parent template
+        if (extends_path) |parent_path| {
+            try self.compileExtends(parent_path);
+            return;
+        }
+
+        // No extends: compile everything else normally
         for (doc.children.items) |child| {
-            if (child.type != .MixinDef) {
+            if (child.type != .MixinDef and child.type != .Extends and child.type != .Block) {
+                try self.compileNode(child);
+            }
+        }
+    }
+
+    // ========================================================================
+    // Template Inheritance (Extends/Block)
+    // ========================================================================
+
+    fn compileExtends(self: *Self, parent_path: []const u8) !void {
+        // Resolve path relative to base_path
+        const full_path = if (self.base_path) |base| blk: {
+            const dir = std.fs.path.dirname(base) orelse ".";
+            break :blk try std.fs.path.join(self.allocator, &.{ dir, parent_path });
+        } else blk: {
+            break :blk try self.allocator.dupe(u8, parent_path);
+        };
+        defer self.allocator.free(full_path);
+
+        // Read parent file
+        const file_content = std.fs.cwd().readFileAlloc(
+            self.allocator,
+            full_path,
+            1024 * 1024, // 1MB max
+        ) catch |err| {
+            std.debug.print("Error reading extends file '{s}': {}\n", .{ full_path, err });
+            return error.ExtendsFileNotFound;
+        };
+        defer self.allocator.free(file_content);
+
+        // Parse parent template
+        var parser = Parser.init(self.allocator, file_content) catch |err| {
+            std.debug.print("Error parsing extends file '{s}': {}\n", .{ full_path, err });
+            return error.ExtendsParseError;
+        };
+        defer parser.deinit();
+
+        const parent_ast = parser.parse() catch |err| {
+            std.debug.print("Error parsing extends file '{s}': {}\n", .{ full_path, err });
+            return error.ExtendsParseError;
+        };
+
+        // Compile parent template (blocks will be substituted via child_blocks)
+        try self.compileNode(parent_ast);
+    }
+
+    fn compileBlock(self: *Self, node: *ast.AstNode) !void {
+        const block = &node.data.Block;
+
+        // Check if child template has overridden this block
+        if (self.child_blocks.get(block.name)) |child_body| {
+            // Render child block content
+            for (child_body.items) |child| {
+                try self.compileNode(child);
+            }
+        } else {
+            // Render default block content
+            for (block.body.items) |child| {
                 try self.compileNode(child);
             }
         }

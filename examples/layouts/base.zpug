@@ -1,0 +1,22 @@
+// Base layout for template inheritance
+doctype html
+html(lang="es")
+  head
+    title #{pageTitle}
+    block head
+      meta(charset="UTF-8")
+      meta(name="viewport" content="width=device-width, initial-scale=1.0")
+
+  body
+    header
+      nav
+        a(href="/") Home
+        a(href="/about") About
+
+    main
+      block content
+        p Default content
+
+    footer
+      block footer
+        p Copyright 2024 zig-pug

@@ -1,0 +1,20 @@
+// Example: Template Inheritance in zig-pug
+// This template extends the base layout
+
+extends layouts/base.zpug
+
+block head
+  meta(charset="UTF-8")
+  meta(name="viewport" content="width=device-width, initial-scale=1.0")
+  link(rel="stylesheet" href="/css/page.css")
+
+block content
+  h1 Welcome to #{pageTitle}
+  p This content overrides the default block.
+
+  div.features
+    h2 Features
+    ul
+      li Template inheritance
+      li Blocks can be overridden
+      li Default content if not overridden
