@@ -1,0 +1,11 @@
+// Partial: Header component
+header.main-header
+  nav.navbar
+    a.logo(href="/") zig-pug
+    ul.nav-menu
+      li
+        a(href="/") Home
+      li
+        a(href="/about") About
+      li
+        a(href="/contact") Contact

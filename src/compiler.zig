@@ -1,6 +1,8 @@
 const std = @import("std");
 const ast = @import("ast.zig");
 const runtime = @import("runtime.zig");
+const cache = @import("cache.zig");
+const Parser = @import("parser.zig").Parser;
 
 // Compiler module - Converts AST to HTML
 // Takes the parsed AST and generates HTML output
@@ -10,6 +12,9 @@ pub const CompilerError = error{
     RuntimeError,
     InvalidNode,
     MixinNotFound,
+    IncludeFileNotFound,
+    IncludeParseError,
+    LoopIterableNotArray,
 };
 
 pub const Compiler = struct {
@@ -19,6 +24,8 @@ pub const Compiler = struct {
     indent_level: usize,
     pretty: bool, // Enable pretty printing with indentation
     mixins: std.StringHashMap(*ast.AstNode), // Store mixin definitions
+    base_path: ?[]const u8, // Base path for resolving includes
+    template_cache: ?*cache.TemplateCache, // Optional template cache
 
     const Self = @This();
 
@@ -31,8 +38,20 @@ pub const Compiler = struct {
             .indent_level = 0,
             .pretty = false,
             .mixins = std.StringHashMap(*ast.AstNode).init(allocator),
+            .base_path = null,
+            .template_cache = null,
         };
         return compiler;
+    }
+
+    /// Set base path for resolving includes
+    pub fn setBasePath(self: *Self, path: []const u8) void {
+        self.base_path = path;
+    }
+
+    /// Set template cache for caching compiled includes
+    pub fn setCache(self: *Self, template_cache: *cache.TemplateCache) void {
+        self.template_cache = template_cache;
     }
 
     pub fn deinit(self: *Self) void {
@@ -59,9 +78,9 @@ pub const Compiler = struct {
             .Loop => try self.compileLoop(node),
             .MixinDef => try self.registerMixin(node),
             .MixinCall => try self.compileMixinCall(node),
-            .Include => {}, // TODO: Implement includes
-            .Block => {}, // TODO: Implement blocks
-            .Extends => {}, // TODO: Implement extends
+            .Include => try self.compileInclude(node),
+            .Block => {}, // TODO: Implement blocks (template inheritance)
+            .Extends => {}, // TODO: Implement extends (template inheritance)
             .Case => try self.compileCase(node),
             .When => {}, // Handled by Case
         }
@@ -243,10 +262,148 @@ pub const Compiler = struct {
     // ========================================================================
 
     fn compileLoop(self: *Self, node: *ast.AstNode) !void {
-        _ = self;
-        _ = node;
-        // TODO: Implement loop compilation with runtime.eval() for iterable
-        // For now, skip loops (will implement with JavaScript expressions support)
+        const loop = &node.data.Loop;
+
+        // Get the iterable value from runtime
+        const iterable_result = self.runtime.eval(loop.iterable) catch |err| {
+            std.debug.print("Runtime error evaluating iterable '{s}': {}\n", .{ loop.iterable, err });
+            return;
+        };
+        defer self.allocator.free(iterable_result);
+
+        // Check if it's an array by looking for array notation or getting length
+        // We'll use JavaScript to iterate
+        const length_expr = try std.fmt.allocPrint(self.allocator, "({s}).length", .{loop.iterable});
+        defer self.allocator.free(length_expr);
+
+        const length_str = self.runtime.eval(length_expr) catch {
+            // Not an array or no length, try else branch
+            if (loop.else_branch) |*else_branch| {
+                for (else_branch.items) |child| {
+                    try self.compileNode(child);
+                }
+            }
+            return;
+        };
+        defer self.allocator.free(length_str);
+
+        const length = std.fmt.parseInt(usize, length_str, 10) catch {
+            // Invalid length, try else branch
+            if (loop.else_branch) |*else_branch| {
+                for (else_branch.items) |child| {
+                    try self.compileNode(child);
+                }
+            }
+            return;
+        };
+
+        // If empty array, execute else branch
+        if (length == 0) {
+            if (loop.else_branch) |*else_branch| {
+                for (else_branch.items) |child| {
+                    try self.compileNode(child);
+                }
+            }
+            return;
+        }
+
+        // Iterate over array
+        var i: usize = 0;
+        while (i < length) : (i += 1) {
+            // Set iterator variable: item = array[i]
+            const set_item_expr = try std.fmt.allocPrint(
+                self.allocator,
+                "var {s} = ({s})[{d}]",
+                .{ loop.iterator, loop.iterable, i },
+            );
+            defer self.allocator.free(set_item_expr);
+
+            _ = self.runtime.eval(set_item_expr) catch |err| {
+                std.debug.print("Error setting loop variable: {}\n", .{err});
+                continue;
+            };
+
+            // Set index variable if specified
+            if (loop.index) |index_name| {
+                const set_index_expr = try std.fmt.allocPrint(
+                    self.allocator,
+                    "var {s} = {d}",
+                    .{ index_name, i },
+                );
+                defer self.allocator.free(set_index_expr);
+
+                _ = self.runtime.eval(set_index_expr) catch {};
+            }
+
+            // Compile loop body
+            for (loop.body.items) |child| {
+                try self.compileNode(child);
+            }
+        }
+    }
+
+    // ========================================================================
+    // Include Compilation
+    // ========================================================================
+
+    fn compileInclude(self: *Self, node: *ast.AstNode) !void {
+        const include = &node.data.Include;
+
+        // Resolve path relative to base_path
+        const full_path = if (self.base_path) |base| blk: {
+            // Get directory from base path
+            const dir = std.fs.path.dirname(base) orelse ".";
+            break :blk try std.fs.path.join(self.allocator, &.{ dir, include.path });
+        } else blk: {
+            break :blk try self.allocator.dupe(u8, include.path);
+        };
+        defer self.allocator.free(full_path);
+
+        // Read file content
+        const file_content = std.fs.cwd().readFileAlloc(
+            self.allocator,
+            full_path,
+            1024 * 1024, // 1MB max
+        ) catch |err| {
+            std.debug.print("Error reading include file '{s}': {}\n", .{ full_path, err });
+            return error.IncludeFileNotFound;
+        };
+        defer self.allocator.free(file_content);
+
+        // Check cache if available
+        if (self.template_cache) |tmpl_cache| {
+            const source_hash = cache.hashSource(file_content);
+            if (tmpl_cache.getIfValid(full_path, source_hash)) |cached_html| {
+                try self.output.appendSlice(self.allocator, cached_html);
+                return;
+            }
+        }
+
+        // Parse the included file
+        var parser = Parser.init(self.allocator, file_content) catch |err| {
+            std.debug.print("Error parsing include file '{s}': {}\n", .{ full_path, err });
+            return error.IncludeParseError;
+        };
+        defer parser.deinit();
+
+        const included_ast = parser.parse() catch |err| {
+            std.debug.print("Error parsing include file '{s}': {}\n", .{ full_path, err });
+            return error.IncludeParseError;
+        };
+
+        // Compile the included AST
+        // Save current output position to extract just the include
+        const start_pos = self.output.items.len;
+
+        // Compile
+        try self.compileNode(included_ast);
+
+        // Cache the result if cache is available
+        if (self.template_cache) |tmpl_cache| {
+            const included_html = self.output.items[start_pos..];
+            const source_hash = cache.hashSource(file_content);
+            tmpl_cache.put(full_path, included_html, source_hash) catch {};
+        }
     }
 
     // ========================================================================

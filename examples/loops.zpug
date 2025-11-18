@@ -1,0 +1,26 @@
+// Example: Loops in zig-pug
+
+doctype html
+html(lang="es")
+  head
+    title Loops Demo
+  body
+    h1 Lista de Usuarios
+
+    // Simple loop
+    ul.users
+      each user in users
+        li.user #{user}
+
+    // Loop with index
+    h2 Frutas Numeradas
+    ol
+      each fruit, i in fruits
+        li #{i}: #{fruit}
+
+    // Empty array with else
+    h2 Items Vacíos
+    each item in emptyArray
+      p #{item}
+    else
+      p.no-items No hay items disponibles

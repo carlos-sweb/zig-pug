@@ -1,0 +1,4 @@
+// Partial: Footer component
+footer.main-footer
+  p &copy; 2024 zig-pug
+  p Made with ❤️ using Zig

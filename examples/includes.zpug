@@ -1,0 +1,32 @@
+// Example: Includes in zig-pug
+
+doctype html
+html(lang="es")
+  head
+    title #{pageTitle}
+    style.
+      body { font-family: system-ui; margin: 0; }
+      .main-header { background: #333; color: white; padding: 1rem; }
+      .navbar { display: flex; align-items: center; gap: 2rem; }
+      .logo { color: white; font-weight: bold; text-decoration: none; }
+      .nav-menu { display: flex; list-style: none; gap: 1rem; }
+      .nav-menu a { color: white; text-decoration: none; }
+      .content { padding: 2rem; }
+      .main-footer { background: #f5f5f5; padding: 1rem; text-align: center; }
+
+  body
+    // Include header partial
+    include partials/header.zpug
+
+    main.content
+      h1 #{pageTitle}
+      p Welcome to #{siteName}!
+
+      div.features
+        h2 Features
+        ul
+          each feature in features
+            li #{feature}
+
+    // Include footer partial
+    include partials/footer.zpug

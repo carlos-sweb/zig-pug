@@ -7,6 +7,7 @@ const parser = @import("parser.zig");
 const compiler = @import("compiler.zig");
 const runtime = @import("runtime.zig");
 const ast = @import("ast.zig");
+const cache_mod = @import("cache.zig");
 
 // Export all modules for Zig users
 pub const Tokenizer = tokenizer.Tokenizer;
@@ -15,6 +16,8 @@ pub const Compiler = compiler.Compiler;
 pub const JsRuntime = runtime.JsRuntime;
 pub const JsValue = runtime.JsValue;
 pub const AstNode = ast.AstNode;
+pub const TemplateCache = cache_mod.TemplateCache;
+pub const hashSource = cache_mod.hashSource;
 
 // Helper functions
 pub const jsValueFromString = runtime.jsValueFromString;
