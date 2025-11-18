@@ -6,11 +6,11 @@
         "binding.c"
       ],
       "include_dirs": [
-        "../include",
-        "../vendor/mujs"
+        "include",
+        "vendor/mujs"
       ],
       "libraries": [
-        "<(module_root_dir)/../vendor/mujs/libmujs.a",
+        "<(module_root_dir)/vendor/mujs/libmujs.a",
         "-lm"
       ],
       "cflags": [

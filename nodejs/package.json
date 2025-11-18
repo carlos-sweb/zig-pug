@@ -1,31 +1,50 @@
 {
   "name": "zig-pug",
   "version": "0.2.0",
-  "description": "High-performance Pug template engine powered by Zig and mujs",
+  "description": "High-performance Pug template engine powered by Zig and mujs - Native N-API addon with ES5.1 JavaScript support",
   "main": "index.js",
   "scripts": {
     "install": "node-gyp rebuild",
     "build": "node-gyp configure build",
+    "rebuild": "node-gyp rebuild",
     "clean": "node-gyp clean",
-    "test": "node test/test.js"
+    "test": "node test/test.js",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "pug",
     "template",
+    "template-engine",
     "html",
     "zig",
     "mujs",
     "javascript",
+    "es5",
     "native",
     "addon",
+    "napi",
+    "n-api",
+    "node-addon",
     "fast",
-    "performance"
+    "performance",
+    "high-performance",
+    "bun",
+    "bunjs",
+    "compiler",
+    "view-engine",
+    "express",
+    "jade",
+    "haml"
   ],
-  "author": "zig-pug contributors",
+  "author": {
+    "name": "zig-pug contributors",
+    "url": "https://github.com/yourusername/zig-pug/graphs/contributors"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/zig-pug"
+    "url": "git+https://github.com/yourusername/zig-pug.git",
+    "directory": "nodejs"
   },
   "bugs": {
     "url": "https://github.com/yourusername/zig-pug/issues"
@@ -39,13 +58,19 @@
     "node-gyp": "^10.0.0"
   },
   "gypfile": true,
+  "binary": {
+    "module_name": "zigpug",
+    "module_path": "./build/Release/",
+    "host": "https://github.com/yourusername/zig-pug/releases/download/"
+  },
   "files": [
     "index.js",
     "binding.c",
     "binding.gyp",
+    "common.gypi",
     "README.md",
-    "../include/zigpug.h",
-    "../vendor/mujs/libmujs.a",
-    "../vendor/mujs/*.h"
+    "LICENSE",
+    "include/",
+    "vendor/"
   ]
 }
