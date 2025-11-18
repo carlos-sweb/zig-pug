@@ -1,0 +1,211 @@
+%YAML 1.2
+---
+# Syntax highlighting for zig-pug templates (.zpug files)
+# Sublime Text 3/4
+name: zig-pug
+file_extensions:
+  - zpug
+scope: source.zpug
+
+contexts:
+  main:
+    # Doctype
+    - match: '^(doctype)\s+(.*)$'
+      scope: meta.tag.sgml.doctype.zpug
+      captures:
+        1: keyword.control.zpug
+        2: entity.name.tag.doctype.zpug
+
+    # Comments (// and //)
+    - match: '^\s*(//)(.*)$'
+      scope: comment.line.double-slash.zpug
+      captures:
+        1: punctuation.definition.comment.zpug
+        2: comment.line.zpug
+
+    - match: '^\s*(-)\s*//'
+      scope: comment.line.unbuffered.zpug
+      push:
+        - meta_scope: comment.line.unbuffered.zpug
+        - match: $
+          pop: true
+
+    # Mixin definition
+    - match: '^\s*(mixin)\s+([a-zA-Z0-9_-]+)'
+      scope: meta.mixin.zpug
+      captures:
+        1: storage.type.function.zpug
+        2: entity.name.function.zpug
+      push: mixin-args
+
+    # Mixin call
+    - match: '^\s*(\+)([a-zA-Z0-9_-]+)'
+      scope: meta.mixin-call.zpug
+      captures:
+        1: keyword.operator.zpug
+        2: entity.name.function.zpug
+      push: mixin-args
+
+    # Conditionals
+    - match: '^\s*(if|else if|else|unless)\b'
+      scope: keyword.control.conditional.zpug
+      push: javascript-expression
+
+    # Each loops
+    - match: '^\s*(each|for)\b'
+      scope: keyword.control.loop.zpug
+      push: javascript-expression
+
+    # Case/When
+    - match: '^\s*(case|when|default)\b'
+      scope: keyword.control.switch.zpug
+      push: javascript-expression
+
+    # Block/Extends/Include
+    - match: '^\s*(block|extends|include)\b'
+      scope: keyword.control.import.zpug
+
+    # Unbuffered code
+    - match: '^\s*(-)\s*'
+      scope: keyword.operator.zpug
+      push: javascript-line
+
+    # Buffered code
+    - match: '^\s*(=)\s*'
+      scope: keyword.operator.zpug
+      push: javascript-line
+
+    # HTML Tags with class/id
+    - match: '^\s*([a-zA-Z0-9]+)((?:[.#][a-zA-Z0-9_-]+)*)'
+      captures:
+        1: entity.name.tag.zpug
+        2: meta.selector.zpug
+      push:
+        - match: '([.#])([a-zA-Z0-9_-]+)'
+          scope: meta.selector.zpug
+          captures:
+            1: punctuation.definition.entity.zpug
+            2: entity.other.attribute-name.class.zpug
+        - match: '(?=\()'
+          push: tag-attributes
+        - match: '(?=[^\s(])'
+          push: tag-text
+        - match: $
+          pop: true
+
+    # Standalone class/id (implicit div)
+    - match: '^\s*([.#][a-zA-Z0-9_-]+(?:[.#][a-zA-Z0-9_-]+)*)'
+      scope: meta.selector.zpug
+      captures:
+        1: entity.other.attribute-name.class.zpug
+      push:
+        - match: '(?=\()'
+          push: tag-attributes
+        - match: '(?=[^\s(])'
+          push: tag-text
+        - match: $
+          pop: true
+
+    # Piped text
+    - match: '^\s*(\|)\s*'
+      scope: punctuation.definition.string.zpug
+      push:
+        - meta_scope: string.quoted.zpug
+        - include: interpolation
+        - match: $
+          pop: true
+
+  # Tag attributes (parentheses)
+  tag-attributes:
+    - match: '\('
+      scope: punctuation.section.attributes.begin.zpug
+      set:
+        - meta_scope: meta.tag.attributes.zpug
+        - match: '\)'
+          scope: punctuation.section.attributes.end.zpug
+          pop: true
+        - match: '([a-zA-Z0-9_-]+)\s*(=)\s*'
+          captures:
+            1: entity.other.attribute-name.zpug
+            2: punctuation.separator.key-value.zpug
+          push: attribute-value
+        - match: '([a-zA-Z0-9_-]+)'
+          scope: entity.other.attribute-name.zpug
+        - match: ','
+          scope: punctuation.separator.zpug
+
+  # Attribute value
+  attribute-value:
+    - match: '"'
+      scope: punctuation.definition.string.begin.zpug
+      set:
+        - meta_scope: string.quoted.double.zpug
+        - include: interpolation
+        - match: '"'
+          scope: punctuation.definition.string.end.zpug
+          pop: true
+    - match: "'"
+      scope: punctuation.definition.string.begin.zpug
+      set:
+        - meta_scope: string.quoted.single.zpug
+        - include: interpolation
+        - match: "'"
+          scope: punctuation.definition.string.end.zpug
+          pop: true
+    - match: '(?=[,)])'
+      pop: true
+    - match: '\S+'
+      scope: string.unquoted.zpug
+      pop: true
+
+  # Tag text content
+  tag-text:
+    - match: '\s+'
+      set:
+        - meta_scope: text.zpug
+        - include: interpolation
+        - match: $
+          pop: true
+
+  # JavaScript interpolation #{...}
+  interpolation:
+    - match: '#\{'
+      scope: punctuation.section.embedded.begin.zpug
+      push:
+        - meta_scope: meta.embedded.line.js
+        - match: '\}'
+          scope: punctuation.section.embedded.end.zpug
+          pop: true
+        - include: scope:source.js
+
+  # JavaScript expression (for if, each, etc.)
+  javascript-expression:
+    - meta_scope: meta.embedded.line.js
+    - include: scope:source.js
+    - match: $
+      pop: true
+
+  # JavaScript line (for -, =)
+  javascript-line:
+    - meta_scope: meta.embedded.line.js
+    - include: scope:source.js
+    - match: $
+      pop: true
+
+  # Mixin arguments
+  mixin-args:
+    - match: '\('
+      scope: punctuation.section.parameters.begin.zpug
+      set:
+        - meta_scope: meta.function.parameters.zpug
+        - match: '\)'
+          scope: punctuation.section.parameters.end.zpug
+          pop: true
+        - match: '([a-zA-Z_][a-zA-Z0-9_]*)'
+          scope: variable.parameter.zpug
+        - match: ','
+          scope: punctuation.separator.zpug
+    - match: '(?=\s)'
+      pop: true
+    - match: $
+      pop: true

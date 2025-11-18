@@ -1,0 +1,65 @@
+{
+  "name": "zig-pug",
+  "displayName": "zig-pug",
+  "description": "Syntax highlighting and snippets for zig-pug (.zpug) template files",
+  "version": "0.2.0",
+  "publisher": "zig-pug",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "zpug",
+    "zig-pug",
+    "pug",
+    "template",
+    "html"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/zig-pug"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/zig-pug/issues"
+  },
+  "homepage": "https://github.com/yourusername/zig-pug#readme",
+  "license": "MIT",
+  "contributes": {
+    "languages": [
+      {
+        "id": "zpug",
+        "aliases": [
+          "zig-pug",
+          "zpug"
+        ],
+        "extensions": [
+          ".zpug"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/zpug-icon.png",
+          "dark": "./images/zpug-icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "zpug",
+        "scopeName": "source.zpug",
+        "path": "./syntaxes/zpug.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "zpug",
+        "path": "./snippets/zpug.json"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0"
+  }
+}

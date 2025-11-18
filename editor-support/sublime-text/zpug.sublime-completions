@@ -1,0 +1,38 @@
+{
+    "scope": "source.zpug",
+    "completions": [
+        // HTML5 tags
+        "doctype html",
+        "html", "head", "body", "title", "meta", "link", "script", "style",
+        "div", "span", "p", "a", "img", "ul", "ol", "li",
+        "h1", "h2", "h3", "h4", "h5", "h6",
+        "header", "footer", "nav", "section", "article", "aside",
+        "form", "input", "button", "label", "select", "option", "textarea",
+        "table", "thead", "tbody", "tr", "td", "th",
+
+        // Pug constructs
+        { "trigger": "if\tConditional", "contents": "if ${1:condition}\n  $0" },
+        { "trigger": "else\tConditional", "contents": "else\n  $0" },
+        { "trigger": "unless\tConditional", "contents": "unless ${1:condition}\n  $0" },
+        { "trigger": "each\tLoop", "contents": "each ${1:item} in ${2:items}\n  $0" },
+        { "trigger": "mixin\tMixin definition", "contents": "mixin ${1:name}(${2:args})\n  $0" },
+        { "trigger": "+\tMixin call", "contents": "+${1:mixinName}(${2:args})$0" },
+        { "trigger": "block\tBlock", "contents": "block ${1:name}\n  $0" },
+        { "trigger": "extends\tExtends", "contents": "extends ${1:layout}" },
+        { "trigger": "include\tInclude", "contents": "include ${1:file}" },
+
+        // Interpolation
+        { "trigger": "#{}\tInterpolation", "contents": "#{${1:expression}}$0" },
+
+        // Common patterns
+        { "trigger": "html5\tHTML5 template", "contents": "doctype html\nhtml(lang=\"${1:en}\")\n  head\n    meta(charset=\"utf-8\")\n    title ${2:Page Title}\n  body\n    $0" },
+
+        { "trigger": "div.\tDiv with class", "contents": "div.${1:classname}\n  $0" },
+        { "trigger": "div#\tDiv with id", "contents": "div#${1:id}\n  $0" },
+
+        { "trigger": "a(\tLink", "contents": "a(href=\"${1:#}\") ${2:Link text}$0" },
+        { "trigger": "img(\tImage", "contents": "img(src=\"${1:image.jpg}\" alt=\"${2:Alt text}\")$0" },
+        { "trigger": "input(\tInput", "contents": "input(type=\"${1:text}\" name=\"${2:name}\")$0" },
+        { "trigger": "button(\tButton", "contents": "button(type=\"${1:submit}\") ${2:Button text}$0" }
+    ]
+}

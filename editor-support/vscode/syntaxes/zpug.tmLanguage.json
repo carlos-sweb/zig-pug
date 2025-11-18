@@ -1,0 +1,231 @@
+{
+  "name": "zig-pug",
+  "scopeName": "source.zpug",
+  "fileTypes": ["zpug"],
+  "patterns": [
+    { "include": "#doctype" },
+    { "include": "#comment" },
+    { "include": "#mixin-definition" },
+    { "include": "#mixin-call" },
+    { "include": "#conditional" },
+    { "include": "#loop" },
+    { "include": "#control" },
+    { "include": "#unbuffered-code" },
+    { "include": "#buffered-code" },
+    { "include": "#tag" },
+    { "include": "#class-id-tag" },
+    { "include": "#pipe-text" }
+  ],
+  "repository": {
+    "doctype": {
+      "match": "^(doctype)\\s+(.*)$",
+      "name": "meta.tag.sgml.doctype.zpug",
+      "captures": {
+        "1": { "name": "keyword.control.zpug" },
+        "2": { "name": "entity.name.tag.doctype.zpug" }
+      }
+    },
+    "comment": {
+      "patterns": [
+        {
+          "match": "^\\s*(//)(.*)$",
+          "name": "comment.line.double-slash.zpug",
+          "captures": {
+            "1": { "name": "punctuation.definition.comment.zpug" },
+            "2": { "name": "comment.line.zpug" }
+          }
+        }
+      ]
+    },
+    "mixin-definition": {
+      "match": "^\\s*(mixin)\\s+([a-zA-Z0-9_-]+)(\\(([^)]*)\\))?",
+      "name": "meta.mixin.zpug",
+      "captures": {
+        "1": { "name": "storage.type.function.zpug" },
+        "2": { "name": "entity.name.function.zpug" },
+        "3": { "name": "meta.function.parameters.zpug" },
+        "4": { "name": "variable.parameter.zpug" }
+      }
+    },
+    "mixin-call": {
+      "match": "^\\s*(\\+)([a-zA-Z0-9_-]+)(\\(([^)]*)\\))?",
+      "name": "meta.mixin-call.zpug",
+      "captures": {
+        "1": { "name": "keyword.operator.zpug" },
+        "2": { "name": "entity.name.function.zpug" },
+        "3": { "name": "meta.function.arguments.zpug" }
+      }
+    },
+    "conditional": {
+      "begin": "^\\s*(if|else\\s+if|else|unless)\\b",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.conditional.zpug" }
+      },
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+    "loop": {
+      "begin": "^\\s*(each|for|while)\\b",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.loop.zpug" }
+      },
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+    "control": {
+      "match": "^\\s*(block|extends|include|case|when|default)\\b.*$",
+      "name": "keyword.control.import.zpug"
+    },
+    "unbuffered-code": {
+      "begin": "^\\s*(-)\\s*",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "name": "keyword.operator.zpug" }
+      },
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+    "buffered-code": {
+      "begin": "^\\s*(=)\\s*",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "name": "keyword.operator.zpug" }
+      },
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+    "tag": {
+      "begin": "^\\s*([a-zA-Z][a-zA-Z0-9]*)((?:[.#][a-zA-Z0-9_-]+)*)",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "name": "entity.name.tag.zpug" },
+        "2": { "patterns": [{ "include": "#class-id" }] }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" },
+        { "include": "#tag-text" }
+      ]
+    },
+    "class-id-tag": {
+      "begin": "^\\s*([.#][a-zA-Z0-9_-]+(?:[.#][a-zA-Z0-9_-]+)*)",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "patterns": [{ "include": "#class-id" }] }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" },
+        { "include": "#tag-text" }
+      ]
+    },
+    "class-id": {
+      "patterns": [
+        {
+          "match": "([.#])([a-zA-Z0-9_-]+)",
+          "captures": {
+            "1": { "name": "punctuation.definition.entity.zpug" },
+            "2": { "name": "entity.other.attribute-name.class.zpug" }
+          }
+        }
+      ]
+    },
+    "tag-attributes": {
+      "begin": "\\(",
+      "end": "\\)",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.attributes.begin.zpug" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.section.attributes.end.zpug" }
+      },
+      "patterns": [
+        {
+          "match": "([a-zA-Z0-9_-]+)\\s*(=)\\s*",
+          "captures": {
+            "1": { "name": "entity.other.attribute-name.zpug" },
+            "2": { "name": "punctuation.separator.key-value.zpug" }
+          }
+        },
+        { "include": "#attribute-value" },
+        {
+          "match": "([a-zA-Z0-9_-]+)",
+          "name": "entity.other.attribute-name.zpug"
+        },
+        {
+          "match": ",",
+          "name": "punctuation.separator.zpug"
+        }
+      ]
+    },
+    "attribute-value": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "end": "\"",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.zpug" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.zpug" }
+          },
+          "name": "string.quoted.double.zpug",
+          "patterns": [
+            { "include": "#interpolation" }
+          ]
+        },
+        {
+          "begin": "'",
+          "end": "'",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.zpug" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.zpug" }
+          },
+          "name": "string.quoted.single.zpug",
+          "patterns": [
+            { "include": "#interpolation" }
+          ]
+        }
+      ]
+    },
+    "tag-text": {
+      "begin": "\\s+",
+      "end": "$",
+      "name": "text.zpug",
+      "patterns": [
+        { "include": "#interpolation" }
+      ]
+    },
+    "interpolation": {
+      "begin": "#\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.embedded.begin.zpug" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.section.embedded.end.zpug" }
+      },
+      "name": "meta.embedded.line.js",
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+    "pipe-text": {
+      "begin": "^\\s*(\\|)\\s*",
+      "end": "$",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.string.zpug" }
+      },
+      "name": "string.quoted.zpug",
+      "patterns": [
+        { "include": "#interpolation" }
+      ]
+    }
+  }
+}

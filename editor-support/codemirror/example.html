@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeMirror zig-pug Mode Example</title>
+
+  <!-- CodeMirror CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #272822;
+      color: #f8f8f2;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #a8a8a8;
+      margin-bottom: 30px;
+    }
+
+    .editor-container {
+      border: 1px solid #3e3d32;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .CodeMirror {
+      height: 500px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      background: #3e3d32;
+      color: #f8f8f2;
+      border: 1px solid #5a5a5a;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #4e4d42;
+    }
+
+    .output {
+      margin-top: 30px;
+      padding: 20px;
+      background: #1e1e1e;
+      border: 1px solid #3e3d32;
+      border-radius: 4px;
+    }
+
+    .output h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #66d9ef;
+    }
+
+    .output pre {
+      margin: 0;
+      color: #a8a8a8;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h1>zig-pug Mode for CodeMirror</h1>
+  <p>Live editor with syntax highlighting for .zpug files</p>
+
+  <div class="editor-container">
+    <textarea id="code">doctype html
+html(lang="es")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    title #{pageTitle}
+
+  body
+    header.main-header
+      nav.navbar
+        a.logo(href="/") zig-pug
+        ul.nav-menu
+          each item in navItems
+            li
+              a(href=item.url) #{item.name}
+
+    main.content
+      div.container
+        if user.isLoggedIn
+          div.welcome
+            h1 Welcome, #{user.name.toUpperCase()}!
+            p.subtitle Last login: #{user.lastLogin}
+        else
+          div.login-prompt
+            h1 Please Log In
+            button.btn.btn-primary Log In
+
+        // Mixin example
+        mixin card(title, content)
+          div.card
+            h3.card-title= title
+            p.card-content= content
+
+        div.cards
+          +card('First Card', 'This is the first card')
+          +card('Second Card', 'This is the second card')
+          +card('Third Card', 'This is the third card')
+
+        unless user.isAdmin
+          p.notice Some features are restricted
+
+    footer.main-footer
+      p &copy; #{new Date().getFullYear()} zig-pug
+      p Made with ❤️ using Zig</textarea>
+  </div>
+
+  <div class="controls">
+    <button onclick="getValue()">Get Value</button>
+    <button onclick="setValue()">Load Example</button>
+    <button onclick="clearEditor()">Clear</button>
+  </div>
+
+  <div class="output" id="output" style="display: none;">
+    <h2>Editor Content:</h2>
+    <pre id="output-content"></pre>
+  </div>
+
+  <!-- CodeMirror JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+
+  <!-- zig-pug mode -->
+  <script src="zpug.js"></script>
+
+  <script>
+    // Initialize CodeMirror
+    var editor = CodeMirror.fromTextArea(document.getElementById('code'), {
+      mode: 'zpug',
+      theme: 'monokai',
+      lineNumbers: true,
+      indentUnit: 2,
+      tabSize: 2,
+      indentWithTabs: false,
+      lineWrapping: true,
+      matchBrackets: true,
+      autoCloseBrackets: true,
+      extraKeys: {
+        "Ctrl-/": "toggleComment",
+        "Cmd-/": "toggleComment"
+      }
+    });
+
+    // Get editor value
+    function getValue() {
+      var content = editor.getValue();
+      document.getElementById('output-content').textContent = content;
+      document.getElementById('output').style.display = 'block';
+    }
+
+    // Set example value
+    function setValue() {
+      var example = `doctype html
+html(lang="en")
+  head
+    title Simple Example
+  body
+    div.hello
+      h1 Hello #{name}!
+
+      if isActive
+        p Status: Active ✓
+      else
+        p Status: Inactive
+
+      each item in items
+        li= item`;
+
+      editor.setValue(example);
+    }
+
+    // Clear editor
+    function clearEditor() {
+      editor.setValue('');
+      document.getElementById('output').style.display = 'none';
+    }
+
+    // Keyboard shortcuts
+    editor.setOption("extraKeys", {
+      "Ctrl-Enter": getValue,
+      "Cmd-Enter": getValue
+    });
+  </script>
+</body>
+</html>
