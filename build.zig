@@ -63,6 +63,12 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    // Link with mujs
+    exe.addIncludePath(b.path("vendor/mujs"));
+    exe.addObjectFile(b.path("vendor/mujs/libmujs.a"));
+    // Note: libm (math library) is needed but we can't use linkSystemLibrary in Termux
+    // mujs was compiled with -lm, so the symbols should be available
+
     b.installArtifact(exe);
 
     // Run command
@@ -84,6 +90,10 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
+
+    // Link with mujs for tests
+    tests.addIncludePath(b.path("vendor/mujs"));
+    tests.addObjectFile(b.path("vendor/mujs/libmujs.a"));
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");

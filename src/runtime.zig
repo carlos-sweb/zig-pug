@@ -1,15 +1,8 @@
+/// JavaScript Runtime using mujs
+/// This module provides a JavaScript runtime for evaluating expressions in Pug templates
+/// Uses mujs (https://mujs.com/) - a lightweight ES5.1 JavaScript interpreter
 const std = @import("std");
-
-// JavaScript Runtime - Stub Implementation for Termux/Android
-// This is a simplified mock runtime that works without QuickJS
-// Replace with real QuickJS implementation when running on standard Linux/Mac
-
-// LIMITATIONS:
-// - eval() only supports simple variable access (no methods, no operators)
-// - No JavaScript libraries (voca.js, numeral.js, etc.)
-// - No complex expressions
-//
-// FUTURE: When QuickJS is available, this will be replaced with full JS evaluation
+const mujs = @import("mujs_wrapper.zig");
 
 pub const RuntimeError = error{
     OutOfMemory,
@@ -17,240 +10,257 @@ pub const RuntimeError = error{
     PropertyNotFound,
     InvalidExpression,
     TypeConversionFailed,
+    CompileError,
+    RuntimeError,
 };
 
-pub const JsValue = union(enum) {
-    null_value,
-    undefined,
-    bool_value: bool,
-    int_value: i64,
-    float_value: f64,
-    string_value: []const u8,
-    object_value: std.StringHashMap(JsValue),
-    array_value: std.ArrayList(JsValue),
+/// JsValue type - for compatibility with existing code
+/// With mujs, values are managed internally by the JS state
+/// This is a simplified placeholder that doesn't need to match the old complex union
+pub const JsValue = struct {
+    allocator: std.mem.Allocator,
+    value: []const u8, // String representation
 
     pub fn deinit(self: *JsValue, allocator: std.mem.Allocator) void {
-        switch (self.*) {
-            .string_value => |s| allocator.free(s),
-            .object_value => |*obj| {
-                var iter = obj.iterator();
-                while (iter.next()) |entry| {
-                    var val = entry.value_ptr.*;
-                    val.deinit(allocator);
-                }
-                obj.deinit();
-            },
-            .array_value => |*arr| {
-                for (arr.items) |*item| {
-                    item.deinit(allocator);
-                }
-                arr.deinit(allocator);
-            },
-            else => {},
-        }
+        _ = allocator;
+        self.allocator.free(self.value);
     }
 
     pub fn clone(self: *const JsValue, allocator: std.mem.Allocator) !JsValue {
-        return switch (self.*) {
-            .null_value => .null_value,
-            .undefined => .undefined,
-            .bool_value => |b| .{ .bool_value = b },
-            .int_value => |i| .{ .int_value = i },
-            .float_value => |f| .{ .float_value = f },
-            .string_value => |s| .{ .string_value = try allocator.dupe(u8, s) },
-            .object_value => |obj| {
-                var new_obj = std.StringHashMap(JsValue).init(allocator);
-                var iter = obj.iterator();
-                while (iter.next()) |entry| {
-                    const cloned_value = try entry.value_ptr.clone(allocator);
-                    try new_obj.put(entry.key_ptr.*, cloned_value);
-                }
-                return .{ .object_value = new_obj };
-            },
-            .array_value => |arr| {
-                var new_arr: std.ArrayList(JsValue) = .{};
-                for (arr.items) |*item| {
-                    try new_arr.append(allocator, try item.clone(allocator));
-                }
-                return .{ .array_value = new_arr };
-            },
+        return JsValue{
+            .allocator = allocator,
+            .value = try allocator.dupe(u8, self.value),
         };
     }
 
     pub fn toString(self: *const JsValue, allocator: std.mem.Allocator) ![]const u8 {
-        return switch (self.*) {
-            .null_value => try allocator.dupe(u8, "null"),
-            .undefined => try allocator.dupe(u8, "undefined"),
-            .bool_value => |b| try allocator.dupe(u8, if (b) "true" else "false"),
-            .int_value => |i| try std.fmt.allocPrint(allocator, "{d}", .{i}),
-            .float_value => |f| try std.fmt.allocPrint(allocator, "{d}", .{f}),
-            .string_value => |s| try allocator.dupe(u8, s),
-            .object_value => try allocator.dupe(u8, "[object Object]"),
-            .array_value => try allocator.dupe(u8, "[object Array]"),
-        };
+        return try allocator.dupe(u8, self.value);
     }
 };
 
+/// JavaScript Runtime powered by mujs
 pub const JsRuntime = struct {
     allocator: std.mem.Allocator,
-    context: std.StringHashMap(JsValue),
+    mujs_runtime: *mujs.JsRuntime,
 
     const Self = @This();
 
+    /// Initialize a new JavaScript runtime
     pub fn init(allocator: std.mem.Allocator) !*Self {
         const runtime = try allocator.create(Self);
+        errdefer allocator.destroy(runtime);
+
+        const mujs_runtime = try mujs.JsRuntime.init(allocator);
+        errdefer mujs_runtime.deinit();
+
         runtime.* = .{
             .allocator = allocator,
-            .context = std.StringHashMap(JsValue).init(allocator),
+            .mujs_runtime = mujs_runtime,
         };
+
         return runtime;
     }
 
+    /// Free the runtime and all resources
     pub fn deinit(self: *Self) void {
-        var iter = self.context.iterator();
-        while (iter.next()) |entry| {
-            var val = entry.value_ptr.*;
-            val.deinit(self.allocator);
-        }
-        self.context.deinit();
+        self.mujs_runtime.deinit();
         self.allocator.destroy(self);
     }
 
-    /// Set a variable in the global context
-    pub fn setContext(self: *Self, key: []const u8, value: JsValue) !void {
-        // If key already exists, deinit old value
-        if (self.context.get(key)) |*old_value| {
-            var old = old_value.*;
-            old.deinit(self.allocator);
-        }
-
-        const cloned_value = try value.clone(self.allocator);
-        try self.context.put(key, cloned_value);
-    }
-
-    /// Evaluate a JavaScript expression (STUB VERSION - Limited functionality)
-    /// Only supports:
-    /// - Simple variable access: "name"
-    /// - Property access: "user.name"
-    /// - Array access: "items.0"
-    ///
-    /// Does NOT support (until QuickJS integration):
-    /// - Methods: "name.toLowerCase()"
-    /// - Operators: "price + tax"
-    /// - Complex expressions
+    /// Evaluate a JavaScript expression and return the result as a string
     pub fn eval(self: *Self, expr: []const u8) ![]const u8 {
-        // Trim whitespace
-        const trimmed = std.mem.trim(u8, expr, " \t\n\r");
-
-        // Check if it's a property access (e.g., "user.name" or "items.0")
-        if (std.mem.indexOf(u8, trimmed, ".")) |dot_index| {
-            const root_var = trimmed[0..dot_index];
-            const rest = trimmed[dot_index + 1 ..];
-
-            // Get root object
-            const root_value = self.context.get(root_var) orelse return error.PropertyNotFound;
-
-            // Navigate property chain
-            return try self.evalPropertyAccess(&root_value, rest);
-        }
-
-        // Simple variable access
-        const value = self.context.get(trimmed) orelse return error.PropertyNotFound;
-        return try value.toString(self.allocator);
+        return self.mujs_runtime.eval(expr) catch |err| {
+            return switch (err) {
+                error.CompileError => RuntimeError.EvalFailed,
+                error.RuntimeError => RuntimeError.EvalFailed,
+                error.OutOfMemory => RuntimeError.OutOfMemory,
+                else => RuntimeError.EvalFailed,
+            };
+        };
     }
 
-    fn evalPropertyAccess(self: *Self, obj: *const JsValue, path: []const u8) ![]const u8 {
-        // For stub: only support one level of property access
-        const trimmed_path = std.mem.trim(u8, path, " \t\n\r");
-
-        switch (obj.*) {
-            .object_value => |hash_map| {
-                const prop_value = hash_map.get(trimmed_path) orelse return error.PropertyNotFound;
-                return try prop_value.toString(self.allocator);
-            },
-            .array_value => |arr| {
-                // Try to parse as array index
-                const index = std.fmt.parseInt(usize, trimmed_path, 10) catch return error.InvalidExpression;
-                if (index >= arr.items.len) return error.PropertyNotFound;
-                return try arr.items[index].toString(self.allocator);
-            },
-            else => return error.InvalidExpression,
-        }
+    /// Set a context variable (string value)
+    pub fn setContext(self: *Self, key: []const u8, value: JsValue) !void {
+        try self.mujs_runtime.setString(key, value.value);
     }
 
-    /// Load a JavaScript library (STUB - Not implemented)
-    /// In real QuickJS version, this would execute the library code
-    pub fn loadLibrary(self: *Self, name: []const u8, code: []const u8) !void {
-        _ = self;
-        _ = name;
-        _ = code;
-        // Stub: libraries not supported without QuickJS
-        // When QuickJS is integrated, this will execute the JS code
+    /// Set a string variable
+    pub fn setString(self: *Self, key: []const u8, value: []const u8) !void {
+        try self.mujs_runtime.setString(key, value);
+    }
+
+    /// Set a number variable
+    pub fn setNumber(self: *Self, key: []const u8, value: f64) !void {
+        try self.mujs_runtime.setNumber(key, value);
+    }
+
+    /// Set a boolean variable
+    pub fn setBool(self: *Self, key: []const u8, value: bool) !void {
+        try self.mujs_runtime.setBool(key, value);
+    }
+
+    /// Set an integer variable
+    pub fn setInt(self: *Self, key: []const u8, value: i64) !void {
+        try self.mujs_runtime.setNumber(key, @as(f64, @floatFromInt(value)));
+    }
+
+    /// Evaluate property access (e.g., "user.name")
+    /// This is now handled directly by mujs in eval()
+    pub fn evalPropertyAccess(self: *Self, root: *const JsValue, path: []const u8) ![]const u8 {
+        _ = root; // Not needed with mujs - just evaluate the full expression
+        return try self.eval(path);
+    }
+
+    /// Run garbage collection
+    pub fn gc(self: *Self) void {
+        self.mujs_runtime.gc();
     }
 };
 
-// Helper functions to create JsValue from Zig types
-
-pub fn jsValueFromString(allocator: std.mem.Allocator, s: []const u8) !JsValue {
-    return .{ .string_value = try allocator.dupe(u8, s) };
+/// Helper function to create a JsValue from a string
+pub fn jsValueFromString(allocator: std.mem.Allocator, value: []const u8) !JsValue {
+    return JsValue{
+        .allocator = allocator,
+        .value = try allocator.dupe(u8, value),
+    };
 }
 
-pub fn jsValueFromInt(i: i64) JsValue {
-    return .{ .int_value = i };
+/// Helper function to create a JsValue from a number
+pub fn jsValueFromNumber(allocator: std.mem.Allocator, value: f64) !JsValue {
+    const str = try std.fmt.allocPrint(allocator, "{d}", .{value});
+    return JsValue{
+        .allocator = allocator,
+        .value = str,
+    };
 }
 
-pub fn jsValueFromFloat(f: f64) JsValue {
-    return .{ .float_value = f };
+/// Helper function to create a JsValue from a boolean
+pub fn jsValueFromBool(allocator: std.mem.Allocator, value: bool) !JsValue {
+    const str = if (value) "true" else "false";
+    return JsValue{
+        .allocator = allocator,
+        .value = try allocator.dupe(u8, str),
+    };
 }
 
-pub fn jsValueFromBool(b: bool) JsValue {
-    return .{ .bool_value = b };
-}
+// ============================================================================
+// Tests
+// ============================================================================
 
-pub fn jsValueNull() JsValue {
-    return .null_value;
-}
-
-pub fn jsValueUndefined() JsValue {
-    return .undefined;
-}
-
-test "runtime - simple variable access" {
+test "runtime - basic variable access" {
     const allocator = std.testing.allocator;
-    var runtime = try JsRuntime.init(allocator);
+
+    const runtime = try JsRuntime.init(allocator);
     defer runtime.deinit();
 
-    const name_value = try jsValueFromString(allocator, "John");
-    try runtime.setContext("name", name_value);
-    // name_value is cloned in setContext, so we need to free original
-    var name_copy = name_value;
-    name_copy.deinit(allocator);
-
+    try runtime.setString("name", "Alice");
     const result = try runtime.eval("name");
     defer allocator.free(result);
 
-    try std.testing.expectEqualStrings("John", result);
+    try std.testing.expectEqualStrings("Alice", result);
+}
+
+test "runtime - string methods" {
+    const allocator = std.testing.allocator;
+
+    const runtime = try JsRuntime.init(allocator);
+    defer runtime.deinit();
+
+    try runtime.setString("name", "World");
+
+    const lower = try runtime.eval("name.toLowerCase()");
+    defer allocator.free(lower);
+    try std.testing.expectEqualStrings("world", lower);
+
+    const upper = try runtime.eval("name.toUpperCase()");
+    defer allocator.free(upper);
+    try std.testing.expectEqualStrings("WORLD", upper);
+}
+
+test "runtime - numbers and arithmetic" {
+    const allocator = std.testing.allocator;
+
+    const runtime = try JsRuntime.init(allocator);
+    defer runtime.deinit();
+
+    try runtime.setNumber("age", 42);
+
+    const result = try runtime.eval("age + 10");
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("52", result);
+}
+
+test "runtime - booleans" {
+    const allocator = std.testing.allocator;
+
+    const runtime = try JsRuntime.init(allocator);
+    defer runtime.deinit();
+
+    try runtime.setBool("active", true);
+
+    const result = try runtime.eval("active");
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("true", result);
 }
 
 test "runtime - object property access" {
     const allocator = std.testing.allocator;
-    var runtime = try JsRuntime.init(allocator);
+
+    const runtime = try JsRuntime.init(allocator);
     defer runtime.deinit();
 
-    var user_obj = std.StringHashMap(JsValue).init(allocator);
-    const name_val = try jsValueFromString(allocator, "Alice");
-    try user_obj.put("name", name_val);
-    try user_obj.put("age", jsValueFromInt(30));
+    // Create object using JavaScript
+    _ = try runtime.eval("var user = {name: 'Bob', age: 30}");
 
-    const user_value = JsValue{ .object_value = user_obj };
-    try runtime.setContext("user", user_value);
+    const name = try runtime.eval("user.name");
+    defer allocator.free(name);
+    try std.testing.expectEqualStrings("Bob", name);
 
-    // user_value is cloned in setContext, so free the original
-    var user_copy = user_value;
-    user_copy.deinit(allocator);
+    const age = try runtime.eval("user.age");
+    defer allocator.free(age);
+    try std.testing.expectEqualStrings("30", age);
+}
 
-    const result = try runtime.eval("user.name");
+test "runtime - JsValue compatibility" {
+    const allocator = std.testing.allocator;
+
+    const runtime = try JsRuntime.init(allocator);
+    defer runtime.deinit();
+
+    // Test JsValue creation and usage
+    var name_val = try jsValueFromString(allocator, "Alice");
+    defer name_val.deinit(allocator);
+
+    try runtime.setContext("name", name_val);
+
+    const result = try runtime.eval("name");
     defer allocator.free(result);
-
     try std.testing.expectEqualStrings("Alice", result);
+}
+
+test "runtime - array indexing" {
+    const allocator = std.testing.allocator;
+
+    const runtime = try JsRuntime.init(allocator);
+    defer runtime.deinit();
+
+    _ = try runtime.eval("var items = ['first', 'second', 'third']");
+
+    const result = try runtime.eval("items[1]");
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("second", result);
+}
+
+test "runtime - complex expressions" {
+    const allocator = std.testing.allocator;
+
+    const runtime = try JsRuntime.init(allocator);
+    defer runtime.deinit();
+
+    try runtime.setString("firstName", "John");
+    try runtime.setString("lastName", "Doe");
+
+    const result = try runtime.eval("firstName + ' ' + lastName");
+    defer allocator.free(result);
+    try std.testing.expectEqualStrings("John Doe", result);
 }
