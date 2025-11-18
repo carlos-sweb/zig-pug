@@ -2,7 +2,7 @@
 
 Un motor de templates inspirado en [Pug](https://pugjs.org/), implementado en Zig con soporte completo de JavaScript.
 
-```pug
+```zpug
 doctype html
 html(lang="es")
   head
@@ -57,13 +57,13 @@ zig-pug incluye una interfaz de línea de comandos para compilar templates:
 
 ```bash
 # Compilar archivo a stdout
-zig-pug template.pug
+zig-pug template.zpug
 
 # Compilar con archivo de salida
-zig-pug -i template.pug -o output.html
+zig-pug -i template.zpug -o output.html
 
 # Con variables
-zig-pug template.pug --var name=Alice --var age=25
+zig-pug template.zpug --var name=Alice --var age=25
 ```
 
 **Nota**: Existen dos versiones del CLI:
@@ -139,8 +139,8 @@ const html = compiler.compile('title #{title}');
 const express = require('express');
 const zigpug = require('./nodejs');
 
-app.engine('pug', createZigPugEngine());
-app.set('view engine', 'pug');
+app.engine('zpug', createZigPugEngine());
+app.set('view engine', 'zpug');
 
 app.get('/', (req, res) => {
     res.render('index', { title: 'Home' });
@@ -153,8 +153,8 @@ app.get('/', (req, res) => {
 
 ### Ejemplo 1: Template Básico
 
-**template.pug:**
-```pug
+**template.zpug:**
+```zpug
 div.container
   h1 Hello #{name}!
   p You are #{age} years old
@@ -210,7 +210,7 @@ pub fn main() !void {
 
 ### Tags y Atributos
 
-```pug
+```zpug
 // Tags simples
 div
 p Hello
@@ -236,7 +236,7 @@ div(
 
 ### Interpolación JavaScript
 
-```pug
+```zpug
 // Variables simples
 p Hello #{name}
 
@@ -271,7 +271,7 @@ p Data: #{JSON.stringify(obj)}
 
 ### Condicionales
 
-```pug
+```zpug
 // if/else
 if isLoggedIn
   p Welcome back!
@@ -293,7 +293,7 @@ else
 
 ### Mixins
 
-```pug
+```zpug
 // Definir mixin
 mixin button(text)
   button.btn= text
@@ -372,6 +372,7 @@ defer allocator.free(html);
 
 - **[GETTING-STARTED.md](docs/GETTING-STARTED.md)** - Guía de inicio paso a paso
 - **[CLI.md](docs/CLI.md)** - Interfaz de línea de comandos
+- **[LOOPS-INCLUDES-CACHE.md](docs/LOOPS-INCLUDES-CACHE.md)** - Loops, includes y cache
 - **[ZIG-PACKAGE.md](docs/ZIG-PACKAGE.md)** - Uso como dependencia de Zig
 - **[NODEJS-INTEGRATION.md](docs/NODEJS-INTEGRATION.md)** - Integración con Node.js (N-API)
 - **[TERMUX.md](docs/TERMUX.md)** - Compilación en Termux/Android
@@ -385,10 +386,12 @@ defer allocator.free(html);
 
 Ver carpeta [examples/](examples/) para ejemplos de templates:
 
-- `examples/basic.pug` - Tags y atributos básicos
-- `examples/interpolation.pug` - Interpolación de JavaScript
-- `examples/conditionals.pug` - Condicionales y lógica
-- `examples/mixins.pug` - Componentes reutilizables
+- `examples/basic.zpug` - Tags y atributos básicos
+- `examples/interpolation.zpug` - Interpolación de JavaScript
+- `examples/conditionals.zpug` - Condicionales y lógica
+- `examples/mixins.zpug` - Componentes reutilizables
+- `examples/loops.zpug` - Iteración con each/for
+- `examples/includes.zpug` - Includes con partials
 
 ### Ejemplos Node.js
 
@@ -416,8 +419,8 @@ zig build test --summary all
 
 ```
 ┌─────────────┐
-│   Source    │  Template Pug
-│  (*.pug)    │
+│   Source    │  Template zpug
+│  (*.zpug)   │
 └──────┬──────┘
        │
        ▼
@@ -498,9 +501,10 @@ zig-pug usa [**mujs**](https://mujs.com/) como motor JavaScript:
 
 ### 🚧 En Desarrollo
 
-- [ ] Loops (each/for)
+- [x] Loops (each/for)
+- [x] Includes
+- [x] Cache de templates
 - [ ] Template inheritance (extends/block)
-- [ ] Includes
 - [ ] Filtros
 - [ ] Pretty printing (indentación HTML)
 - [ ] Escapado HTML
