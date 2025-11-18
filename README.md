@@ -24,7 +24,9 @@ html(lang="es")
 - ✅ **Node.js addon** - Integración nativa via N-API
 - ✅ **Sin dependencias** - Solo Zig 0.15.2 y mujs embebido
 - ⚡ **Rápido** - Compilación nativa en Zig
-- 🔧 **Funciona en Termux/Android**
+- 🔧 **Funciona en Termux/Android** (CLI binario)
+
+> **Nota para Termux**: El CLI binario funciona perfectamente. El addon de Node.js compila pero no se puede cargar debido a restricciones de Android. Ver [docs/TERMUX.md](docs/TERMUX.md) para detalles.
 
 ## 📦 Instalación
 
@@ -339,6 +341,7 @@ defer allocator.free(html);
 - **[GETTING-STARTED.md](docs/GETTING-STARTED.md)** - Guía de inicio paso a paso
 - **[CLI.md](docs/CLI.md)** - Interfaz de línea de comandos
 - **[NODEJS-INTEGRATION.md](docs/NODEJS-INTEGRATION.md)** - Integración con Node.js (N-API)
+- **[TERMUX.md](docs/TERMUX.md)** - Compilación en Termux/Android
 - **[PUG-SYNTAX.md](docs/PUG-SYNTAX.md)** - Referencia completa de sintaxis Pug
 - **[API-REFERENCE.md](docs/API-REFERENCE.md)** - Documentación de la API
 - **[EXAMPLES.md](docs/EXAMPLES.md)** - Ejemplos prácticos
