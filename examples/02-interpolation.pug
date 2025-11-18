@@ -1,0 +1,19 @@
+// Ejemplo 2: Interpolación de JavaScript
+// Muestra cómo usar variables y expresiones JavaScript
+
+div.user-profile
+  h1 Perfil de #{name}
+
+  div.info
+    p Nombre: #{name.toUpperCase()}
+    p Email: #{email.toLowerCase()}
+    p Edad: #{age}
+    p Edad el próximo año: #{age + 1}
+
+  div.calculated
+    p Doble de edad: #{age * 2}
+    p Es adulto: #{age >= 18 ? 'Sí' : 'No'}
+
+  div.methods
+    p Primera letra: #{name[0]}
+    p Longitud del nombre: #{name.length}

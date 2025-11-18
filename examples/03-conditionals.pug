@@ -1,0 +1,31 @@
+// Ejemplo 3: Condicionales
+// Muestra if/else/unless para lógica condicional
+
+div.status
+  h2 Estado del Usuario
+
+  // Condicional simple
+  if isLoggedIn
+    p.success ✓ Sesión iniciada
+  else
+    p.warning Debe iniciar sesión
+
+  // Condicional con expresión
+  if age >= 18
+    p.info Puede votar
+  else if age >= 16
+    p.info Casi puede votar
+  else
+    p.info Muy joven para votar
+
+  // Unless (negación)
+  unless hasPermission
+    p.error ⚠ Acceso denegado
+
+  // Combinando con variables
+  if role === 'admin'
+    button.btn-danger Panel de Administración
+  else if role === 'user'
+    button.btn-primary Panel de Usuario
+  else
+    button.btn-secondary Ver Perfil

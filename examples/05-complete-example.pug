@@ -1,0 +1,94 @@
+// Ejemplo 5: Ejemplo Completo
+// Combina todas las características: tags, interpolación, condicionales, mixins
+
+// Mixins reutilizables
+mixin nav-item(text, url)
+  li.nav-item
+    a(href=url)= text
+
+mixin user-card(user)
+  div.user-card
+    h3 #{user.name.toUpperCase()}
+    p Email: #{user.email.toLowerCase()}
+    p Miembro desde: #{user.year}
+    if user.isPremium
+      span.badge Premium
+    else
+      span.badge Free
+
+// Estructura de la página
+doctype html
+html(lang="es")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title Dashboard - #{siteName}
+    link(rel="stylesheet" href="/styles.css")
+
+  body
+    // Navegación
+    nav.navbar
+      div.container
+        h1.logo= siteName
+        ul.nav-menu
+          +nav-item('Inicio', '/')
+          +nav-item('Perfil', '/profile')
+          +nav-item('Configuración', '/settings')
+          if isAdmin
+            +nav-item('Admin', '/admin')
+
+    // Contenido principal
+    main.main-content
+      div.container
+        // Cabecera
+        header.page-header
+          h1 Bienvenido, #{currentUser.name}!
+          p Último acceso: #{lastLogin}
+
+        // Sección de estadísticas
+        div.stats-grid
+          div.stat-card
+            h3 Posts
+            p.stat-value #{stats.posts}
+
+          div.stat-card
+            h3 Seguidores
+            p.stat-value #{stats.followers}
+
+          div.stat-card
+            h3 Siguiendo
+            p.stat-value #{stats.following}
+
+        // Condicional: mostrar según rol
+        if currentUser.role === 'admin'
+          div.admin-panel
+            h2 Panel de Administración
+            p Total de usuarios: #{adminData.totalUsers}
+            p Nuevos hoy: #{adminData.newToday}
+
+        // Estado de cuenta
+        div.account-status
+          if currentUser.isPremium
+            div.premium-info
+              h2 ⭐ Cuenta Premium
+              p Gracias por tu apoyo
+              p Válido hasta: #{premiumUntil}
+          else
+            div.upgrade-prompt
+              h2 Actualiza a Premium
+              p Desbloquea características exclusivas
+              button.btn-primary Mejorar Ahora
+
+        // Lista de usuarios (simulado)
+        div.users-section
+          h2 Usuarios Activos
+          div.users-grid
+            +user-card({name: 'Alice', email: 'alice@example.com', year: 2020, isPremium: true})
+            +user-card({name: 'Bob', email: 'bob@example.com', year: 2021, isPremium: false})
+            +user-card({name: 'Carol', email: 'carol@example.com', year: 2019, isPremium: true})
+
+    // Footer
+    footer.footer
+      div.container
+        p © #{currentYear} #{siteName}. Todos los derechos reservados.
+        p Powered by zig-pug

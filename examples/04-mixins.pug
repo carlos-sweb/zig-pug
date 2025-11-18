@@ -1,0 +1,36 @@
+// Ejemplo 4: Mixins (Componentes Reutilizables)
+// Los mixins permiten crear componentes que puedes reusar
+
+// Definir un mixin simple
+mixin button(text)
+  button.btn= text
+
+// Mixin con múltiples parámetros
+mixin card(title, description)
+  div.card
+    h3.card-title= title
+    p.card-description= description
+
+// Mixin para alertas
+mixin alert(type, message)
+  div(class="alert alert-" + type)
+    p= message
+
+// Usar los mixins
+div.page
+  h1 Ejemplos de Mixins
+
+  div.buttons
+    +button('Guardar')
+    +button('Cancelar')
+    +button('Eliminar')
+
+  div.cards
+    +card('Bienvenida', 'Gracias por usar zig-pug')
+    +card('Características', 'Soporta toda la sintaxis de Pug')
+    +card('Rendimiento', 'Compilación ultra-rápida')
+
+  div.alerts
+    +alert('success', 'Operación exitosa')
+    +alert('warning', 'Ten cuidado')
+    +alert('error', 'Algo salió mal')
