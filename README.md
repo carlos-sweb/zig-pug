@@ -504,8 +504,7 @@ zig-pug usa [**mujs**](https://mujs.com/) como motor JavaScript:
 - [x] Loops (each/for)
 - [x] Includes
 - [x] Cache de templates
-- [ ] Template inheritance (extends/block)
-- [ ] Filtros
+- [x] Template inheritance (extends/block)
 - [ ] Pretty printing (indentación HTML)
 - [ ] Escapado HTML
 - [ ] CLI completo
@@ -513,6 +512,56 @@ zig-pug usa [**mujs**](https://mujs.com/) como motor JavaScript:
 ### 📋 Roadmap
 
 Ver [PLAN.md](PLAN.md) para el plan completo de desarrollo.
+
+## 💬 Propuestas (RFC)
+
+Las siguientes características están en evaluación. Tu feedback es bienvenido en [GitHub Discussions](https://github.com/yourusername/zig-pug/discussions).
+
+### RFC-001: Filtros de Valor
+
+**Estado:** En evaluación
+
+**Propuesta:** Agregar filtros para transformar valores en interpolaciones usando sintaxis pipe.
+
+```zpug
+p #{name | uppercase}
+p #{price | default(0)}
+p #{bio | truncate(50)}
+p #{tags | join(', ')}
+```
+
+**Filtros propuestos:**
+- `uppercase`, `lowercase`, `capitalize` - Transformación de texto
+- `truncate(n)` - Cortar texto a n caracteres
+- `default(val)` - Valor por defecto si undefined/null
+- `escape` - Escapar HTML
+- `json` - Convertir a JSON string
+- `length`, `first`, `last` - Operaciones de arrays
+- `join(sep)`, `reverse`, `sort` - Manipulación de arrays
+
+**A favor:**
+- Mejora expresividad de templates
+- Se implementa con mujs (sin dependencias nuevas)
+- Común en otros motores (Jinja2, Twig, Liquid)
+
+**En contra:**
+- JavaScript ya tiene métodos: `name.toUpperCase()`, `arr.join(',')`
+- Agrega complejidad al parser
+- Sintaxis adicional que aprender
+- Filosofía minimalista de zig-pug
+
+**Alternativa actual:**
+```zpug
+// En lugar de filtros, usar métodos JavaScript directamente
+p #{name.toUpperCase()}
+p #{price || 0}
+p #{bio.substr(0, 50)}
+p #{tags.join(', ')}
+```
+
+**¿Qué opinas?** Abre un issue o discussion con tu caso de uso.
+
+---
 
 ## 🤝 Contribuir
 
