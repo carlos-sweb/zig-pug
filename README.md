@@ -372,17 +372,12 @@ defer allocator.free(html);
 
 - **[GETTING-STARTED.md](docs/GETTING-STARTED.md)** - Guía de inicio paso a paso
 - **[CLI.md](docs/CLI.md)** - Interfaz de línea de comandos
+- **[ZIG-PACKAGE.md](docs/ZIG-PACKAGE.md)** - Uso como dependencia de Zig
 - **[NODEJS-INTEGRATION.md](docs/NODEJS-INTEGRATION.md)** - Integración con Node.js (N-API)
 - **[TERMUX.md](docs/TERMUX.md)** - Compilación en Termux/Android
 - **[PUG-SYNTAX.md](docs/PUG-SYNTAX.md)** - Referencia completa de sintaxis Pug
 - **[API-REFERENCE.md](docs/API-REFERENCE.md)** - Documentación de la API
 - **[EXAMPLES.md](docs/EXAMPLES.md)** - Ejemplos prácticos
-
-### Documentación Técnica
-
-- **[MUJS-INTEGRATION.md](MUJS-INTEGRATION.md)** - Integración del motor JavaScript
-- **[MUJS-ANALYSIS.md](MUJS-ANALYSIS.md)** - Análisis mujs vs QuickJS
-- **[LIBRARY-USAGE.md](LIBRARY-USAGE.md)** - Usar zig-pug como librería C
 
 ## 🎨 Ejemplos
 

@@ -5,6 +5,18 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // ========================================================================
+    // Module Export - For use as a Zig dependency
+    // ========================================================================
+    const zigpug_module = b.addModule("zig_pug", .{
+        .root_source_file = b.path("src/lib.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // Add mujs include path for the module
+    zigpug_module.addIncludePath(b.path("vendor/mujs"));
+
+    // ========================================================================
     // Static Library (.a) - Optional, requires libc
     // Note: Won't build in Termux/Android due to libc requirement
     // ========================================================================
