@@ -74,7 +74,6 @@ pub const JsRuntime = struct {
                 error.CompileError => RuntimeError.EvalFailed,
                 error.RuntimeError => RuntimeError.EvalFailed,
                 error.OutOfMemory => RuntimeError.OutOfMemory,
-                else => RuntimeError.EvalFailed,
             };
         };
     }

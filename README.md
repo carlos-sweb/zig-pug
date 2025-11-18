@@ -21,6 +21,7 @@ html(lang="es")
 - ✅ **Motor JavaScript real** - Powered by [mujs](https://mujs.com/)
 - ✅ **Condicionales** - if/else/unless
 - ✅ **Mixins** - Componentes reutilizables
+- ✅ **Node.js addon** - Integración nativa via N-API
 - ✅ **Sin dependencias** - Solo Zig 0.15.2 y mujs embebido
 - ⚡ **Rápido** - Compilación nativa en Zig
 - 🔧 **Funciona en Termux/Android**
@@ -42,8 +43,77 @@ zig build
 ### Ejecutar
 
 ```bash
+# Ejecutar el binario compilado
 ./zig-out/bin/zig-pug
 ```
+
+### CLI - Línea de Comandos
+
+zig-pug incluye una interfaz de línea de comandos para compilar templates:
+
+```bash
+# Compilar archivo a stdout
+zig-pug template.pug
+
+# Compilar con archivo de salida
+zig-pug -i template.pug -o output.html
+
+# Con variables
+zig-pug template.pug --var name=Alice --var age=25
+```
+
+**Nota**: Existen dos versiones del CLI:
+- **Simple** (`src/main.zig`) - Funciona en Termux/Android, menos opciones
+- **Completo** (`src/cli.zig`) - Requiere libc, todas las opciones (--var, --pretty, --minify, etc.)
+
+📖 **[Ver documentación completa del CLI](docs/CLI.md)**
+
+### Uso en Node.js
+
+zig-pug también está disponible como addon nativo para Node.js:
+
+```bash
+cd nodejs
+npm install
+npm run build
+```
+
+**Ejemplo de uso:**
+```javascript
+const zigpug = require('./nodejs');
+
+const html = zigpug.compile('p Hello #{name}!', { name: 'World' });
+console.log(html);
+// <p>Hello World!</p>
+```
+
+**API orientada a objetos:**
+```javascript
+const { PugCompiler } = require('./nodejs');
+
+const compiler = new PugCompiler();
+compiler
+    .set('title', 'My Page')
+    .set('version', 1.5)
+    .setBool('isDev', false);
+
+const html = compiler.compile('title #{title}');
+```
+
+**Integración con Express.js:**
+```javascript
+const express = require('express');
+const zigpug = require('./nodejs');
+
+app.engine('pug', createZigPugEngine());
+app.set('view engine', 'pug');
+
+app.get('/', (req, res) => {
+    res.render('index', { title: 'Home' });
+});
+```
+
+📖 **[Ver documentación completa de Node.js](docs/NODEJS-INTEGRATION.md)**
 
 ## 🚀 Inicio Rápido
 
@@ -267,6 +337,8 @@ defer allocator.free(html);
 ## 📖 Documentación Completa
 
 - **[GETTING-STARTED.md](docs/GETTING-STARTED.md)** - Guía de inicio paso a paso
+- **[CLI.md](docs/CLI.md)** - Interfaz de línea de comandos
+- **[NODEJS-INTEGRATION.md](docs/NODEJS-INTEGRATION.md)** - Integración con Node.js (N-API)
 - **[PUG-SYNTAX.md](docs/PUG-SYNTAX.md)** - Referencia completa de sintaxis Pug
 - **[API-REFERENCE.md](docs/API-REFERENCE.md)** - Documentación de la API
 - **[EXAMPLES.md](docs/EXAMPLES.md)** - Ejemplos prácticos
@@ -279,12 +351,24 @@ defer allocator.free(html);
 
 ## 🎨 Ejemplos
 
-Ver carpeta [examples/](examples/) para más ejemplos:
+### Templates Pug
+
+Ver carpeta [examples/](examples/) para ejemplos de templates:
 
 - `examples/basic.pug` - Tags y atributos básicos
 - `examples/interpolation.pug` - Interpolación de JavaScript
 - `examples/conditionals.pug` - Condicionales y lógica
 - `examples/mixins.pug` - Componentes reutilizables
+
+### Ejemplos Node.js
+
+Ver carpeta [examples/nodejs/](examples/nodejs/) para ejemplos de uso en Node.js:
+
+- `01-basic.js` - Uso básico con `compile()`
+- `02-interpolation.js` - Expresiones JavaScript
+- `03-compiler-class.js` - API orientada a objetos
+- `04-file-compilation.js` - Compilación desde archivos
+- `05-express-integration.js` - Integración con Express.js
 
 ## 🧪 Testing
 

@@ -81,6 +81,61 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     // ========================================================================
+    // Cross-compilation targets
+    // ========================================================================
+    const cross_targets = [_]std.Target.Query{
+        // Linux
+        .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+        .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
+        // Windows
+        .{ .cpu_arch = .x86_64, .os_tag = .windows },
+        // macOS
+        .{ .cpu_arch = .x86_64, .os_tag = .macos },
+        .{ .cpu_arch = .aarch64, .os_tag = .macos },
+    };
+
+    const cross_target_names = [_][]const u8{
+        "linux-x86_64",
+        "linux-aarch64",
+        "windows-x86_64",
+        "macos-x86_64",
+        "macos-aarch64",
+    };
+
+    const cross_all_step = b.step("cross-all", "Build for all target platforms");
+
+    for (cross_targets, cross_target_names, 0..) |cross_target, name, i| {
+        _ = i;
+        const cross_exe = b.addExecutable(.{
+            .name = "zig-pug",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/cli.zig"),
+                .target = b.resolveTargetQuery(cross_target),
+                .optimize = .ReleaseFast,
+            }),
+        });
+
+        cross_exe.addIncludePath(b.path("vendor/mujs"));
+        cross_exe.addObjectFile(b.path("vendor/mujs/libmujs.a"));
+        cross_exe.linkLibC();
+
+        const install_artifact = b.addInstallArtifact(cross_exe, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = b.fmt("bin/{s}", .{name}),
+                },
+            },
+        });
+
+        const cross_step = b.step(
+            b.fmt("cross-{s}", .{name}),
+            b.fmt("Build for {s}", .{name}),
+        );
+        cross_step.dependOn(&install_artifact.step);
+        cross_all_step.dependOn(&install_artifact.step);
+    }
+
+    // ========================================================================
     // Tests
     // ========================================================================
     const tests = b.addTest(.{
