@@ -22,6 +22,8 @@ html(lang="es")
 - ✅ **Condicionales** - if/else/unless
 - ✅ **Mixins** - Componentes reutilizables
 - ✅ **Node.js addon** - Integración nativa via N-API
+- ✅ **Bun.js compatible** - 2-5x más rápido que Node.js
+- ✅ **Editor support** - VS Code, Sublime Text, CodeMirror
 - ✅ **Sin dependencias** - Solo Zig 0.15.2 y mujs embebido
 - ⚡ **Rápido** - Compilación nativa en Zig
 - 🔧 **Funciona en Termux/Android** (CLI binario)
@@ -69,6 +71,36 @@ zig-pug template.pug --var name=Alice --var age=25
 - **Completo** (`src/cli.zig`) - Requiere libc, todas las opciones (--var, --pretty, --minify, etc.)
 
 📖 **[Ver documentación completa del CLI](docs/CLI.md)**
+
+### Editor Support
+
+zig-pug usa la extensión **`.zpug`** para sus archivos de template, con soporte completo en los principales editores:
+
+**Visual Studio Code:**
+```bash
+cd editor-support/vscode
+code --install-extension zig-pug-0.2.0.vsix
+```
+
+**Sublime Text 3/4:**
+- Copia los archivos de `editor-support/sublime-text/` a tu carpeta de Packages
+- Reinicia Sublime Text
+
+**CodeMirror (para editores web):**
+```javascript
+var editor = CodeMirror.fromTextArea(textarea, {
+  mode: 'zpug',
+  theme: 'monokai'
+});
+```
+
+Todas las extensiones incluyen:
+- ✅ Syntax highlighting completo
+- ✅ Snippets para patrones comunes
+- ✅ Auto-completado
+- ✅ Indentación inteligente
+
+📖 **[Ver documentación completa de editores](editor-support/README.md)**
 
 ### Uso en Node.js
 
