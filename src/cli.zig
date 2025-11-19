@@ -45,18 +45,18 @@ const CliOptions = struct {
 };
 
 fn printVersion() void {
-    std.debug.print("zig-pug v{s}\n", .{VERSION});
+    std.debug.print("zpug v{s}\n", .{VERSION});
     std.debug.print("Pug template engine powered by Zig and mujs\n", .{});
 }
 
 fn printHelp() void {
     const help_text =
-        \\zig-pug - High-performance Pug template compiler
+        \\zpug - High-performance Pug template compiler
         \\
         \\USAGE:
-        \\  zig-pug [OPTIONS] <input-files...>
-        \\  zig-pug [OPTIONS] -i <input> -o <output>
-        \\  zig-pug [OPTIONS] < input.pug > output.html
+        \\  zpug [OPTIONS] <input-files...>
+        \\  zpug [OPTIONS] -i <input> -o <output>
+        \\  zpug [OPTIONS] < input.pug > output.html
         \\
         \\OPTIONS:
         \\  -h, --help              Show this help message
@@ -78,34 +78,34 @@ fn printHelp() void {
         \\
         \\EXAMPLES:
         \\  # Compile single file to stdout
-        \\  zig-pug template.pug
+        \\  zpug template.pug
         \\
         \\  # Compile with output file
-        \\  zig-pug -i template.pug -o output.html
+        \\  zpug -i template.pug -o output.html
         \\
         \\  # Compile multiple files to directory
-        \\  zig-pug -i *.pug -o dist/
+        \\  zpug -i *.pug -o dist/
         \\
         \\  # Compile with variables
-        \\  zig-pug template.pug --var name=Alice --var age=25
+        \\  zpug template.pug --var name=Alice --var age=25
         \\
         \\  # Compile with JSON variables
-        \\  zig-pug template.pug --vars data.json -o output.html
+        \\  zpug template.pug --vars data.json -o output.html
         \\
         \\  # Pretty-print output
-        \\  zig-pug -p template.pug -o pretty.html
+        \\  zpug -p template.pug -o pretty.html
         \\
         \\  # Minify output
-        \\  zig-pug -m template.pug -o minified.html
+        \\  zpug -m template.pug -o minified.html
         \\
         \\  # Watch for changes
-        \\  zig-pug -w -i template.pug -o output.html
+        \\  zpug -w -i template.pug -o output.html
         \\
         \\  # Use stdin/stdout (Unix pipe)
-        \\  cat template.pug | zig-pug --stdin --stdout > output.html
+        \\  cat template.pug | zpug --stdin --stdout > output.html
         \\
         \\  # Compile with verbose output
-        \\  zig-pug -V template.pug -o output.html
+        \\  zpug -V template.pug -o output.html
         \\
         \\TEMPLATE VARIABLES:
         \\  Variables can be set via:
@@ -135,7 +135,7 @@ fn printHelp() void {
         \\  3  Invalid arguments
         \\
         \\DOCUMENTATION:
-        \\  https://github.com/yourusername/zig-pug
+        \\  https://github.com/yourusername/zpug
         \\
     ;
     std.debug.print("{s}", .{help_text});

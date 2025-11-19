@@ -80,7 +80,7 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "zpug",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
+            .root_source_file = b.path("src/cli.zig"),
             .target = exe_target,
             .optimize = optimize,
         }),
