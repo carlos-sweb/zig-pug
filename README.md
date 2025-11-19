@@ -1,42 +1,44 @@
+[Espanol](README.es.md) | English
+
 # zig-pug
 
-Un motor de templates inspirado en [Pug](https://pugjs.org/), implementado en Zig con soporte completo de JavaScript.
+A template engine inspired by [Pug](https://pugjs.org/), implemented in Zig with full JavaScript support.
 
 ```zpug
 doctype html
-html(lang="es")
+html(lang="en")
   head
     title #{pageTitle.toUpperCase()}
   body
     h1.greeting Hello #{name}!
     p Age next year: #{age + 1}
     if isActive
-      p.status ✓ Usuario activo
+      p.status Active user
 ```
 
-## 🎯 Características
+## Features
 
-- ✅ **Sintaxis Pug completa** - Tags, atributos, clases, IDs
-- ✅ **JavaScript ES5.1** - Interpolaciones con métodos, operadores y expresiones
-- ✅ **Motor JavaScript real** - Powered by [mujs](https://mujs.com/)
-- ✅ **Condicionales** - if/else/unless
-- ✅ **Mixins** - Componentes reutilizables
-- ✅ **Node.js addon** - Integración nativa via N-API
-- ✅ **Bun.js compatible** - 2-5x más rápido que Node.js
-- ✅ **Editor support** - VS Code, Sublime Text, CodeMirror
-- ✅ **Sin dependencias** - Solo Zig 0.15.2 y mujs embebido
-- ⚡ **Rápido** - Compilación nativa en Zig
-- 🔧 **Funciona en Termux/Android** (CLI binario)
+- **Complete Pug syntax** - Tags, attributes, classes, IDs
+- **JavaScript ES5.1** - Interpolations with methods, operators and expressions
+- **Real JavaScript engine** - Powered by [mujs](https://mujs.com/)
+- **Conditionals** - if/else/unless
+- **Mixins** - Reusable components
+- **Node.js addon** - Native integration via N-API
+- **Bun.js compatible** - 2-5x faster than Node.js
+- **Editor support** - VS Code, Sublime Text, CodeMirror
+- **No dependencies** - Only Zig 0.15.2 and embedded mujs
+- **Fast** - Native compilation in Zig
+- **Works on Termux/Android** (CLI binary)
 
-> **Nota para Termux**: El CLI binario funciona perfectamente. El addon de Node.js compila pero no se puede cargar debido a restricciones de Android. Ver [docs/TERMUX.md](docs/TERMUX.md) para detalles.
+> **Note for Termux**: The CLI binary works perfectly. The Node.js addon compiles but cannot be loaded due to Android restrictions. See [docs/en/TERMUX.md](docs/en/TERMUX.md) for details.
 
-## 📦 Instalación
+## Installation
 
-### Requisitos
+### Requirements
 
-- **Zig 0.15.2** ([descargar](https://ziglang.org/download/))
+- **Zig 0.15.2** ([download](https://ziglang.org/download/))
 
-### Clonar y compilar
+### Clone and build
 
 ```bash
 git clone https://github.com/yourusername/zig-pug
@@ -44,37 +46,37 @@ cd zig-pug
 zig build
 ```
 
-### Ejecutar
+### Run
 
 ```bash
-# Ejecutar el binario compilado
+# Run the compiled binary
 ./zig-out/bin/zig-pug
 ```
 
-### CLI - Línea de Comandos
+### CLI - Command Line Interface
 
-zig-pug incluye una interfaz de línea de comandos para compilar templates:
+zig-pug includes a command line interface for compiling templates:
 
 ```bash
-# Compilar archivo a stdout
+# Compile file to stdout
 zig-pug template.zpug
 
-# Compilar con archivo de salida
+# Compile with output file
 zig-pug -i template.zpug -o output.html
 
-# Con variables
+# With variables
 zig-pug template.zpug --var name=Alice --var age=25
 ```
 
-**Nota**: Existen dos versiones del CLI:
-- **Simple** (`src/main.zig`) - Funciona en Termux/Android, menos opciones
-- **Completo** (`src/cli.zig`) - Requiere libc, todas las opciones (--var, --pretty, --minify, etc.)
+**Note**: There are two CLI versions:
+- **Simple** (`src/main.zig`) - Works on Termux/Android, fewer options
+- **Full** (`src/cli.zig`) - Requires libc, all options (--var, --pretty, --minify, etc.)
 
-📖 **[Ver documentación completa del CLI](docs/CLI.md)**
+**[See complete CLI documentation](docs/en/CLI.md)**
 
 ### Editor Support
 
-zig-pug usa la extensión **`.zpug`** para sus archivos de template, con soporte completo en los principales editores:
+zig-pug uses the **`.zpug`** extension for its template files, with full support in major editors:
 
 **Visual Studio Code:**
 ```bash
@@ -83,10 +85,10 @@ code --install-extension zig-pug-0.2.0.vsix
 ```
 
 **Sublime Text 3/4:**
-- Copia los archivos de `editor-support/sublime-text/` a tu carpeta de Packages
-- Reinicia Sublime Text
+- Copy the files from `editor-support/sublime-text/` to your Packages folder
+- Restart Sublime Text
 
-**CodeMirror (para editores web):**
+**CodeMirror (for web editors):**
 ```javascript
 var editor = CodeMirror.fromTextArea(textarea, {
   mode: 'zpug',
@@ -94,17 +96,17 @@ var editor = CodeMirror.fromTextArea(textarea, {
 });
 ```
 
-Todas las extensiones incluyen:
-- ✅ Syntax highlighting completo
-- ✅ Snippets para patrones comunes
-- ✅ Auto-completado
-- ✅ Indentación inteligente
+All extensions include:
+- Complete syntax highlighting
+- Snippets for common patterns
+- Auto-completion
+- Smart indentation
 
-📖 **[Ver documentación completa de editores](editor-support/README.md)**
+**[See complete editor documentation](editor-support/README.md)**
 
-### Uso en Node.js
+### Usage in Node.js
 
-zig-pug también está disponible como addon nativo para Node.js:
+zig-pug is also available as a native addon for Node.js:
 
 ```bash
 cd nodejs
@@ -112,7 +114,7 @@ npm install
 npm run build
 ```
 
-**Ejemplo de uso:**
+**Usage example:**
 ```javascript
 const zigpug = require('./nodejs');
 
@@ -121,7 +123,7 @@ console.log(html);
 // <p>Hello World!</p>
 ```
 
-**API orientada a objetos:**
+**Object-oriented API:**
 ```javascript
 const { PugCompiler } = require('./nodejs');
 
@@ -134,7 +136,7 @@ compiler
 const html = compiler.compile('title #{title}');
 ```
 
-**Integración con Express.js:**
+**Express.js integration:**
 ```javascript
 const express = require('express');
 const zigpug = require('./nodejs');
@@ -147,11 +149,11 @@ app.get('/', (req, res) => {
 });
 ```
 
-📖 **[Ver documentación completa de Node.js](docs/NODEJS-INTEGRATION.md)**
+**[See complete Node.js documentation](docs/en/NODEJS-INTEGRATION.md)**
 
-## 🚀 Inicio Rápido
+## Quick Start
 
-### Ejemplo 1: Template Básico
+### Example 1: Basic Template
 
 **template.zpug:**
 ```zpug
@@ -160,7 +162,7 @@ div.container
   p You are #{age} years old
 ```
 
-**Uso en Zig:**
+**Usage in Zig:**
 ```zig
 const std = @import("std");
 const parser = @import("parser.zig");
@@ -172,15 +174,15 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // Crear runtime JavaScript
+    // Create JavaScript runtime
     var js_runtime = try runtime.JsRuntime.init(allocator);
     defer js_runtime.deinit();
 
-    // Establecer variables
+    // Set variables
     try js_runtime.setString("name", "Alice");
     try js_runtime.setNumber("age", 25);
 
-    // Parsear template
+    // Parse template
     const source =
         \\div.container
         \\  h1 Hello #{name}!
@@ -191,7 +193,7 @@ pub fn main() !void {
     defer pars.deinit();
     const tree = try pars.parse();
 
-    // Compilar a HTML
+    // Compile to HTML
     var comp = try compiler.Compiler.init(allocator, js_runtime);
     defer comp.deinit();
     const html = try comp.compile(tree);
@@ -206,27 +208,27 @@ pub fn main() !void {
 <div class="container"><h1>HelloAlice!</h1><p>You are25years old</p></div>
 ```
 
-## 📚 Sintaxis Pug Soportada
+## Supported Pug Syntax
 
-### Tags y Atributos
+### Tags and Attributes
 
 ```zpug
-// Tags simples
+// Simple tags
 div
 p Hello
 span World
 
-// Clases e IDs
+// Classes and IDs
 div.container
 p#main-text
 button.btn.btn-primary#submit
 
-// Atributos
+// Attributes
 a(href="https://example.com" target="_blank") Link
 input(type="text" name="username" required)
-img(src="photo.jpg" alt="Foto")
+img(src="photo.jpg" alt="Photo")
 
-// Múltiples líneas
+// Multiple lines
 div(
   class="card"
   id="user-card"
@@ -234,22 +236,22 @@ div(
 )
 ```
 
-### Interpolación JavaScript
+### JavaScript Interpolation
 
 ```zpug
-// Variables simples
+// Simple variables
 p Hello #{name}
 
-// Métodos de strings
+// String methods
 p #{name.toUpperCase()}
 p #{email.toLowerCase()}
 
-// Aritmética
+// Arithmetic
 p Age: #{age}
 p Next year: #{age + 1}
 p Double: #{age * 2}
 
-// Objetos
+// Objects
 p Name: #{user.firstName} #{user.lastName}
 p Email: #{user.email.toLowerCase()}
 
@@ -257,7 +259,7 @@ p Email: #{user.email.toLowerCase()}
 p First item: #{items[0]}
 p Count: #{items.length}
 
-// Expresiones complejas
+// Complex expressions
 p Full name: #{firstName + ' ' + lastName}
 p Status: #{age >= 18 ? 'Adult' : 'Minor'}
 
@@ -269,32 +271,32 @@ p Random: #{Math.floor(Math.random() * 100)}
 p Data: #{JSON.stringify(obj)}
 ```
 
-### Escapado HTML (Seguridad XSS)
+### HTML Escaping (XSS Security)
 
-Por defecto, todas las interpolaciones `#{}` escapan caracteres HTML para prevenir ataques XSS:
+By default, all `#{}` interpolations escape HTML characters to prevent XSS attacks:
 
 ```zpug
-// Escapado automático (seguro)
+// Automatic escaping (safe)
 p #{userInput}
 // Input: <script>alert('xss')</script>
 // Output: <p>&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;</p>
 
-// Sin escapar (para HTML confiable)
+// Unescaped (for trusted HTML)
 p !{trustedHtml}
 // Input: <strong>Bold</strong>
 // Output: <p><strong>Bold</strong></p>
 ```
 
-**Caracteres escapados:**
-- `&` → `&amp;`
-- `<` → `&lt;`
-- `>` → `&gt;`
-- `"` → `&quot;`
-- `'` → `&#39;`
+**Escaped characters:**
+- `&` -> `&amp;`
+- `<` -> `&lt;`
+- `>` -> `&gt;`
+- `"` -> `&quot;`
+- `'` -> `&#39;`
 
-**Importante:** Solo usa `!{}` con contenido HTML que controlas. Nunca uses `!{}` con input de usuarios.
+**Important:** Only use `!{}` with HTML content that you control. Never use `!{}` with user input.
 
-### Condicionales
+### Conditionals
 
 ```zpug
 // if/else
@@ -303,11 +305,11 @@ if isLoggedIn
 else
   p Please log in
 
-// unless (negación)
+// unless (negation)
 unless isAdmin
   p Access denied
 
-// Expresiones
+// Expressions
 if age >= 18
   p You can vote
 else if age >= 16
@@ -319,15 +321,15 @@ else
 ### Mixins
 
 ```zpug
-// Definir mixin
+// Define mixin
 mixin button(text)
   button.btn= text
 
-// Usar mixin
+// Use mixin
 +button('Click me')
 +button('Submit')
 
-// Mixin con atributos
+// Mixin with attributes
 mixin card(title, content)
   div.card
     h3= title
@@ -336,29 +338,29 @@ mixin card(title, content)
 +card('Hello', 'This is a card')
 ```
 
-## 🔧 API de Programación
+## Programming API
 
-### Runtime JavaScript
+### JavaScript Runtime
 
 ```zig
 const runtime = @import("runtime.zig");
 
-// Inicializar
+// Initialize
 var js_runtime = try runtime.JsRuntime.init(allocator);
 defer js_runtime.deinit();
 
-// Establecer variables
+// Set variables
 try js_runtime.setString("name", "Alice");
 try js_runtime.setNumber("age", 25);
 try js_runtime.setBool("active", true);
 try js_runtime.setInt("count", 42);
 
-// Evaluar expresiones
+// Evaluate expressions
 const result = try js_runtime.eval("name.toUpperCase()");
 defer allocator.free(result);
 // result = "ALICE"
 
-// Crear objetos en JavaScript
+// Create objects in JavaScript
 _ = try js_runtime.eval("var user = {name: 'Bob', age: 30}");
 const name = try js_runtime.eval("user.name");
 defer allocator.free(name);
@@ -370,13 +372,13 @@ defer allocator.free(name);
 ```zig
 const parser = @import("parser.zig");
 
-// Crear parser
+// Create parser
 var pars = try parser.Parser.init(allocator, source_code);
 defer pars.deinit();
 
-// Parsear
+// Parse
 const ast_tree = try pars.parse();
-// ast_tree es el árbol AST
+// ast_tree is the AST tree
 ```
 
 ### Compiler
@@ -384,169 +386,169 @@ const ast_tree = try pars.parse();
 ```zig
 const compiler = @import("compiler.zig");
 
-// Crear compiler
+// Create compiler
 var comp = try compiler.Compiler.init(allocator, js_runtime);
 defer comp.deinit();
 
-// Compilar AST a HTML
+// Compile AST to HTML
 const html = try comp.compile(ast_tree);
 defer allocator.free(html);
 ```
 
-## 📖 Documentación Completa
+## Complete Documentation
 
-- **[GETTING-STARTED.md](docs/GETTING-STARTED.md)** - Guía de inicio paso a paso
-- **[CLI.md](docs/CLI.md)** - Interfaz de línea de comandos
-- **[LOOPS-INCLUDES-CACHE.md](docs/LOOPS-INCLUDES-CACHE.md)** - Loops, includes y cache
-- **[ZIG-PACKAGE.md](docs/ZIG-PACKAGE.md)** - Uso como dependencia de Zig
-- **[NODEJS-INTEGRATION.md](docs/NODEJS-INTEGRATION.md)** - Integración con Node.js (N-API)
-- **[TERMUX.md](docs/TERMUX.md)** - Compilación en Termux/Android
-- **[PUG-SYNTAX.md](docs/PUG-SYNTAX.md)** - Referencia completa de sintaxis Pug
-- **[API-REFERENCE.md](docs/API-REFERENCE.md)** - Documentación de la API
-- **[EXAMPLES.md](docs/EXAMPLES.md)** - Ejemplos prácticos
+- **[GETTING-STARTED.md](docs/en/GETTING-STARTED.md)** - Step-by-step getting started guide
+- **[CLI.md](docs/en/CLI.md)** - Command line interface
+- **[LOOPS-INCLUDES-CACHE.md](docs/en/LOOPS-INCLUDES-CACHE.md)** - Loops, includes and cache
+- **[ZIG-PACKAGE.md](docs/en/ZIG-PACKAGE.md)** - Usage as a Zig dependency
+- **[NODEJS-INTEGRATION.md](docs/en/NODEJS-INTEGRATION.md)** - Node.js integration (N-API)
+- **[TERMUX.md](docs/en/TERMUX.md)** - Compilation on Termux/Android
+- **[PUG-SYNTAX.md](docs/en/PUG-SYNTAX.md)** - Complete Pug syntax reference
+- **[API-REFERENCE.md](docs/en/API-REFERENCE.md)** - API documentation
+- **[EXAMPLES.md](docs/en/EXAMPLES.md)** - Practical examples
 
-## 🎨 Ejemplos
+## Examples
 
-### Templates Pug
+### Pug Templates
 
-Ver carpeta [examples/](examples/) para ejemplos de templates:
+See the [examples/](examples/) folder for template examples:
 
-- `examples/basic.zpug` - Tags y atributos básicos
-- `examples/interpolation.zpug` - Interpolación de JavaScript
-- `examples/conditionals.zpug` - Condicionales y lógica
-- `examples/mixins.zpug` - Componentes reutilizables
-- `examples/loops.zpug` - Iteración con each/for
-- `examples/includes.zpug` - Includes con partials
+- `examples/basic.zpug` - Basic tags and attributes
+- `examples/interpolation.zpug` - JavaScript interpolation
+- `examples/conditionals.zpug` - Conditionals and logic
+- `examples/mixins.zpug` - Reusable components
+- `examples/loops.zpug` - Iteration with each/for
+- `examples/includes.zpug` - Includes with partials
 
-### Ejemplos Node.js
+### Node.js Examples
 
-Ver carpeta [examples/nodejs/](examples/nodejs/) para ejemplos de uso en Node.js:
+See the [examples/nodejs/](examples/nodejs/) folder for Node.js usage examples:
 
-- `01-basic.js` - Uso básico con `compile()`
-- `02-interpolation.js` - Expresiones JavaScript
-- `03-compiler-class.js` - API orientada a objetos
-- `04-file-compilation.js` - Compilación desde archivos
-- `05-express-integration.js` - Integración con Express.js
+- `01-basic.js` - Basic usage with `compile()`
+- `02-interpolation.js` - JavaScript expressions
+- `03-compiler-class.js` - Object-oriented API
+- `04-file-compilation.js` - Compilation from files
+- `05-express-integration.js` - Express.js integration
 
-## 🧪 Testing
+## Testing
 
 ```bash
-# Ejecutar todos los tests
+# Run all tests
 zig build test
 
-# Ver resultados detallados
+# View detailed results
 zig build test --summary all
 ```
 
-**Estado de tests**: ✅ Todos pasando (13 tests)
+**Test status**: All passing (13 tests)
 
-## 🏗️ Arquitectura
+## Architecture
 
 ```
-┌─────────────┐
-│   Source    │  Template zpug
-│  (*.zpug)   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Tokenizer  │  Análisis léxico
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Parser    │  Análisis sintáctico
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│     AST     │  Árbol de sintaxis abstracta
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐       ┌─────────────┐
-│  Compiler   │◄──────┤  JS Runtime │
-└──────┬──────┘       │    (mujs)   │
-       │              └─────────────┘
-       ▼
-┌─────────────┐
-│    HTML     │  Output final
-└─────────────┘
++-------------+
+|   Source    |  zpug template
+|  (*.zpug)   |
++------+------+
+       |
+       v
++-------------+
+|  Tokenizer  |  Lexical analysis
++------+------+
+       |
+       v
++-------------+
+|   Parser    |  Syntactic analysis
++------+------+
+       |
+       v
++-------------+
+|     AST     |  Abstract syntax tree
++------+------+
+       |
+       v
++-------------+       +-------------+
+|  Compiler   |<------|  JS Runtime |
++------+------+       |    (mujs)   |
+       |              +-------------+
+       v
++-------------+
+|    HTML     |  Final output
++-------------+
 ```
 
-## ⚙️ Motor JavaScript
+## JavaScript Engine
 
-zig-pug usa [**mujs**](https://mujs.com/) como motor JavaScript:
+zig-pug uses [**mujs**](https://mujs.com/) as its JavaScript engine:
 
-- **Versión**: mujs 1.3.8
-- **Estándar**: ES5.1 compliant
-- **Tamaño**: 590 KB
-- **Dependencias**: Ninguna (solo libm)
-- **Usado por**: MuPDF, Ghostscript
+- **Version**: mujs 1.3.8
+- **Standard**: ES5.1 compliant
+- **Size**: 590 KB
+- **Dependencies**: None (only libm)
+- **Used by**: MuPDF, Ghostscript
 
-### JavaScript Soportado (ES5.1)
+### Supported JavaScript (ES5.1)
 
-✅ **Soportado:**
+**Supported:**
 - String methods: `toLowerCase()`, `toUpperCase()`, `substr()`, `split()`, etc.
 - Number methods: `toFixed()`, `toPrecision()`
 - Array methods: `map()`, `filter()`, `reduce()`, `forEach()`, etc.
 - Object property access
-- Operadores aritméticos: `+`, `-`, `*`, `/`, `%`
-- Operadores de comparación: `>`, `<`, `>=`, `<=`, `==`, `===`
-- Operadores lógicos: `&&`, `||`, `!`
-- Operador ternario: `condition ? true : false`
+- Arithmetic operators: `+`, `-`, `*`, `/`, `%`
+- Comparison operators: `>`, `<`, `>=`, `<=`, `==`, `===`
+- Logical operators: `&&`, `||`, `!`
+- Ternary operator: `condition ? true : false`
 - Math: `Math.max()`, `Math.min()`, `Math.round()`, etc.
 - JSON: `JSON.parse()`, `JSON.stringify()`
 
-❌ **No soportado** (ES6+):
+**Not supported** (ES6+):
 - Arrow functions: `() => {}`
 - Template literals: `` `text ${var}` ``
-- let/const (usar `var`)
+- let/const (use `var`)
 - Async/await
-- Clases (class keyword)
-- Módulos ES6
+- Classes (class keyword)
+- ES6 modules
 
-**Para templates Pug, ES5.1 es completamente suficiente.**
+**For Pug templates, ES5.1 is completely sufficient.**
 
-## 📊 Estado del Proyecto
+## Project Status
 
-### ✅ Completado
+### Completed
 
-- [x] Tokenizer (análisis léxico)
-- [x] Parser (análisis sintáctico)
-- [x] AST (árbol de sintaxis)
-- [x] Compiler (generación HTML)
-- [x] Runtime JavaScript (mujs)
-- [x] Tags y atributos
-- [x] Clases e IDs
-- [x] Interpolación JavaScript
-- [x] Condicionales (if/else/unless)
+- [x] Tokenizer (lexical analysis)
+- [x] Parser (syntactic analysis)
+- [x] AST (syntax tree)
+- [x] Compiler (HTML generation)
+- [x] JavaScript Runtime (mujs)
+- [x] Tags and attributes
+- [x] Classes and IDs
+- [x] JavaScript interpolation
+- [x] Conditionals (if/else/unless)
 - [x] Mixins
 - [x] Tests
 
-### 🚧 En Desarrollo
+### In Development
 
 - [x] Loops (each/for)
 - [x] Includes
-- [x] Cache de templates
+- [x] Template cache
 - [x] Template inheritance (extends/block)
-- [x] Escapado HTML (XSS prevention)
-- [ ] Pretty printing (indentación HTML)
-- [ ] CLI completo
+- [x] HTML escaping (XSS prevention)
+- [ ] Pretty printing (HTML indentation)
+- [ ] Full CLI
 
-### 📋 Roadmap
+### Roadmap
 
-Ver [PLAN.md](PLAN.md) para el plan completo de desarrollo.
+See [PLAN.md](PLAN.md) for the complete development plan.
 
-## 💬 Propuestas (RFC)
+## Proposals (RFC)
 
-Las siguientes características están en evaluación. Tu feedback es bienvenido en [GitHub Discussions](https://github.com/yourusername/zig-pug/discussions).
+The following features are under evaluation. Your feedback is welcome in [GitHub Discussions](https://github.com/yourusername/zig-pug/discussions).
 
-### RFC-001: Filtros de Valor
+### RFC-001: Value Filters
 
-**Estado:** En evaluación
+**Status:** Under evaluation
 
-**Propuesta:** Agregar filtros para transformar valores en interpolaciones usando sintaxis pipe.
+**Proposal:** Add filters to transform values in interpolations using pipe syntax.
 
 ```zpug
 p #{name | uppercase}
@@ -555,65 +557,65 @@ p #{bio | truncate(50)}
 p #{tags | join(', ')}
 ```
 
-**Filtros propuestos:**
-- `uppercase`, `lowercase`, `capitalize` - Transformación de texto
-- `truncate(n)` - Cortar texto a n caracteres
-- `default(val)` - Valor por defecto si undefined/null
-- `escape` - Escapar HTML
-- `json` - Convertir a JSON string
-- `length`, `first`, `last` - Operaciones de arrays
-- `join(sep)`, `reverse`, `sort` - Manipulación de arrays
+**Proposed filters:**
+- `uppercase`, `lowercase`, `capitalize` - Text transformation
+- `truncate(n)` - Truncate text to n characters
+- `default(val)` - Default value if undefined/null
+- `escape` - Escape HTML
+- `json` - Convert to JSON string
+- `length`, `first`, `last` - Array operations
+- `join(sep)`, `reverse`, `sort` - Array manipulation
 
-**A favor:**
-- Mejora expresividad de templates
-- Se implementa con mujs (sin dependencias nuevas)
-- Común en otros motores (Jinja2, Twig, Liquid)
+**Pros:**
+- Improves template expressiveness
+- Implemented with mujs (no new dependencies)
+- Common in other engines (Jinja2, Twig, Liquid)
 
-**En contra:**
-- JavaScript ya tiene métodos: `name.toUpperCase()`, `arr.join(',')`
-- Agrega complejidad al parser
-- Sintaxis adicional que aprender
-- Filosofía minimalista de zig-pug
+**Cons:**
+- JavaScript already has methods: `name.toUpperCase()`, `arr.join(',')`
+- Adds complexity to the parser
+- Additional syntax to learn
+- Goes against zig-pug's minimalist philosophy
 
-**Alternativa actual:**
+**Current alternative:**
 ```zpug
-// En lugar de filtros, usar métodos JavaScript directamente
+// Instead of filters, use JavaScript methods directly
 p #{name.toUpperCase()}
 p #{price || 0}
 p #{bio.substr(0, 50)}
 p #{tags.join(', ')}
 ```
 
-**¿Qué opinas?** Abre un issue o discussion con tu caso de uso.
+**What do you think?** Open an issue or discussion with your use case.
 
 ---
 
-## 🤝 Contribuir
+## Contributing
 
-¡Las contribuciones son bienvenidas! Por favor:
+Contributions are welcome! Please:
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+1. Fork the project
+2. Create a branch for your feature (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## 📄 Licencia
+## License
 
-MIT License - ver [LICENSE](LICENSE) para detalles
+MIT License - see [LICENSE](LICENSE) for details
 
-## 🙏 Agradecimientos
+## Acknowledgments
 
-- [Pug](https://pugjs.org/) - Inspiración original
-- [Zig](https://ziglang.org/) - Lenguaje de programación
-- [mujs](https://mujs.com/) - Motor JavaScript embebido
-- [Artifex Software](https://artifex.com/) - Creadores de mujs
+- [Pug](https://pugjs.org/) - Original inspiration
+- [Zig](https://ziglang.org/) - Programming language
+- [mujs](https://mujs.com/) - Embedded JavaScript engine
+- [Artifex Software](https://artifex.com/) - Creators of mujs
 
-## 📞 Soporte
+## Support
 
 - **Issues**: [GitHub Issues](https://github.com/yourusername/zig-pug/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/yourusername/zig-pug/discussions)
 
 ---
 
-**Hecho con ❤️ usando Zig 0.15.2 y mujs**
+**Made with love using Zig 0.15.2 and mujs**
