@@ -309,21 +309,21 @@ pub const Compiler = struct {
         }
 
         // Escape characters
-        var result = std.ArrayList(u8).init(self.allocator);
-        errdefer result.deinit();
+        var result = std.ArrayList(u8){};
+        errdefer result.deinit(self.allocator);
 
         for (input) |c| {
             switch (c) {
-                '&' => try result.appendSlice("&amp;"),
-                '<' => try result.appendSlice("&lt;"),
-                '>' => try result.appendSlice("&gt;"),
-                '"' => try result.appendSlice("&quot;"),
-                '\'' => try result.appendSlice("&#39;"),
-                else => try result.append(c),
+                '&' => try result.appendSlice(self.allocator, "&amp;"),
+                '<' => try result.appendSlice(self.allocator, "&lt;"),
+                '>' => try result.appendSlice(self.allocator, "&gt;"),
+                '"' => try result.appendSlice(self.allocator, "&quot;"),
+                '\'' => try result.appendSlice(self.allocator, "&#39;"),
+                else => try result.append(self.allocator, c),
             }
         }
 
-        return try result.toOwnedSlice();
+        return try result.toOwnedSlice(self.allocator);
     }
 
     // ========================================================================
@@ -620,8 +620,6 @@ pub fn compileTemplate(
 // ============================================================================
 // Tests
 // ============================================================================
-
-const Parser = @import("parser.zig").Parser;
 
 test "compiler - simple tag" {
     const source = "div Hello World";

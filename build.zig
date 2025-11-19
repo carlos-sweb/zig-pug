@@ -66,20 +66,33 @@ pub fn build(b: *std.Build) void {
     // ========================================================================
     // Executable (CLI tool)
     // ========================================================================
+
+    // For native Linux builds, use musl to avoid system libc dependency
+    const exe_target = if (target.result.os.tag == .linux)
+        b.resolveTargetQuery(.{
+            .cpu_arch = target.result.cpu.arch,
+            .os_tag = .linux,
+            .abi = .musl,
+        })
+    else
+        target;
+
     const exe = b.addExecutable(.{
         .name = "zig-pug",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
-            .target = target,
+            .target = exe_target,
             .optimize = optimize,
         }),
     });
 
-    // Link with mujs
+    // Compile mujs from source (enables cross-compilation)
     exe.addIncludePath(b.path("vendor/mujs"));
-    exe.addObjectFile(b.path("vendor/mujs/libmujs.a"));
-    // Note: libm (math library) is needed but we can't use linkSystemLibrary in Termux
-    // mujs was compiled with -lm, so the symbols should be available
+    exe.addCSourceFile(.{
+        .file = b.path("vendor/mujs/one.c"),
+        .flags = &.{ "-std=c99", "-DHAVE_STRLCPY=0" },
+    });
+    exe.linkLibC();
 
     b.installArtifact(exe);
 
@@ -127,8 +140,12 @@ pub fn build(b: *std.Build) void {
             }),
         });
 
+        // Compile mujs from source for cross-compilation
         cross_exe.addIncludePath(b.path("vendor/mujs"));
-        cross_exe.addObjectFile(b.path("vendor/mujs/libmujs.a"));
+        cross_exe.addCSourceFile(.{
+            .file = b.path("vendor/mujs/one.c"),
+            .flags = &.{ "-std=c99", "-DHAVE_STRLCPY=0" },
+        });
         cross_exe.linkLibC();
 
         const install_artifact = b.addInstallArtifact(cross_exe, .{
@@ -153,14 +170,18 @@ pub fn build(b: *std.Build) void {
     const tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
-            .target = target,
+            .target = exe_target,
             .optimize = optimize,
         }),
     });
 
-    // Link with mujs for tests
+    // Compile mujs from source for tests
     tests.addIncludePath(b.path("vendor/mujs"));
-    tests.addObjectFile(b.path("vendor/mujs/libmujs.a"));
+    tests.addCSourceFile(.{
+        .file = b.path("vendor/mujs/one.c"),
+        .flags = &.{ "-std=c99", "-DHAVE_STRLCPY=0" },
+    });
+    tests.linkLibC();
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
