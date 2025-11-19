@@ -50,7 +50,7 @@ zig build
 
 ```bash
 # Ejecutar el binario compilado
-./zig-out/bin/zig-pug
+./zig-out/bin/zpug
 ```
 
 ### CLI - Línea de Comandos
@@ -59,13 +59,13 @@ zig-pug incluye una interfaz de línea de comandos para compilar templates:
 
 ```bash
 # Compilar archivo a stdout
-zig-pug template.zpug
+zpug template.zpug
 
 # Compilar con archivo de salida
-zig-pug -i template.zpug -o output.html
+zpug -i template.zpug -o output.html
 
 # Con variables
-zig-pug template.zpug --var name=Alice --var age=25
+zpug template.zpug --var name=Alice --var age=25
 ```
 
 **Nota**: Existen dos versiones del CLI:

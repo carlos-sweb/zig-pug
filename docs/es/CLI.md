@@ -1,4 +1,4 @@
-# zig-pug CLI - Command Line Interface
+# zpug CLI - Command Line Interface
 
 Command-line interface for compiling Pug templates to HTML.
 
@@ -12,13 +12,13 @@ cd zig-pug
 zig build
 ```
 
-The compiled binary will be in `zig-out/bin/zig-pug`.
+The compiled binary will be in `zig-out/bin/zpug`.
 
 ### Install Globally
 
 ```bash
 # Linux/macOS
-sudo cp zig-out/bin/zig-pug /usr/local/bin/
+sudo cp zig-out/bin/zpug /usr/local/bin/
 
 # Or use Make
 make install
@@ -29,24 +29,24 @@ make install
 ### Compile to Stdout
 
 ```bash
-zig-pug template.pug
+zpug template.pug
 ```
 
 ### Compile with Output File
 
 ```bash
-zig-pug -i template.pug -o output.html
+zpug -i template.pug -o output.html
 ```
 
 ### Compile Multiple Files
 
 ```bash
-zig-pug -i template1.pug -i template2.pug -o dist/
+zpug -i template1.pug -i template2.pug -o dist/
 ```
 
 ## CLI Versions
 
-zig-pug has two CLI versions:
+zpug has two CLI versions:
 
 ### 1. Simple CLI (Current Default - `src/main.zig`)
 
@@ -64,7 +64,7 @@ zig-pug has two CLI versions:
 **Usage**:
 ```bash
 # Compile and output to stdout
-zig-pug
+zpug
 
 # Uses hard-coded template in main.zig
 ```
@@ -138,23 +138,23 @@ zig build -Droot_source_file=src/cli.zig
 
 ```bash
 # Compile single file to stdout
-zig-pug template.pug
+zpug template.pug
 
 # Compile with output file
-zig-pug -i template.pug -o output.html
+zpug -i template.pug -o output.html
 
 # Compile multiple files to directory
-zig-pug -i *.pug -o dist/
+zpug -i *.pug -o dist/
 ```
 
 #### Using Variables
 
 ```bash
 # Set variables via command line
-zig-pug template.pug --var name=Alice --var age=25
+zpug template.pug --var name=Alice --var age=25
 
 # Load variables from JSON file
-zig-pug template.pug --vars data.json -o output.html
+zpug template.pug --vars data.json -o output.html
 ```
 
 **data.json**:
@@ -170,7 +170,7 @@ zig-pug template.pug --vars data.json -o output.html
 
 ```bash
 # Pretty-print with indentation
-zig-pug -p template.pug -o pretty.html
+zpug -p template.pug -o pretty.html
 ```
 
 **Output**:
@@ -185,7 +185,7 @@ zig-pug -p template.pug -o pretty.html
 
 ```bash
 # Minify (remove whitespace)
-zig-pug -m template.pug -o minified.html
+zpug -m template.pug -o minified.html
 ```
 
 **Output**:
@@ -197,17 +197,17 @@ zig-pug -m template.pug -o minified.html
 
 ```bash
 # Read from stdin, write to stdout
-cat template.pug | zig-pug --stdin --stdout > output.html
+cat template.pug | zpug --stdin --stdout > output.html
 
 # Use in pipe chain
-echo "p Hello World" | zig-pug --stdin --stdout
+echo "p Hello World" | zpug --stdin --stdout
 ```
 
 #### Verbose Output
 
 ```bash
 # Show compilation details
-zig-pug -V template.pug -o output.html
+zpug -V template.pug -o output.html
 ```
 
 **Output**:
@@ -223,7 +223,7 @@ Output size: 512 bytes
 
 ```bash
 # Watch for changes and recompile
-zig-pug -w -i template.pug -o output.html
+zpug -w -i template.pug -o output.html
 ```
 
 ## Template Examples
@@ -243,7 +243,7 @@ html
 
 **Compile**:
 ```bash
-zig-pug template.pug \
+zpug template.pug \
   --var pageTitle="My Page" \
   --var heading="Welcome" \
   --var message="Hello World" \
@@ -276,7 +276,7 @@ div.user-card
 
 **Compile**:
 ```bash
-zig-pug template.pug --vars variables.json -o user.html
+zpug template.pug --vars variables.json -o user.html
 ```
 
 ## Exit Codes
@@ -304,9 +304,9 @@ You didn't provide any input files.
 
 **Solution**:
 ```bash
-zig-pug -i template.pug
+zpug -i template.pug
 # or
-zig-pug template.pug
+zpug template.pug
 ```
 
 ### "Error: Cannot open file 'template.pug'"
@@ -360,7 +360,7 @@ all: $(OUTPUTS)
 
 dist/%.html: templates/%.pug
 	@mkdir -p dist
-	zig-pug -i $< -o $@
+	zpug -i $< -o $@
 
 clean:
 	rm -rf dist/
@@ -372,8 +372,8 @@ clean:
 ```json
 {
   "scripts": {
-    "build:templates": "zig-pug -i templates/*.pug -o dist/",
-    "watch:templates": "zig-pug -w -i templates/*.pug -o dist/"
+    "build:templates": "zpug -i templates/*.pug -o dist/",
+    "watch:templates": "zpug -w -i templates/*.pug -o dist/"
   }
 }
 ```
@@ -385,7 +385,7 @@ const { exec } = require('child_process');
 const gulp = require('gulp');
 
 gulp.task('templates', () => {
-  return exec('zig-pug -i templates/*.pug -o dist/');
+  return exec('zpug -i templates/*.pug -o dist/');
 });
 
 gulp.task('watch', () => {
@@ -395,7 +395,7 @@ gulp.task('watch', () => {
 
 ## Comparison with Other Tools
 
-| Feature | zig-pug | pug-cli | jade |
+| Feature | zpug | pug-cli | jade |
 |---------|---------|---------|------|
 | Speed | ⚡ Very Fast | Moderate | Moderate |
 | File Size | ~3MB | ~50MB | ~30MB |
@@ -410,29 +410,29 @@ gulp.task('watch', () => {
 
 ```bash
 # Boolean values
-zig-pug template.pug --var isDev=true --var isProd=false
+zpug template.pug --var isDev=true --var isProd=false
 
 # Numbers
-zig-pug template.pug --var version=2.5 --var count=42
+zpug template.pug --var version=2.5 --var count=42
 
 # Strings with spaces (quote the whole argument)
-zig-pug template.pug --var "message=Hello World"
+zpug template.pug --var "message=Hello World"
 ```
 
 ### Combining Options
 
 ```bash
 # Pretty-print with variables
-zig-pug -p template.pug \
+zpug -p template.pug \
   --var title="My Page" \
   --var year=2024 \
   -o output.html
 
 # Minify with JSON variables
-zig-pug -m template.pug --vars data.json -o min.html
+zpug -m template.pug --vars data.json -o min.html
 
 # Verbose pretty-print
-zig-pug -V -p template.pug -o output.html
+zpug -V -p template.pug -o output.html
 ```
 
 ## Future Features
@@ -450,7 +450,7 @@ Planned for future releases:
 ## See Also
 
 - [Getting Started Guide](./GETTING-STARTED.md) - Step-by-step tutorial
-- [Node.js Integration](./NODEJS-INTEGRATION.md) - Use zig-pug in Node.js
+- [Node.js Integration](./NODEJS-INTEGRATION.md) - Use zpug in Node.js
 - [Main README](../README.md) - Complete Pug syntax reference
 - [Examples](../examples/) - Template examples
 
