@@ -3,18 +3,19 @@
     {
       "target_name": "zigpug",
       "sources": [
-        "binding.c"
+        "binding.c",
+        "vendor/mujs/one.c"
       ],
       "include_dirs": [
         "include",
         "vendor/mujs"
       ],
       "libraries": [
-        "<(module_root_dir)/vendor/mujs/libmujs.a",
         "-lm"
       ],
       "cflags": [
-        "-std=c99"
+        "-std=c99",
+        "-DHAVE_STRLCPY=0"
       ],
       "defines": [
         "NAPI_VERSION=8"
