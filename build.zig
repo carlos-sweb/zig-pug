@@ -106,6 +106,12 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     // ========================================================================
+    // Global Installation
+    // Usage: sudo zig build -p /usr/local install
+    // Or on Windows: zig build -p "C:\Program Files\zig-pug" install
+    // ========================================================================
+
+    // ========================================================================
     // Cross-compilation targets
     // ========================================================================
     const cross_targets = [_]std.Target.Query{
