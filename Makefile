@@ -1,8 +1,8 @@
-.PHONY: help build run test clean cross install binaries docs
+.PHONY: help build run test clean cross install uninstall binaries docs
 
 # Default target
 help:
-	@echo "zig-pug - Makefile"
+	@echo "zpug - Makefile"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  make build          - Build the CLI for current platform"
@@ -11,7 +11,8 @@ help:
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make cross          - Build for all platforms"
 	@echo "  make binaries       - Build and package release binaries"
-	@echo "  make install        - Install zig-pug to /usr/local/bin"
+	@echo "  make install        - Install zpug to /usr/local/bin"
+	@echo "  make uninstall      - Remove zpug from /usr/local/bin"
 	@echo "  make docs           - Generate documentation"
 	@echo ""
 	@echo "Cross-compilation targets:"
@@ -76,10 +77,16 @@ binaries:
 
 # Install to system
 install: build
-	@echo "Installing zig-pug to /usr/local/bin..."
-	@sudo cp zig-out/bin/zig-pug /usr/local/bin/
-	@echo "✓ Installed successfully"
-	@echo "Run 'zig-pug --help' to get started"
+	@echo "Installing zpug to /usr/local/bin..."
+	@cp zig-out/bin/zpug /usr/local/bin/
+	@echo "Installed successfully"
+	@echo "Run 'zpug --help' to get started"
+
+# Uninstall from system
+uninstall:
+	@echo "Removing zpug from /usr/local/bin..."
+	@rm -f /usr/local/bin/zpug
+	@echo "Uninstalled successfully"
 
 # Generate documentation
 docs:
