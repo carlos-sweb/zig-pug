@@ -269,6 +269,31 @@ p Random: #{Math.floor(Math.random() * 100)}
 p Data: #{JSON.stringify(obj)}
 ```
 
+### Escapado HTML (Seguridad XSS)
+
+Por defecto, todas las interpolaciones `#{}` escapan caracteres HTML para prevenir ataques XSS:
+
+```zpug
+// Escapado automático (seguro)
+p #{userInput}
+// Input: <script>alert('xss')</script>
+// Output: <p>&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;</p>
+
+// Sin escapar (para HTML confiable)
+p !{trustedHtml}
+// Input: <strong>Bold</strong>
+// Output: <p><strong>Bold</strong></p>
+```
+
+**Caracteres escapados:**
+- `&` → `&amp;`
+- `<` → `&lt;`
+- `>` → `&gt;`
+- `"` → `&quot;`
+- `'` → `&#39;`
+
+**Importante:** Solo usa `!{}` con contenido HTML que controlas. Nunca uses `!{}` con input de usuarios.
+
 ### Condicionales
 
 ```zpug
@@ -505,8 +530,8 @@ zig-pug usa [**mujs**](https://mujs.com/) como motor JavaScript:
 - [x] Includes
 - [x] Cache de templates
 - [x] Template inheritance (extends/block)
+- [x] Escapado HTML (XSS prevention)
 - [ ] Pretty printing (indentación HTML)
-- [ ] Escapado HTML
 - [ ] CLI completo
 
 ### 📋 Roadmap

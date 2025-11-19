@@ -279,8 +279,51 @@ pub const Compiler = struct {
         };
         defer self.allocator.free(result);
 
-        // TODO: Implement HTML escaping if not is_unescaped
-        try self.output.appendSlice(self.allocator, result);
+        // Apply HTML escaping unless explicitly unescaped
+        if (interp.is_unescaped) {
+            try self.output.appendSlice(self.allocator, result);
+        } else {
+            const escaped = try self.escapeHtml(result);
+            defer self.allocator.free(escaped);
+            try self.output.appendSlice(self.allocator, escaped);
+        }
+    }
+
+    /// Escape HTML special characters to prevent XSS attacks
+    fn escapeHtml(self: *Self, input: []const u8) ![]const u8 {
+        // Count how much space we need (worst case: all chars need escaping)
+        var needs_escaping = false;
+        for (input) |c| {
+            switch (c) {
+                '&', '<', '>', '"', '\'' => {
+                    needs_escaping = true;
+                    break;
+                },
+                else => {},
+            }
+        }
+
+        // If no escaping needed, return a copy of the input
+        if (!needs_escaping) {
+            return try self.allocator.dupe(u8, input);
+        }
+
+        // Escape characters
+        var result = std.ArrayList(u8).init(self.allocator);
+        errdefer result.deinit();
+
+        for (input) |c| {
+            switch (c) {
+                '&' => try result.appendSlice("&amp;"),
+                '<' => try result.appendSlice("&lt;"),
+                '>' => try result.appendSlice("&gt;"),
+                '"' => try result.appendSlice("&quot;"),
+                '\'' => try result.appendSlice("&#39;"),
+                else => try result.append(c),
+            }
+        }
+
+        return try result.toOwnedSlice();
     }
 
     // ========================================================================
@@ -715,4 +758,81 @@ test "compiler - mixin call" {
     defer std.testing.allocator.free(html);
 
     try std.testing.expectEqualStrings("<p>Hello !</p>", html);
+}
+
+test "compiler - html escaping" {
+    const source = "p #{content}";
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    // Set XSS-like content
+    const content_val = try runtime.jsValueFromString(std.testing.allocator, "<script>alert('xss')</script>");
+    try js_runtime.setContext("content", content_val);
+    var content_copy = content_val;
+    content_copy.deinit(std.testing.allocator);
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    // Should escape HTML characters
+    try std.testing.expectEqualStrings("<p>&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;</p>", html);
+}
+
+test "compiler - html escaping special chars" {
+    const source = "p #{text}";
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    // Set content with all special chars
+    const text_val = try runtime.jsValueFromString(std.testing.allocator, "A & B < C > D \"E\" 'F'");
+    try js_runtime.setContext("text", text_val);
+    var text_copy = text_val;
+    text_copy.deinit(std.testing.allocator);
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    try std.testing.expectEqualStrings("<p>A &amp; B &lt; C &gt; D &quot;E&quot; &#39;F&#39;</p>", html);
+}
+
+test "compiler - unescaped interpolation" {
+    const source = "p !{html}";
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    // Set trusted HTML content
+    const html_val = try runtime.jsValueFromString(std.testing.allocator, "<strong>Bold</strong>");
+    try js_runtime.setContext("html", html_val);
+    var html_copy = html_val;
+    html_copy.deinit(std.testing.allocator);
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const result = try compiler.compile(tree);
+    defer std.testing.allocator.free(result);
+
+    // Should NOT escape - unescaped interpolation
+    try std.testing.expectEqualStrings("<p><strong>Bold</strong></p>", result);
 }
