@@ -78,7 +78,7 @@ pub fn build(b: *std.Build) void {
         target;
 
     const exe = b.addExecutable(.{
-        .name = "zig-pug",
+        .name = "zpug",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = exe_target,
@@ -138,7 +138,7 @@ pub fn build(b: *std.Build) void {
     for (cross_targets, cross_target_names, 0..) |cross_target, name, i| {
         _ = i;
         const cross_exe = b.addExecutable(.{
-            .name = "zig-pug",
+            .name = "zpug",
             .root_module = b.createModule(.{
                 .root_source_file = b.path("src/cli.zig"),
                 .target = b.resolveTargetQuery(cross_target),

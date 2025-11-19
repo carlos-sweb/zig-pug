@@ -87,21 +87,21 @@ create_archive() {
 }
 
 # Create archives for each platform
-create_archive "linux-x86_64" "zig-pug"
-create_archive "linux-aarch64" "zig-pug"
-create_archive "windows-x86_64" "zig-pug.exe"
-create_archive "macos-x86_64" "zig-pug"
-create_archive "macos-aarch64" "zig-pug"
+create_archive "linux-x86_64" "zpug"
+create_archive "linux-aarch64" "zpug"
+create_archive "windows-x86_64" "zpug.exe"
+create_archive "macos-x86_64" "zpug"
+create_archive "macos-aarch64" "zpug"
 
 echo ""
 echo "✅ Build complete!"
 echo ""
 echo "Binaries available in:"
-echo "  - zig-out/bin/linux-x86_64/zig-pug"
-echo "  - zig-out/bin/linux-aarch64/zig-pug"
-echo "  - zig-out/bin/windows-x86_64/zig-pug.exe"
-echo "  - zig-out/bin/macos-x86_64/zig-pug"
-echo "  - zig-out/bin/macos-aarch64/zig-pug"
+echo "  - zig-out/bin/linux-x86_64/zpug"
+echo "  - zig-out/bin/linux-aarch64/zpug"
+echo "  - zig-out/bin/windows-x86_64/zpug.exe"
+echo "  - zig-out/bin/macos-x86_64/zpug"
+echo "  - zig-out/bin/macos-aarch64/zpug"
 echo ""
 echo "Release archives available in:"
 echo "  - zig-out/release/zig-pug-v0.2.0-*.tar.gz"
@@ -109,7 +109,7 @@ echo ""
 
 # Show sizes
 echo "Binary sizes:"
-du -h zig-out/bin/*/zig-pug* 2>/dev/null | sed 's/^/  /'
+du -h zig-out/bin/*/zpug* 2>/dev/null | sed 's/^/  /'
 echo ""
 
 echo "Release archive sizes:"
