@@ -297,6 +297,80 @@ pub const JsRuntime = struct {
         };
     }
 
+    /// Set an object variable from JSON object
+    pub fn setObjectFromJson(self: *Self, key: []const u8, obj: std.json.ObjectMap) !void {
+        // Build JavaScript object literal
+        var js_code = std.ArrayList(u8){};
+        defer js_code.deinit(self.allocator);
+
+        try js_code.appendSlice(self.allocator, "var ");
+        try js_code.appendSlice(self.allocator, key);
+        try js_code.appendSlice(self.allocator, " = {");
+
+        var it = obj.iterator();
+        var first = true;
+        while (it.next()) |entry| {
+            if (!first) {
+                try js_code.appendSlice(self.allocator, ", ");
+            }
+            first = false;
+
+            // Property name
+            try js_code.appendSlice(self.allocator, entry.key_ptr.*);
+            try js_code.appendSlice(self.allocator, ": ");
+
+            // Property value
+            const value = entry.value_ptr.*;
+            switch (value) {
+                .string => |str| {
+                    try js_code.append(self.allocator, '"');
+                    for (str) |c| {
+                        switch (c) {
+                            '"' => try js_code.appendSlice(self.allocator, "\\\""),
+                            '\\' => try js_code.appendSlice(self.allocator, "\\\\"),
+                            '\n' => try js_code.appendSlice(self.allocator, "\\n"),
+                            '\r' => try js_code.appendSlice(self.allocator, "\\r"),
+                            '\t' => try js_code.appendSlice(self.allocator, "\\t"),
+                            else => try js_code.append(self.allocator, c),
+                        }
+                    }
+                    try js_code.append(self.allocator, '"');
+                },
+                .integer => |num| {
+                    var buf: [32]u8 = undefined;
+                    const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
+                    try js_code.appendSlice(self.allocator, formatted);
+                },
+                .float => |num| {
+                    var buf: [64]u8 = undefined;
+                    const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
+                    try js_code.appendSlice(self.allocator, formatted);
+                },
+                .bool => |b| {
+                    try js_code.appendSlice(self.allocator, if (b) "true" else "false");
+                },
+                .null => {
+                    try js_code.appendSlice(self.allocator, "null");
+                },
+                else => {
+                    // Nested objects/arrays not supported yet, use null
+                    try js_code.appendSlice(self.allocator, "null");
+                },
+            }
+        }
+
+        try js_code.appendSlice(self.allocator, "}");
+
+        // Evaluate the code to create the object
+        const code = try js_code.toOwnedSlice(self.allocator);
+        defer self.allocator.free(code);
+
+        _ = self.eval(code) catch |err| {
+            std.debug.print("Error setting object '{s}': {}\n", .{ key, err });
+            return err;
+        };
+    }
+
     /// Run garbage collection
     pub fn gc(self: *Self) void {
         js_gc(self.state, 0);

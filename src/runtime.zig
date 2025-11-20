@@ -115,6 +115,11 @@ pub const JsRuntime = struct {
         try self.mujs_runtime.setArrayFromJson(key, values);
     }
 
+    /// Set an object variable from JSON object
+    pub fn setObjectFromJson(self: *Self, key: []const u8, obj: std.json.ObjectMap) !void {
+        try self.mujs_runtime.setObjectFromJson(key, obj);
+    }
+
     /// Run garbage collection
     pub fn gc(self: *Self) void {
         self.mujs_runtime.gc();

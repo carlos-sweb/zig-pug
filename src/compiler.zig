@@ -240,7 +240,10 @@ pub const Compiler = struct {
                 // Evaluate expression if needed
                 if (attr.is_expression) {
                     const result = self.runtime.eval(value) catch |err| {
-                        std.debug.print("Error evaluating attribute '{s}={s}': {}\n", .{ attr.name, value, err });
+                        std.debug.print("Error: Failed to evaluate attribute expression\n", .{});
+                        std.debug.print("  Attribute: {s}={s}\n", .{ attr.name, value });
+                        std.debug.print("  Error: {}\n", .{err});
+                        std.debug.print("  Hint: Make sure the variable '{s}' is defined\n", .{value});
                         // Fall back to literal value on error
                         try self.output.appendSlice(self.allocator, value);
                         try self.output.appendSlice(self.allocator, "\"");
@@ -293,7 +296,10 @@ pub const Compiler = struct {
 
         // Evaluate the JavaScript expression using runtime
         const result = self.runtime.eval(interp.expression) catch |err| {
-            std.debug.print("Runtime error evaluating '{s}': {}\n", .{ interp.expression, err });
+            std.debug.print("Error: Failed to evaluate interpolation at line {d}\n", .{node.line});
+            std.debug.print("  Expression: #{{{s}}}\n", .{interp.expression});
+            std.debug.print("  Error: {}\n", .{err});
+            std.debug.print("  Hint: Check that all variables used in the expression are defined\n", .{});
             // On error, output the expression as-is for debugging
             try self.output.appendSlice(self.allocator, "#{");
             try self.output.appendSlice(self.allocator, interp.expression);
@@ -317,7 +323,9 @@ pub const Compiler = struct {
 
         // Evaluate the code
         const result = self.runtime.eval(code.code) catch |err| {
-            std.debug.print("Runtime error evaluating code '{s}': {}\n", .{ code.code, err });
+            std.debug.print("Error: Failed to execute code at line {d}\n", .{node.line});
+            std.debug.print("  Code: {s}\n", .{code.code});
+            std.debug.print("  Error: {}\n", .{err});
             return;
         };
         defer self.allocator.free(result);
@@ -435,7 +443,9 @@ pub const Compiler = struct {
 
         // Evaluate condition using runtime
         const result = self.runtime.eval(cond.condition) catch |err| {
-            std.debug.print("Runtime error evaluating condition '{s}': {}\n", .{ cond.condition, err });
+            std.debug.print("Error: Failed to evaluate conditional at line {d}\n", .{node.line});
+            std.debug.print("  Condition: {s}\n", .{cond.condition});
+            std.debug.print("  Error: {}\n", .{err});
             return;
         };
         defer self.allocator.free(result);
@@ -471,7 +481,10 @@ pub const Compiler = struct {
 
         // Get the iterable value from runtime
         const iterable_result = self.runtime.eval(loop.iterable) catch |err| {
-            std.debug.print("Runtime error evaluating iterable '{s}': {}\n", .{ loop.iterable, err });
+            std.debug.print("Error: Failed to evaluate loop iterable at line {d}\n", .{node.line});
+            std.debug.print("  Iterable: {s}\n", .{loop.iterable});
+            std.debug.print("  Error: {}\n", .{err});
+            std.debug.print("  Hint: Make sure the array variable is defined\n", .{});
             return;
         };
         defer self.allocator.free(iterable_result);
