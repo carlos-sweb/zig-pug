@@ -133,16 +133,15 @@ pub const Parser = struct {
         var attributes = std.ArrayListUnmanaged(ast.Attribute){};
         var children = std.ArrayListUnmanaged(*ast.AstNode){};
 
+        // Collect classes to concatenate them into a single attribute
+        var classes = std.ArrayListUnmanaged([]const u8){};
+
         // Parse classes and ids (.class, #id)
         while (self.match(&.{ .Class, .Id })) {
             if (self.current.type == .Class) {
                 const class_token = self.current;
                 try self.advance();
-                try attributes.append(arena_allocator, .{
-                    .name = "class",
-                    .value = class_token.value,
-                    .is_unescaped = false,
-                });
+                try classes.append(arena_allocator, class_token.value);
             } else if (self.current.type == .Id) {
                 const id_token = self.current;
                 try self.advance();
@@ -152,6 +151,16 @@ pub const Parser = struct {
                     .is_unescaped = false,
                 });
             }
+        }
+
+        // Add combined class attribute if any classes were found
+        if (classes.items.len > 0) {
+            const combined_classes = try std.mem.join(arena_allocator, " ", classes.items);
+            try attributes.append(arena_allocator, .{
+                .name = "class",
+                .value = combined_classes,
+                .is_unescaped = false,
+            });
         }
 
         // Parse attributes (...)
@@ -611,14 +620,53 @@ pub const Parser = struct {
         const start_line = self.current.line;
         try self.advance(); // consume 'each' or 'while'
 
-        // Parse loop expression (for now, just collect the whole expression)
-        var expression: std.ArrayList(u8) = .{};
-        while (!self.match(&.{ .Newline, .Eof })) {
-            if (expression.items.len > 0) {
-                try expression.append(arena_allocator, ' ');
+        // Parse loop expression: "item in items" or "item, index in items"
+        var iterator: []const u8 = "";
+        var index_var: ?[]const u8 = null;
+        var iterable: []const u8 = "";
+
+        if (!is_while) {
+            // Parse iterator variable name
+            if (self.match(&.{.Ident})) {
+                iterator = self.current.value;
+                try self.advance();
             }
-            try expression.appendSlice(arena_allocator, self.current.value);
-            try self.advance();
+
+            // Check for optional index variable: ", index"
+            if (self.current.type == .Ident and std.mem.eql(u8, self.current.value, ",")) {
+                try self.advance(); // consume ','
+                if (self.match(&.{.Ident})) {
+                    index_var = self.current.value;
+                    try self.advance();
+                }
+            }
+
+            // Expect "in" keyword
+            if (self.match(&.{.Ident}) and std.mem.eql(u8, self.current.value, "in")) {
+                try self.advance(); // consume 'in'
+            }
+
+            // Parse iterable expression (rest of the line)
+            var iterable_expr: std.ArrayList(u8) = .{};
+            while (!self.match(&.{ .Newline, .Eof })) {
+                if (iterable_expr.items.len > 0) {
+                    try iterable_expr.append(arena_allocator, ' ');
+                }
+                try iterable_expr.appendSlice(arena_allocator, self.current.value);
+                try self.advance();
+            }
+            iterable = try iterable_expr.toOwnedSlice(arena_allocator);
+        } else {
+            // While loop - just collect the condition
+            var expression: std.ArrayList(u8) = .{};
+            while (!self.match(&.{ .Newline, .Eof })) {
+                if (expression.items.len > 0) {
+                    try expression.append(arena_allocator, ' ');
+                }
+                try expression.appendSlice(arena_allocator, self.current.value);
+                try self.advance();
+            }
+            iterable = try expression.toOwnedSlice(arena_allocator);
         }
 
         // Parse loop body
@@ -638,9 +686,9 @@ pub const Parser = struct {
             start_line,
             1,
             .{ .Loop = .{
-                .iterator = "", // TODO: parse variable names properly
-                .index = null,
-                .iterable = try expression.toOwnedSlice(arena_allocator),
+                .iterator = iterator,
+                .index = index_var,
+                .iterable = iterable,
                 .body = body,
                 .else_branch = null,
                 .is_while = is_while,
@@ -871,7 +919,14 @@ pub const Parser = struct {
                     if (arg.items.len > 0) {
                         try arg.append(arena_allocator, ' ');
                     }
-                    try arg.appendSlice(arena_allocator, self.current.value);
+                    // For String tokens, wrap value in quotes to preserve as JS string literal
+                    if (self.current.type == .String) {
+                        try arg.append(arena_allocator, '"');
+                        try arg.appendSlice(arena_allocator, self.current.value);
+                        try arg.append(arena_allocator, '"');
+                    } else {
+                        try arg.appendSlice(arena_allocator, self.current.value);
+                    }
                     try self.advance();
                 }
 

@@ -334,10 +334,49 @@ pub const Compiler = struct {
         const comment = &node.data.Comment;
         if (comment.is_buffered) {
             try self.output.appendSlice(self.allocator, "<!--");
-            try self.output.appendSlice(self.allocator, comment.content);
+            // Escape comment content to prevent injection attacks
+            // Replace "--" with "- -" to prevent premature comment closing
+            const escaped = try self.escapeComment(comment.content);
+            defer self.allocator.free(escaped);
+            try self.output.appendSlice(self.allocator, escaped);
             try self.output.appendSlice(self.allocator, "-->");
         }
         // Unbuffered comments are not rendered
+    }
+
+    /// Escape HTML comment content to prevent XSS/injection attacks
+    /// Replaces "--" with "- -" to prevent premature comment closing
+    fn escapeComment(self: *Self, input: []const u8) ![]const u8 {
+        // Check if escaping is needed
+        var needs_escaping = false;
+        var i: usize = 0;
+        while (i < input.len) : (i += 1) {
+            if (i + 1 < input.len and input[i] == '-' and input[i + 1] == '-') {
+                needs_escaping = true;
+                break;
+            }
+        }
+
+        if (!needs_escaping) {
+            return try self.allocator.dupe(u8, input);
+        }
+
+        // Escape "--" sequences
+        var result = std.ArrayList(u8){};
+        errdefer result.deinit(self.allocator);
+
+        i = 0;
+        while (i < input.len) {
+            if (i + 1 < input.len and input[i] == '-' and input[i + 1] == '-') {
+                try result.appendSlice(self.allocator, "- -");
+                i += 2;
+            } else {
+                try result.append(self.allocator, input[i]);
+                i += 1;
+            }
+        }
+
+        return try result.toOwnedSlice(self.allocator);
     }
 
     // ========================================================================
@@ -587,8 +626,63 @@ pub const Compiler = struct {
 
         const mixin_def = &mixin_node.data.MixinDef;
 
-        // TODO: Set mixin parameters in runtime context
-        // For now, just compile the body
+        // Bind parameters to arguments in runtime context
+        for (mixin_def.params.items, 0..) |param, i| {
+            if (i < call.args.items.len) {
+                // Evaluate the argument and set as variable
+                const arg_value = call.args.items[i];
+                const set_var_expr = try std.fmt.allocPrint(
+                    self.allocator,
+                    "var {s} = {s}",
+                    .{ param, arg_value },
+                );
+                defer self.allocator.free(set_var_expr);
+
+                _ = self.runtime.eval(set_var_expr) catch |err| {
+                    std.debug.print("Error setting mixin parameter '{s}': {}\n", .{ param, err });
+                };
+            } else {
+                // Set undefined for missing arguments
+                const set_undefined_expr = try std.fmt.allocPrint(
+                    self.allocator,
+                    "var {s} = undefined",
+                    .{param},
+                );
+                defer self.allocator.free(set_undefined_expr);
+
+                _ = self.runtime.eval(set_undefined_expr) catch {};
+            }
+        }
+
+        // Handle rest parameter if present
+        if (mixin_def.rest_param) |rest_param| {
+            // Create array from remaining arguments
+            var rest_args = std.ArrayList(u8){};
+            defer rest_args.deinit(self.allocator);
+
+            try rest_args.appendSlice(self.allocator, "var ");
+            try rest_args.appendSlice(self.allocator, rest_param);
+            try rest_args.appendSlice(self.allocator, " = [");
+
+            const start_idx = mixin_def.params.items.len;
+            for (call.args.items[start_idx..], 0..) |arg, j| {
+                if (j > 0) {
+                    try rest_args.appendSlice(self.allocator, ", ");
+                }
+                try rest_args.appendSlice(self.allocator, arg);
+            }
+
+            try rest_args.appendSlice(self.allocator, "]");
+
+            const rest_expr = try rest_args.toOwnedSlice(self.allocator);
+            defer self.allocator.free(rest_expr);
+
+            _ = self.runtime.eval(rest_expr) catch |err| {
+                std.debug.print("Error setting rest parameter '{s}': {}\n", .{ rest_param, err });
+            };
+        }
+
+        // Compile the mixin body
         for (mixin_def.body.items) |child| {
             try self.compileNode(child);
         }
