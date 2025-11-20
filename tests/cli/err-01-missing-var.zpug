@@ -1,0 +1,7 @@
+// Error Test 01: Missing variable
+// Expected: Error or undefined when variable is not provided
+// Run WITHOUT passing variables to test error handling
+
+p Hello #{name}
+p Your email is #{email}
+p Age: #{age}

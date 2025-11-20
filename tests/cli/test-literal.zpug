@@ -1,0 +1,2 @@
+// Test simple literal expression
+p Result is #{1 + 1}

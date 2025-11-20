@@ -1,0 +1,7 @@
+// Test 04: Variable interpolation
+// Expected: Variables replaced with values
+// Run with: zpug 04-interpolation.zpug --var name=Alice --var age=25
+
+p Hello #{name}
+p You are #{age} years old
+p Welcome, #{name}!

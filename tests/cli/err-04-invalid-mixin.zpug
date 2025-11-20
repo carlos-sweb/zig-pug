@@ -1,0 +1,8 @@
+// Error Test 04: Calling undefined mixin
+// Expected: Error when calling mixin that doesn't exist
+
+h1 Test
+
++undefinedMixin("arg1", "arg2")
+
+p After mixin call

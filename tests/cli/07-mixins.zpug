@@ -1,0 +1,18 @@
+// Test 07: Mixins
+// Expected: Reusable template components
+
+mixin button(text)
+  button.btn= text
+
+mixin card(title, content)
+  div.card
+    h3.card-title= title
+    p.card-content= content
+
+h1 Mixin Examples
+
++button("Click Me")
++button("Submit")
+
++card("Welcome", "This is a card component")
++card("About", "Information goes here")

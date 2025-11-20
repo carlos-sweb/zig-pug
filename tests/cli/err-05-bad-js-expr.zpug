@@ -1,0 +1,6 @@
+// Error Test 05: Invalid JavaScript expression
+// Expected: Runtime error from mujs
+
+p= invalidFunction()
+p= 1 + + + 2
+p= obj.prop.missing.deep

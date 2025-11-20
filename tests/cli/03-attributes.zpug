@@ -1,0 +1,8 @@
+// Test 03: Attributes
+// Expected: Tags with various attributes
+
+a(href="/home") Home Link
+img(src="image.png" alt="My Image")
+input(type="text" name="username" placeholder="Enter name")
+button(type="submit" disabled) Submit
+input(type="checkbox" checked)

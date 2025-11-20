@@ -1,0 +1,13 @@
+// Test 06: Loops
+// Expected: Iteration over arrays
+// Note: Requires array support in variables
+
+h2 Shopping List
+ul
+  each item in items
+    li= item
+
+h2 Numbered List
+ol
+  each fruit in fruits
+    li #{fruit}

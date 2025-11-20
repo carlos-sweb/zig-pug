@@ -1,0 +1,7 @@
+// Test 02: Classes and IDs
+// Expected: Tags with class and id attributes
+
+div.container Main container
+div#header Header with ID
+div.box.highlight Multiple classes
+p.text#intro.bold Class, ID, and another class

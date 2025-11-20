@@ -1,0 +1,8 @@
+// Error Test 02: Bad indentation
+// Expected: Parser error due to inconsistent indentation
+
+div.container
+  p First paragraph
+    span This is wrong - span should not be child of p in this way
+ p Bad indent - only 1 space
+   span Another bad indent

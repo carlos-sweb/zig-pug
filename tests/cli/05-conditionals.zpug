@@ -1,0 +1,16 @@
+// Test 05: Conditionals
+// Expected: Conditional rendering based on variables
+// Run with: zpug 05-conditionals.zpug --var isLoggedIn=true --var isAdmin=false
+
+div.status
+  if isLoggedIn
+    p Welcome back!
+    if isAdmin
+      p You have admin access
+    else
+      p Standard user
+  else
+    p Please log in
+
+unless isAdmin
+  p You are not an admin

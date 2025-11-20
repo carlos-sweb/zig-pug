@@ -1,0 +1,5 @@
+// Error Test 03: Unclosed parenthesis
+// Expected: Parser error for unclosed attribute
+
+a(href="/home" class="link" Broken link
+p(style="color: red" Some text

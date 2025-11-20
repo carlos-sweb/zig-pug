@@ -1,0 +1,6 @@
+// Error Test 06: Empty or malformed tags
+// Expected: Parser behavior with edge cases
+
+.only-class
+#only-id
+.(bad-class

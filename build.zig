@@ -2,7 +2,10 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+    // Force ReleaseFast because mujs requires optimization to work correctly
+    // Debug and ReleaseSafe builds crash due to mujs internal issues with pointer arithmetic
+    const user_optimize = b.standardOptimizeOption(.{});
+    const optimize: std.builtin.OptimizeMode = if (user_optimize == .Debug) .ReleaseFast else user_optimize;
 
     // ========================================================================
     // Module Export - For use as a Zig dependency
@@ -87,10 +90,11 @@ pub fn build(b: *std.Build) void {
     });
 
     // Compile mujs from source (enables cross-compilation)
+    // Note: mujs requires optimization (-O2) to work correctly
     exe.addIncludePath(b.path("vendor/mujs"));
     exe.addCSourceFile(.{
         .file = b.path("vendor/mujs/one.c"),
-        .flags = &.{ "-std=c99", "-DHAVE_STRLCPY=0" },
+        .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
     exe.linkLibC();
 
@@ -150,7 +154,7 @@ pub fn build(b: *std.Build) void {
         cross_exe.addIncludePath(b.path("vendor/mujs"));
         cross_exe.addCSourceFile(.{
             .file = b.path("vendor/mujs/one.c"),
-            .flags = &.{ "-std=c99", "-DHAVE_STRLCPY=0" },
+            .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
         });
         cross_exe.linkLibC();
 
@@ -185,7 +189,7 @@ pub fn build(b: *std.Build) void {
     tests.addIncludePath(b.path("vendor/mujs"));
     tests.addCSourceFile(.{
         .file = b.path("vendor/mujs/one.c"),
-        .flags = &.{ "-std=c99", "-DHAVE_STRLCPY=0" },
+        .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
     tests.linkLibC();
 

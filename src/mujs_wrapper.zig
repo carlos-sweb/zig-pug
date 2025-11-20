@@ -119,15 +119,21 @@ pub const JsRuntime = struct {
     /// Setup console object with log function
     fn setupConsole(self: *Self) !void {
         // Create a simple console.log stub (no-op for now)
-        _ = js_ploadstring(self.state, "[init]", "var console = {log: function(){}};");
+        if (js_ploadstring(self.state, "[init]", "var console = {log: function(){}};") != 0) {
+            js_pop(self.state, 1); // Pop error message
+            return error.InitFailed;
+        }
         js_pushundefined(self.state);
-        _ = js_pcall(self.state, 0);
-        js_pop(self.state, 1);
+        if (js_pcall(self.state, 0) != 0) {
+            js_pop(self.state, 1); // Pop error message
+            return error.InitFailed;
+        }
+        js_pop(self.state, 1); // Pop result
     }
 
     /// Evaluate a JavaScript expression and return the result as a string
     pub fn eval(self: *Self, expr: []const u8) ![]const u8 {
-        // Create null-terminated string
+        // Create null-terminated string for the expression
         const expr_z = try self.allocator.dupeZ(u8, expr);
         defer self.allocator.free(expr_z);
 

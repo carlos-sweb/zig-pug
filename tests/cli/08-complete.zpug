@@ -1,0 +1,116 @@
+// Test 08: Complete template with ALL features
+// This is the most complex test combining all zpug features
+// Run with: zpug 08-complete.zpug --var title="My App" --var user="Alice" --var isLoggedIn=true --var isAdmin=false --var year=2024
+
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title #{title} - Dashboard
+    link(rel="stylesheet" href="/css/style.css")
+
+  body
+    // Header section
+    header#main-header.site-header
+      nav.navbar
+        a.logo(href="/") #{title}
+        ul.nav-links
+          li
+            a(href="/home") Home
+          li
+            a(href="/about") About
+          li
+            a(href="/contact") Contact
+
+    // Main content
+    main.container
+      h1 Welcome to #{title}
+
+      // User status with conditionals
+      div.user-status
+        if isLoggedIn
+          p Hello, #{user}!
+          if isAdmin
+            div.admin-panel
+              h3 Admin Panel
+              button.btn.btn-danger(type="button") Manage Users
+              button.btn.btn-warning(type="button") View Logs
+          else
+            p You have standard user access
+        else
+          div.login-prompt
+            p Please log in to continue
+            a.btn.btn-primary(href="/login") Login
+
+      // Mixin definitions
+      mixin card(cardTitle, cardContent)
+        div.card
+          div.card-header
+            h3= cardTitle
+          div.card-body
+            p= cardContent
+
+      mixin alert(type, message)
+        div(class="alert alert-" + type)
+          span.alert-icon
+          span.alert-text= message
+
+      // Using mixins
+      section.cards
+        h2 Features
+        +card("Fast", "Blazing fast compilation with Zig")
+        +card("Simple", "Clean and intuitive syntax")
+        +card("Powerful", "Full JavaScript expression support")
+
+      // Alerts
+      +alert("success", "Template compiled successfully!")
+      +alert("info", "Running zpug version 0.2.0")
+
+      // Form example with various input types
+      section.contact-form
+        h2 Contact Us
+        form(action="/submit" method="POST")
+          div.form-group
+            label(for="name") Name
+            input#name(type="text" name="name" placeholder="Your name" required)
+
+          div.form-group
+            label(for="email") Email
+            input#email(type="email" name="email" placeholder="your@email.com" required)
+
+          div.form-group
+            label(for="message") Message
+            textarea#message(name="message" rows="5" placeholder="Your message")
+
+          div.form-group
+            input#newsletter(type="checkbox" name="newsletter" checked)
+            label(for="newsletter") Subscribe to newsletter
+
+          button.btn.btn-submit(type="submit") Send Message
+
+      // Case statement example
+      case userRole
+        when "admin"
+          p Full administrative access
+        when "editor"
+          p Can edit content
+        when "viewer"
+          p Read-only access
+        default
+          p Guest access
+
+      // Unless example
+      unless isAdmin
+        p.note Note: Some features are only available to administrators.
+
+    // Footer
+    footer.site-footer
+      div.footer-content
+        p Copyright #{year} #{title}. All rights reserved.
+        nav.footer-nav
+          a(href="/privacy") Privacy Policy
+          a(href="/terms") Terms of Service
+
+      // Comment that won't appear in output
+      //- This is a hidden comment for developers

@@ -1,0 +1,7 @@
+// Test 01: Basic tags
+// Expected: Simple HTML tags
+
+p Hello World
+div Content here
+span Inline text
+h1 Title
