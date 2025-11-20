@@ -77,7 +77,7 @@ pub const Compiler = struct {
             .Tag => try self.compileTag(node),
             .Text => try self.compileText(node),
             .Interpolation => try self.compileInterpolation(node),
-            .Code => {}, // TODO: Implement in future
+            .Code => try self.compileCode(node),
             .Comment => try self.compileComment(node),
             .Conditional => try self.compileConditional(node),
             .Loop => try self.compileLoop(node),
@@ -236,7 +236,30 @@ pub const Compiler = struct {
 
             if (attr.value) |value| {
                 try self.output.appendSlice(self.allocator, "=\"");
-                try self.output.appendSlice(self.allocator, value);
+
+                // Evaluate expression if needed
+                if (attr.is_expression) {
+                    const result = self.runtime.eval(value) catch |err| {
+                        std.debug.print("Error evaluating attribute '{s}={s}': {}\n", .{ attr.name, value, err });
+                        // Fall back to literal value on error
+                        try self.output.appendSlice(self.allocator, value);
+                        try self.output.appendSlice(self.allocator, "\"");
+                        continue;
+                    };
+                    defer self.allocator.free(result);
+
+                    // Escape the result if not unescaped
+                    if (attr.is_unescaped) {
+                        try self.output.appendSlice(self.allocator, result);
+                    } else {
+                        const escaped = try self.escapeHtml(result);
+                        defer self.allocator.free(escaped);
+                        try self.output.appendSlice(self.allocator, escaped);
+                    }
+                } else {
+                    try self.output.appendSlice(self.allocator, value);
+                }
+
                 try self.output.appendSlice(self.allocator, "\"");
             }
         }
@@ -287,6 +310,30 @@ pub const Compiler = struct {
             defer self.allocator.free(escaped);
             try self.output.appendSlice(self.allocator, escaped);
         }
+    }
+
+    fn compileCode(self: *Self, node: *ast.AstNode) !void {
+        const code = &node.data.Code;
+
+        // Evaluate the code
+        const result = self.runtime.eval(code.code) catch |err| {
+            std.debug.print("Runtime error evaluating code '{s}': {}\n", .{ code.code, err });
+            return;
+        };
+        defer self.allocator.free(result);
+
+        // If buffered, output the result
+        if (code.is_buffered) {
+            // Apply HTML escaping unless explicitly unescaped
+            if (code.is_unescaped) {
+                try self.output.appendSlice(self.allocator, result);
+            } else {
+                const escaped = try self.escapeHtml(result);
+                defer self.allocator.free(escaped);
+                try self.output.appendSlice(self.allocator, escaped);
+            }
+        }
+        // If unbuffered, we just executed it but don't output
     }
 
     /// Escape HTML special characters to prevent XSS attacks

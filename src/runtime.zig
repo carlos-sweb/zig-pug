@@ -110,6 +110,11 @@ pub const JsRuntime = struct {
         return try self.eval(path);
     }
 
+    /// Set an array variable from JSON values
+    pub fn setArrayFromJson(self: *Self, key: []const u8, values: []const std.json.Value) !void {
+        try self.mujs_runtime.setArrayFromJson(key, values);
+    }
+
     /// Run garbage collection
     pub fn gc(self: *Self) void {
         self.mujs_runtime.gc();

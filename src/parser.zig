@@ -149,6 +149,7 @@ pub const Parser = struct {
                     .name = "id",
                     .value = id_token.value,
                     .is_unescaped = false,
+                    .is_expression = false,
                 });
             }
         }
@@ -160,6 +161,7 @@ pub const Parser = struct {
                 .name = "class",
                 .value = combined_classes,
                 .is_unescaped = false,
+                .is_expression = false,
             });
         }
 
@@ -231,6 +233,7 @@ pub const Parser = struct {
 
             var value: ?[]const u8 = null;
             var is_unescaped = false;
+            var is_expression = false;
 
             // Parse attribute value
             if (self.match(&.{.Assign})) {
@@ -248,6 +251,7 @@ pub const Parser = struct {
                     try self.advance();
                 } else if (self.match(&.{.Ident})) {
                     value = self.current.value;
+                    is_expression = true; // Identifier = expression to evaluate
                     try self.advance();
                 }
             } else if (self.match(&.{.BufferedCode})) {
@@ -260,6 +264,7 @@ pub const Parser = struct {
                     try self.advance();
                 } else if (self.match(&.{.Ident})) {
                     value = self.current.value;
+                    is_expression = true;
                     try self.advance();
                 }
             } else if (self.match(&.{.UnescapedCode})) {
@@ -272,6 +277,7 @@ pub const Parser = struct {
                     try self.advance();
                 } else if (self.match(&.{.Ident})) {
                     value = self.current.value;
+                    is_expression = true;
                     try self.advance();
                 }
             }
@@ -281,6 +287,7 @@ pub const Parser = struct {
                 .name = name_token.value,
                 .value = value,
                 .is_unescaped = is_unescaped,
+                .is_expression = is_expression,
             });
 
             try self.skipNewlines();
@@ -520,7 +527,14 @@ pub const Parser = struct {
             if (code.items.len > 0) {
                 try code.append(arena_allocator, ' ');
             }
-            try code.appendSlice(arena_allocator, self.current.value);
+            // Preserve string quotes
+            if (self.current.type == .String) {
+                try code.append(arena_allocator, '"');
+                try code.appendSlice(arena_allocator, self.current.value);
+                try code.append(arena_allocator, '"');
+            } else {
+                try code.appendSlice(arena_allocator, self.current.value);
+            }
             try self.advance();
         }
 

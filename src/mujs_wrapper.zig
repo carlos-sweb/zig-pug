@@ -231,6 +231,72 @@ pub const JsRuntime = struct {
         js_setglobal(self.state, key_z);
     }
 
+    /// Set an array variable in the global scope from JSON values
+    pub fn setArrayFromJson(self: *Self, key: []const u8, values: []const std.json.Value) !void {
+        // Build JavaScript array literal
+        var js_code = std.ArrayList(u8){};
+        defer js_code.deinit(self.allocator);
+
+        try js_code.appendSlice(self.allocator, "var ");
+        try js_code.appendSlice(self.allocator, key);
+        try js_code.appendSlice(self.allocator, " = [");
+
+        for (values, 0..) |value, i| {
+            if (i > 0) {
+                try js_code.appendSlice(self.allocator, ", ");
+            }
+
+            switch (value) {
+                .string => |str| {
+                    try js_code.append(self.allocator, '"');
+                    // Escape special characters in string
+                    for (str) |c| {
+                        switch (c) {
+                            '"' => try js_code.appendSlice(self.allocator, "\\\""),
+                            '\\' => try js_code.appendSlice(self.allocator, "\\\\"),
+                            '\n' => try js_code.appendSlice(self.allocator, "\\n"),
+                            '\r' => try js_code.appendSlice(self.allocator, "\\r"),
+                            '\t' => try js_code.appendSlice(self.allocator, "\\t"),
+                            else => try js_code.append(self.allocator, c),
+                        }
+                    }
+                    try js_code.append(self.allocator, '"');
+                },
+                .integer => |num| {
+                    var buf: [32]u8 = undefined;
+                    const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
+                    try js_code.appendSlice(self.allocator, formatted);
+                },
+                .float => |num| {
+                    var buf: [64]u8 = undefined;
+                    const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
+                    try js_code.appendSlice(self.allocator, formatted);
+                },
+                .bool => |b| {
+                    try js_code.appendSlice(self.allocator, if (b) "true" else "false");
+                },
+                .null => {
+                    try js_code.appendSlice(self.allocator, "null");
+                },
+                else => {
+                    // For nested arrays/objects, stringify as JSON
+                    try js_code.appendSlice(self.allocator, "null");
+                },
+            }
+        }
+
+        try js_code.appendSlice(self.allocator, "]");
+
+        // Evaluate the code to create the array
+        const code = try js_code.toOwnedSlice(self.allocator);
+        defer self.allocator.free(code);
+
+        _ = self.eval(code) catch |err| {
+            std.debug.print("Error setting array '{s}': {}\n", .{ key, err });
+            return err;
+        };
+    }
+
     /// Run garbage collection
     pub fn gc(self: *Self) void {
         js_gc(self.state, 0);

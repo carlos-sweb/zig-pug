@@ -252,6 +252,7 @@ fn loadVariablesFromJson(allocator: std.mem.Allocator, filepath: []const u8, js_
             .integer => |num| try js_runtime.setNumber(key, @floatFromInt(num)),
             .float => |num| try js_runtime.setNumber(key, num),
             .bool => |b| try js_runtime.setBool(key, b),
+            .array => |arr| try js_runtime.setArrayFromJson(key, arr.items),
             else => {
                 std.debug.print("Warning: Unsupported type for variable '{s}', skipping\n", .{key});
             },

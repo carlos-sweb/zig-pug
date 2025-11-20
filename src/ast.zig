@@ -187,6 +187,7 @@ pub const Attribute = struct {
     name: []const u8,
     value: ?[]const u8,
     is_unescaped: bool,
+    is_expression: bool, // true if value should be evaluated as JS expression
 };
 
 pub const InterpolationNode = struct {
