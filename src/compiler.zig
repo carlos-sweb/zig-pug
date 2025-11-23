@@ -1007,3 +1007,154 @@ test "compiler - unescaped interpolation" {
     // Should NOT escape - unescaped interpolation
     try std.testing.expectEqualStrings("<p><strong>Bold</strong></p>", result);
 }
+
+test "compiler - tag= buffered code" {
+    const source =
+        \\- var greeting = "Hello"
+        \\p= greeting
+    ;
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    try std.testing.expectEqualStrings("<p>Hello</p>", html);
+}
+
+test "compiler - tag!= unescaped code" {
+    const source =
+        \\- var html = "<em>italic</em>"
+        \\div!= html
+    ;
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    try std.testing.expectEqualStrings("<div><em>italic</em></div>", html);
+}
+
+test "compiler - attribute expressions" {
+    const source =
+        \\- var myClass = "primary"
+        \\button(class=myClass) Click
+    ;
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    try std.testing.expectEqualStrings("<button class=\"primary\">Click</button>", html);
+}
+
+test "compiler - unbuffered code" {
+    const source =
+        \\- var x = 10
+        \\- var y = 20
+        \\p Sum: #{x + y}
+    ;
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    try std.testing.expectEqualStrings("<p>Sum :30</p>", html);
+}
+
+test "compiler - multiple classes" {
+    const source = "div.box.highlight Content";
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    try std.testing.expectEqualStrings("<div class=\"box highlight\">Content</div>", html);
+}
+
+test "compiler - mixin with arguments" {
+    const source =
+        \\mixin greet(name)
+        \\  p Hello, #{name}
+        \\+greet("World")
+    ;
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    try std.testing.expectEqualStrings("<p>Hello ,World</p>", html);
+}
+
+test "compiler - comment escaping" {
+    const source = "// Comment with --> dangerous";
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    // Should escape "-->" to prevent injection
+    try std.testing.expect(std.mem.indexOf(u8, html, "- ->") != null);
+}
