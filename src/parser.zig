@@ -170,8 +170,12 @@ pub const Parser = struct {
             try self.parseAttributes(&attributes);
         }
 
-        // Parse inline text (puede retornar múltiples nodos: Text e Interpolation)
-        if (!self.match(&.{ .Newline, .Indent, .Eof })) {
+        // Check for buffered/unescaped code after tag (e.g., p= value)
+        if (self.match(&.{ .BufferedCode, .UnescapedCode })) {
+            const code_node = try self.parseCode();
+            try children.append(arena_allocator, code_node);
+        } else if (!self.match(&.{ .Newline, .Indent, .Eof })) {
+            // Parse inline text (puede retornar múltiples nodos: Text e Interpolation)
             const inline_nodes = try self.parseInlineText();
             try children.appendSlice(arena_allocator, inline_nodes.items);
         }
