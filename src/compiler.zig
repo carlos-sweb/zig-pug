@@ -345,16 +345,33 @@ pub const Compiler = struct {
     }
 
     /// Escape HTML special characters to prevent XSS attacks
+    /// Optimized version that pre-calculates size to avoid reallocations
     fn escapeHtml(self: *Self, input: []const u8) ![]const u8 {
-        // Count how much space we need (worst case: all chars need escaping)
+        // First pass: check if escaping is needed and calculate exact size
         var needs_escaping = false;
+        var final_size: usize = 0;
+
         for (input) |c| {
             switch (c) {
-                '&', '<', '>', '"', '\'' => {
+                '&' => {
                     needs_escaping = true;
-                    break;
+                    final_size += 5; // &amp;
                 },
-                else => {},
+                '<', '>' => {
+                    needs_escaping = true;
+                    final_size += 4; // &lt; or &gt;
+                },
+                '"' => {
+                    needs_escaping = true;
+                    final_size += 6; // &quot;
+                },
+                '\'' => {
+                    needs_escaping = true;
+                    final_size += 5; // &#39;
+                },
+                else => {
+                    final_size += 1;
+                },
             }
         }
 
@@ -363,18 +380,20 @@ pub const Compiler = struct {
             return try self.allocator.dupe(u8, input);
         }
 
-        // Escape characters
+        // Allocate exact size needed (no reallocations)
         var result = std.ArrayList(u8){};
         errdefer result.deinit(self.allocator);
+        try result.ensureTotalCapacity(self.allocator, final_size);
 
+        // Second pass: build escaped string
         for (input) |c| {
             switch (c) {
-                '&' => try result.appendSlice(self.allocator, "&amp;"),
-                '<' => try result.appendSlice(self.allocator, "&lt;"),
-                '>' => try result.appendSlice(self.allocator, "&gt;"),
-                '"' => try result.appendSlice(self.allocator, "&quot;"),
-                '\'' => try result.appendSlice(self.allocator, "&#39;"),
-                else => try result.append(self.allocator, c),
+                '&' => result.appendSliceAssumeCapacity("&amp;"),
+                '<' => result.appendSliceAssumeCapacity("&lt;"),
+                '>' => result.appendSliceAssumeCapacity("&gt;"),
+                '"' => result.appendSliceAssumeCapacity("&quot;"),
+                '\'' => result.appendSliceAssumeCapacity("&#39;"),
+                else => result.appendAssumeCapacity(c),
             }
         }
 

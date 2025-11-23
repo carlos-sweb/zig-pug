@@ -233,13 +233,17 @@ pub const JsRuntime = struct {
 
     /// Set an array variable in the global scope from JSON values
     pub fn setArrayFromJson(self: *Self, key: []const u8, values: []const std.json.Value) !void {
-        // Build JavaScript array literal
+        // Pre-calculate approximate size to reduce allocations
+        // Estimate: "var " + key + " = [" + values + "]"
+        const estimated_size = 10 + key.len + values.len * 20; // ~20 bytes per value estimate
+
         var js_code = std.ArrayList(u8){};
         defer js_code.deinit(self.allocator);
+        try js_code.ensureTotalCapacity(self.allocator, estimated_size);
 
-        try js_code.appendSlice(self.allocator, "var ");
-        try js_code.appendSlice(self.allocator, key);
-        try js_code.appendSlice(self.allocator, " = [");
+        js_code.appendSliceAssumeCapacity("var ");
+        js_code.appendSliceAssumeCapacity(key);
+        js_code.appendSliceAssumeCapacity(" = [");
 
         for (values, 0..) |value, i| {
             if (i > 0) {
@@ -299,13 +303,17 @@ pub const JsRuntime = struct {
 
     /// Set an object variable from JSON object
     pub fn setObjectFromJson(self: *Self, key: []const u8, obj: std.json.ObjectMap) !void {
-        // Build JavaScript object literal
+        // Pre-calculate approximate size to reduce allocations
+        // Estimate: "var " + key + " = {" + properties + "}"
+        const estimated_size = 10 + key.len + obj.count() * 30; // ~30 bytes per property estimate
+
         var js_code = std.ArrayList(u8){};
         defer js_code.deinit(self.allocator);
+        try js_code.ensureTotalCapacity(self.allocator, estimated_size);
 
-        try js_code.appendSlice(self.allocator, "var ");
-        try js_code.appendSlice(self.allocator, key);
-        try js_code.appendSlice(self.allocator, " = {");
+        js_code.appendSliceAssumeCapacity("var ");
+        js_code.appendSliceAssumeCapacity(key);
+        js_code.appendSliceAssumeCapacity(" = {");
 
         var it = obj.iterator();
         var first = true;
