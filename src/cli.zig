@@ -489,23 +489,47 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
             const closing_has_only_text = blk: {
                 if (!is_closing) break :blk false;
 
-                // Look backwards in result to see if last char was '>' (end of opening tag)
-                // and no other '<' between them (only text content)
-                var found_close_bracket = false;
+                // Look backwards to find the last '>' and check if:
+                // 1. There's no '<' between that '>' and current position (no nested tags)
+                // 2. The '>' belongs to an opening tag, not a closing tag like </p>
                 var idx: usize = result.items.len;
+
+                // Skip any whitespace/newlines at the end
+                while (idx > 0 and (result.items[idx - 1] == ' ' or result.items[idx - 1] == '\n')) {
+                    idx -= 1;
+                }
+
+                // Now look for '>' and check there's no '<' before it
                 while (idx > 0) {
                     idx -= 1;
                     const c = result.items[idx];
-                    if (c == '>') {
-                        found_close_bracket = true;
-                        break;
-                    }
+
                     if (c == '<') {
-                        // Found another tag opening, so there were nested tags
+                        // Found a '<' before finding '>', means there are nested tags
                         break :blk false;
                     }
+
+                    if (c == '>') {
+                        // Found '>'. Now we need to find its corresponding '<' to check if it's a closing tag
+                        // Look backwards from '>' to find '<'
+                        var tag_start_idx = idx;
+                        while (tag_start_idx > 0 and result.items[tag_start_idx] != '<') {
+                            tag_start_idx -= 1;
+                        }
+
+                        // Check if this is a closing tag: the char after '<' should be '/'
+                        if (tag_start_idx + 1 < result.items.len and result.items[tag_start_idx + 1] == '/') {
+                            // This is a closing tag like </p>, so there are nested tags
+                            break :blk false;
+                        }
+
+                        // This is an opening tag, and no '<' between it and current position
+                        // So we have only text content
+                        break :blk true;
+                    }
                 }
-                break :blk found_close_bracket;
+
+                break :blk false;
             };
 
             if (is_closing and indent > 0) {
