@@ -130,6 +130,11 @@ pub const Parser = struct {
             .Include => try self.parseInclude(),
             .Extends => try self.parseExtends(),
             .Block => try self.parseBlock(),
+            .Doctype => {
+                std.debug.print("Error: 'doctype' must be at the beginning of the document (line {d})\n", .{self.current.line});
+                std.debug.print("Hint: Move 'doctype html' to line 1, before any comments or content\n", .{});
+                return error.DoctypeMustBeFirst;
+            },
             else => {
                 std.debug.print("Unexpected token in statement: {s} at line {d}\n", .{
                     @tagName(self.current.type),

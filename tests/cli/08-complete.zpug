@@ -1,8 +1,8 @@
+doctype html
 // Test 08: Complete template with ALL features
 // This is the most complex test combining all zpug features
 // Run with: zpug 08-complete.zpug --var title="My App" --var user="Alice" --var isLoggedIn=true --var isAdmin=false --var year=2024
 
-doctype html
 html(lang="en")
   head
     meta(charset="UTF-8")
@@ -52,7 +52,8 @@ html(lang="en")
             p= cardContent
 
       mixin alert(type, message)
-        div(class="alert alert-" + type)
+        - var alertClass = "alert alert-" + type
+        div(class=alertClass)
           span.alert-icon
           span.alert-text= message
 
