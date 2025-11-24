@@ -111,8 +111,8 @@ zig build -Droot_source_file=src/cli.zig
 -i, --input <file>      Input .pug file (can be used multiple times)
 -o, --output <path>     Output file or directory
 -w, --watch             Watch files for changes and recompile
--p, --pretty            Pretty-print HTML output (with indentation)
--m, --minify            Minify HTML output (remove whitespace)
+-p, --pretty            Pretty-print HTML output (with indentation and comments)
+-m, --minify            Minify HTML output (remove whitespace and comments)
 --stdin                 Read input from stdin
 --stdout                Write output to stdout
 -s, --silent            Suppress all output except errors
@@ -166,32 +166,48 @@ zpug template.pug --vars data.json -o output.html
 }
 ```
 
-#### Pretty-Print Output
+#### Pretty-Print Output (Development Mode)
 
 ```bash
-# Pretty-print with indentation
+# Pretty-print with indentation and comments
 zpug -p template.pug -o pretty.html
 ```
 
+**Features:**
+- HTML indentation for readability
+- **Includes buffered comments** (`//`) for debugging
+- Ideal for development and inspection
+
 **Output**:
 ```html
+<!-- Page header -->
 <div class="container">
   <h1>Hello World</h1>
   <p>Welcome</p>
 </div>
 ```
 
-#### Minify Output
+#### Minify Output (Production Mode)
 
 ```bash
-# Minify (remove whitespace)
+# Minify (remove whitespace and comments)
 zpug -m template.pug -o minified.html
+
+# Or default mode (same as minify)
+zpug template.pug -o output.html
 ```
+
+**Features:**
+- Removes all whitespace
+- **Strips all buffered comments** (`//`) for minimal file size
+- Ideal for production deployment
 
 **Output**:
 ```html
 <div class="container"><h1>Hello World</h1><p>Welcome</p></div>
 ```
+
+**Note:** Default compilation (without `-p` or `-m`) uses production mode and strips comments.
 
 #### Using Stdin/Stdout
 
@@ -218,6 +234,61 @@ Compiling to HTML
 Output size: 512 bytes
 Compiled: template.pug -> output.html
 ```
+
+#### Comment Handling
+
+zpug handles comments differently based on the compilation mode to match industry standards (Pug, HTML minifiers):
+
+**Production Mode (Default):**
+```bash
+# Default: strips all buffered comments
+zpug template.pug -o output.html
+
+# Or explicitly minify
+zpug -m template.pug -o output.html
+```
+
+**Result:** All buffered comments (`//`) are **removed** for minimal file size.
+
+**Development Mode:**
+```bash
+# Pretty mode: includes comments for debugging
+zpug -p template.pug -o output.html
+```
+
+**Result:** Buffered comments (`//`) are **included** in the output as HTML comments.
+
+**Template Example:**
+```zpug
+doctype html
+html
+  // This is a buffered comment
+  //- This is an unbuffered comment (never in output)
+  body
+    // Page content starts here
+    h1 Hello World
+```
+
+**Production output** (default or `-m`):
+```html
+<!DOCTYPE html><html><body><h1>Hello World</h1></body></html>
+```
+
+**Development output** (`-p`):
+```html
+<!DOCTYPE html>
+<html>
+  <!-- This is a buffered comment -->
+  <body>
+    <!-- Page content starts here -->
+    <h1>Hello World</h1>
+  </body>
+</html>
+```
+
+**Comment Types:**
+- `//` - **Buffered:** Included only with `--pretty`, stripped in production
+- `//-` - **Unbuffered:** Always stripped, never appears in output
 
 #### Watch Mode (Planned)
 

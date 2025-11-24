@@ -92,11 +92,14 @@ zpug template.zpug --var name=Alice --var age=25
 # With JSON variables (arrays, objects)
 zpug template.zpug --vars data.json
 
-# Pretty-print output
+# Pretty-print output (with comments and indentation)
 zpug -p template.zpug -o pretty.html
 
-# Minify output
+# Minify output (strip comments and whitespace)
 zpug -m template.zpug -o minified.html
+
+# Production mode (default: no comments, minified)
+zpug template.zpug -o output.html
 
 # From stdin
 cat template.zpug | zpug --stdin > output.html
@@ -353,16 +356,32 @@ mixin button(text, type)
 ### Comments
 
 ```zpug
-// Buffered comment (included in HTML)
-// This appears in output
+// Buffered comment (visible in HTML with --pretty)
+// This appears only in development mode
 
-//- Unbuffered comment (not in HTML)
-//- This is only in source
+//- Unbuffered comment (never in HTML)
+//- This is only in source, never compiled
 
 // Security: Comments are escaped
 // Comment with --> injection attempt
 // Output: <!-- Comment with - -> injection attempt -->
 ```
+
+**Comment Behavior:**
+
+- **Production mode (default)**: All buffered comments (`//`) are **stripped** for minimal file size
+- **Development mode (`--pretty`)**: Buffered comments (`//`) are **included** for debugging
+- **Unbuffered comments (`//-`)**: Always stripped in both modes
+
+```bash
+# Production: no comments
+zpug template.zpug -o output.html
+
+# Development: with comments
+zpug --pretty template.zpug -o output.html
+```
+
+This matches industry standards (Pug, HTML minifiers) where production output is optimized and development output is readable.
 
 ## Programming API (Zig)
 
@@ -535,9 +554,12 @@ zig-pug uses [**mujs**](https://mujs.com/) as its JavaScript engine:
 - [x] 87 comprehensive unit tests
 - [x] Test documentation
 
+**Phase 6: Production Features**
+- [x] Comment handling (production vs development modes)
+- [x] Pretty printing (HTML indentation)
+
 ### 🚧 In Progress
 
-- [ ] Pretty printing (HTML indentation)
 - [ ] Watch mode (`-w`)
 
 ### 📋 Roadmap
