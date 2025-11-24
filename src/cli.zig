@@ -435,6 +435,12 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
 
     while (i < html.len) {
         if (html[i] == '<') {
+            // Check if it's a comment
+            const is_comment = i + 3 < html.len and
+                html[i + 1] == '!' and
+                html[i + 2] == '-' and
+                html[i + 3] == '-';
+
             // Check if closing tag
             const is_closing = i + 1 < html.len and html[i + 1] == '/';
             const is_self_closing = blk: {
@@ -463,7 +469,8 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
                 i += 1;
             }
 
-            if (!is_closing and !is_self_closing) {
+            // Don't increase indent for comments or self-closing tags
+            if (!is_closing and !is_self_closing and !is_comment) {
                 indent += 1;
             }
         } else {
