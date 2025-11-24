@@ -30,6 +30,7 @@ pub const Compiler = struct {
     template_cache: ?*cache.TemplateCache, // Optional template cache
     child_blocks: std.StringHashMap(std.ArrayListUnmanaged(*ast.AstNode)), // Blocks from child template
     include_comments: bool, // Include HTML comments in output (true for --pretty, false for production)
+    has_errors: bool, // Track if any compilation errors occurred (for strict mode)
 
     const Self = @This();
 
@@ -42,6 +43,7 @@ pub const Compiler = struct {
             .indent_level = 0,
             .pretty = false,
             .include_comments = false, // Production default: no comments
+            .has_errors = false, // Start with no errors
             .mixins = std.StringHashMap(*ast.AstNode).init(allocator),
             .base_path = null,
             .template_cache = null,
@@ -249,12 +251,12 @@ pub const Compiler = struct {
                 // Evaluate expression if needed
                 if (attr.is_expression) {
                     const result = self.runtime.eval(value) catch |err| {
+                        self.has_errors = true;
                         std.debug.print("Error: Failed to evaluate attribute expression\n", .{});
                         std.debug.print("  Attribute: {s}={s}\n", .{ attr.name, value });
                         std.debug.print("  Error: {}\n", .{err});
                         std.debug.print("  Hint: Make sure the variable '{s}' is defined\n", .{value});
-                        // Fall back to literal value on error
-                        try self.output.appendSlice(self.allocator, value);
+                        // Skip attribute on error (strict mode)
                         try self.output.appendSlice(self.allocator, "\"");
                         continue;
                     };
@@ -305,14 +307,12 @@ pub const Compiler = struct {
 
         // Evaluate the JavaScript expression using runtime
         const result = self.runtime.eval(interp.expression) catch |err| {
+            self.has_errors = true;
             std.debug.print("Error: Failed to evaluate interpolation at line {d}\n", .{node.line});
             std.debug.print("  Expression: #{{{s}}}\n", .{interp.expression});
             std.debug.print("  Error: {}\n", .{err});
             std.debug.print("  Hint: Check that all variables used in the expression are defined\n", .{});
-            // On error, output the expression as-is for debugging
-            try self.output.appendSlice(self.allocator, "#{");
-            try self.output.appendSlice(self.allocator, interp.expression);
-            try self.output.appendSlice(self.allocator, "}");
+            // Don't generate output on error (strict mode)
             return;
         };
         defer self.allocator.free(result);
@@ -332,6 +332,7 @@ pub const Compiler = struct {
 
         // Evaluate the code
         const result = self.runtime.eval(code.code) catch |err| {
+            self.has_errors = true;
             std.debug.print("Error: Failed to execute code at line {d}\n", .{node.line});
             std.debug.print("  Code: {s}\n", .{code.code});
             std.debug.print("  Error: {}\n", .{err});
@@ -475,6 +476,7 @@ pub const Compiler = struct {
 
         // Evaluate condition using runtime
         const result = self.runtime.eval(cond.condition) catch |err| {
+            self.has_errors = true;
             std.debug.print("Error: Failed to evaluate conditional at line {d}\n", .{node.line});
             std.debug.print("  Condition: {s}\n", .{cond.condition});
             std.debug.print("  Error: {}\n", .{err});
@@ -513,6 +515,7 @@ pub const Compiler = struct {
 
         // Get the iterable value from runtime
         const iterable_result = self.runtime.eval(loop.iterable) catch |err| {
+            self.has_errors = true;
             std.debug.print("Error: Failed to evaluate loop iterable at line {d}\n", .{node.line});
             std.debug.print("  Iterable: {s}\n", .{loop.iterable});
             std.debug.print("  Error: {}\n", .{err});
@@ -665,6 +668,7 @@ pub const Compiler = struct {
 
         // Evaluate the case expression
         const case_value = self.runtime.eval(case_node.expression) catch |err| {
+            self.has_errors = true;
             std.debug.print("Runtime error evaluating case '{s}': {}\n", .{ case_node.expression, err });
             return;
         };

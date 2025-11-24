@@ -348,6 +348,12 @@ fn compileFile(
     };
     defer allocator.free(html);
 
+    // Check for compilation errors (strict mode)
+    if (comp.has_errors) {
+        std.debug.print("\nCompilation failed due to errors. No output generated.\n", .{});
+        std.process.exit(1);
+    }
+
     // Apply formatting
     const final_html = if (options.minify)
         try minifyHtml(allocator, html)
@@ -490,6 +496,12 @@ fn compileFromStdin(allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime
 
     const html = try comp.compile(tree);
     defer allocator.free(html);
+
+    // Check for compilation errors (strict mode)
+    if (comp.has_errors) {
+        std.debug.print("\nCompilation failed due to errors. No output generated.\n", .{});
+        std.process.exit(1);
+    }
 
     // Output
     const stdout_file = std.fs.File.stdout();
