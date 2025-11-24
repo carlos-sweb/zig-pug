@@ -29,6 +29,7 @@ pub const Compiler = struct {
     base_path: ?[]const u8, // Base path for resolving includes
     template_cache: ?*cache.TemplateCache, // Optional template cache
     child_blocks: std.StringHashMap(std.ArrayListUnmanaged(*ast.AstNode)), // Blocks from child template
+    include_comments: bool, // Include HTML comments in output (true for --pretty, false for production)
 
     const Self = @This();
 
@@ -40,6 +41,7 @@ pub const Compiler = struct {
             .output = .{},
             .indent_level = 0,
             .pretty = false,
+            .include_comments = false, // Production default: no comments
             .mixins = std.StringHashMap(*ast.AstNode).init(allocator),
             .base_path = null,
             .template_cache = null,
@@ -413,7 +415,10 @@ pub const Compiler = struct {
 
     fn compileComment(self: *Self, node: *ast.AstNode) !void {
         const comment = &node.data.Comment;
-        if (comment.is_buffered) {
+
+        // Only include buffered comments if include_comments is true
+        // Unbuffered comments (//-) are never included
+        if (comment.is_buffered and self.include_comments) {
             try self.output.appendSlice(self.allocator, "<!--");
             // Escape comment content to prevent injection attacks
             // Replace "--" with "- -" to prevent premature comment closing
@@ -422,7 +427,8 @@ pub const Compiler = struct {
             try self.output.appendSlice(self.allocator, escaped);
             try self.output.appendSlice(self.allocator, "-->");
         }
-        // Unbuffered comments are not rendered
+        // Production mode (include_comments=false): comments are stripped
+        // Development mode (include_comments=true): comments are included
     }
 
     /// Escape HTML comment content to prevent XSS/injection attacks

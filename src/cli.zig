@@ -338,6 +338,10 @@ fn compileFile(
     };
     defer comp.deinit();
 
+    // Include comments only in pretty mode (development)
+    // Production (default/minify): strip comments for smaller output
+    comp.include_comments = options.pretty;
+
     const html = comp.compile(tree) catch |err| {
         std.debug.print("Error: Compilation failed: {}\n", .{err});
         std.process.exit(1);
@@ -467,7 +471,6 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
 }
 
 fn compileFromStdin(allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime, options: *const CliOptions) !void {
-    _ = options; // TODO: Use options for minify/pretty
     const stdin_file = std.fs.File.stdin();
 
     const source = try stdin_file.readToEndAlloc(allocator, 10 * 1024 * 1024);
@@ -481,6 +484,10 @@ fn compileFromStdin(allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime
     // Compile
     var comp = try compiler.Compiler.init(allocator, js_runtime);
     defer comp.deinit();
+
+    // Include comments only in pretty mode (development)
+    comp.include_comments = options.pretty;
+
     const html = try comp.compile(tree);
     defer allocator.free(html);
 
