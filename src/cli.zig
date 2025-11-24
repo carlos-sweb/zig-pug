@@ -449,15 +449,41 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
                 break :blk j > 0 and html[j - 1] == '/';
             };
 
+            // For closing tags: check if content before it is only text (no nested tags)
+            const closing_has_only_text = blk: {
+                if (!is_closing) break :blk false;
+
+                // Look backwards in result to see if last char was '>' (end of opening tag)
+                // and no other '<' between them (only text content)
+                var found_close_bracket = false;
+                var idx: usize = result.items.len;
+                while (idx > 0) {
+                    idx -= 1;
+                    const c = result.items[idx];
+                    if (c == '>') {
+                        found_close_bracket = true;
+                        break;
+                    }
+                    if (c == '<') {
+                        // Found another tag opening, so there were nested tags
+                        break :blk false;
+                    }
+                }
+                break :blk found_close_bracket;
+            };
+
             if (is_closing and indent > 0) {
                 indent -= 1;
             }
 
-            // Add indentation
-            try result.append(allocator, '\n');
-            var j: usize = 0;
-            while (j < indent * 2) : (j += 1) {
-                try result.append(allocator, ' ');
+            // Add indentation (newline + spaces)
+            // Skip newline for closing tags that only have text content
+            if (!closing_has_only_text) {
+                try result.append(allocator, '\n');
+                var j: usize = 0;
+                while (j < indent * 2) : (j += 1) {
+                    try result.append(allocator, ' ');
+                }
             }
 
             // Add tag
