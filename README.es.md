@@ -66,6 +66,15 @@ zpug -i template.zpug -o output.html
 
 # Con variables
 zpug template.zpug --var name=Alice --var age=25
+
+# Modo desarrollo (con comentarios e indentación)
+zpug -p template.zpug -o pretty.html
+
+# Modo producción (sin comentarios, minificado)
+zpug -m template.zpug -o minified.html
+
+# Por defecto (producción: sin comentarios)
+zpug template.zpug -o output.html
 ```
 
 **Nota**: Existen dos versiones del CLI:
@@ -533,8 +542,10 @@ zig-pug usa [**mujs**](https://mujs.com/) como motor JavaScript:
 - [x] Cache de templates
 - [x] Template inheritance (extends/block)
 - [x] Escapado HTML (XSS prevention)
-- [ ] Pretty printing (indentación HTML)
+- [x] Pretty printing (indentación HTML)
+- [x] Manejo de comentarios (producción vs desarrollo)
 - [ ] CLI completo
+- [ ] Modo watch (`-w`)
 
 ### 📋 Roadmap
 
