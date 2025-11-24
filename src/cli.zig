@@ -477,8 +477,8 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
             }
 
             // Add indentation (newline + spaces)
-            // Skip newline for closing tags that only have text content
-            if (!closing_has_only_text) {
+            // Skip newline for: closing tags with only text, or the very first tag
+            if (!closing_has_only_text and result.items.len > 0) {
                 try result.append(allocator, '\n');
                 var j: usize = 0;
                 while (j < indent * 2) : (j += 1) {
