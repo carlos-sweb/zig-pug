@@ -428,6 +428,20 @@ fn minifyHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
     return result.toOwnedSlice(allocator);
 }
 
+/// Check if a tag name is a void element (self-closing HTML element)
+fn isVoidElement(tag_name: []const u8) bool {
+    const void_elements = [_][]const u8{
+        "area", "base", "br", "col", "embed", "hr", "img",
+        "input", "link", "meta", "param", "source", "track", "wbr",
+    };
+    for (void_elements) |void_elem| {
+        if (std.mem.eql(u8, tag_name, void_elem)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
     var result = std.ArrayList(u8){};
     var indent: usize = 0;
@@ -443,10 +457,32 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
 
             // Check if closing tag
             const is_closing = i + 1 < html.len and html[i + 1] == '/';
+
+            // Extract tag name to check if it's a void element
+            const tag_name = blk: {
+                if (is_closing or is_comment) break :blk "";
+
+                var j = i + 1;
+                // Skip whitespace after '<'
+                while (j < html.len and html[j] == ' ') : (j += 1) {}
+
+                const start = j;
+                // Read tag name until space, '>', or '/'
+                while (j < html.len and html[j] != ' ' and html[j] != '>' and html[j] != '/') : (j += 1) {}
+
+                if (j > start) {
+                    break :blk html[start..j];
+                }
+                break :blk "";
+            };
+
+            // Check if self-closing (either ends with /> or is a void element)
             const is_self_closing = blk: {
                 var j = i;
                 while (j < html.len and html[j] != '>') : (j += 1) {}
-                break :blk j > 0 and html[j - 1] == '/';
+                const ends_with_slash = j > 0 and html[j - 1] == '/';
+                const is_void = isVoidElement(tag_name);
+                break :blk ends_with_slash or is_void;
             };
 
             // For closing tags: check if content before it is only text (no nested tags)
