@@ -12,6 +12,7 @@ const CliOptions = struct {
     variables: std.StringHashMap([]const u8),
     watch: bool,
     pretty: bool,
+    format: bool,
     minify: bool,
     verbose: bool,
     silent: bool,
@@ -28,6 +29,7 @@ const CliOptions = struct {
             .variables = std.StringHashMap([]const u8).init(allocator),
             .watch = false,
             .pretty = false,
+            .format = false,
             .minify = false,
             .verbose = false,
             .silent = false,
@@ -64,8 +66,9 @@ fn printHelp() void {
         \\  -i, --input <file>      Input .pug file (can be used multiple times)
         \\  -o, --output <path>     Output file or directory
         \\  -w, --watch             Watch files for changes and recompile
-        \\  -p, --pretty            Pretty-print HTML output (with indentation)
-        \\  -m, --minify            Minify HTML output (remove whitespace)
+        \\  -p, --pretty            Pretty-print with comments (development mode)
+        \\  -F, --format            Pretty-print without comments (readable mode)
+        \\  -m, --minify            Minify HTML output (production mode)
         \\  --stdin                 Read input from stdin
         \\  --stdout                Write output to stdout
         \\  -s, --silent            Suppress all output except errors
@@ -92,10 +95,13 @@ fn printHelp() void {
         \\  # Compile with JSON variables
         \\  zpug template.pug --vars data.json -o output.html
         \\
-        \\  # Pretty-print output
-        \\  zpug -p template.pug -o pretty.html
+        \\  # Pretty-print with comments (development)
+        \\  zpug -p template.pug -o dev.html
         \\
-        \\  # Minify output
+        \\  # Pretty-print without comments (readable)
+        \\  zpug -F template.pug -o readable.html
+        \\
+        \\  # Minify output (production)
         \\  zpug -m template.pug -o minified.html
         \\
         \\  # Watch for changes
@@ -197,6 +203,8 @@ fn parseArguments(allocator: std.mem.Allocator) !CliOptions {
             options.watch = true;
         } else if (std.mem.eql(u8, arg, "-p") or std.mem.eql(u8, arg, "--pretty")) {
             options.pretty = true;
+        } else if (std.mem.eql(u8, arg, "-F") or std.mem.eql(u8, arg, "--format")) {
+            options.format = true;
         } else if (std.mem.eql(u8, arg, "-m") or std.mem.eql(u8, arg, "--minify")) {
             options.minify = true;
         } else if (std.mem.eql(u8, arg, "--stdin")) {
@@ -357,12 +365,12 @@ fn compileFile(
     // Apply formatting
     const final_html = if (options.minify)
         try minifyHtml(allocator, html)
-    else if (options.pretty)
+    else if (options.pretty or options.format)
         try prettyPrintHtml(allocator, html)
     else
         html;
 
-    defer if (options.minify or options.pretty) allocator.free(final_html);
+    defer if (options.minify or options.pretty or options.format) allocator.free(final_html);
 
     if (options.verbose) {
         std.debug.print("Output size: {} bytes\n", .{final_html.len});
@@ -596,9 +604,19 @@ fn compileFromStdin(allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime
         std.process.exit(1);
     }
 
+    // Apply formatting
+    const final_html = if (options.minify)
+        try minifyHtml(allocator, html)
+    else if (options.pretty or options.format)
+        try prettyPrintHtml(allocator, html)
+    else
+        html;
+
+    defer if (options.minify or options.pretty or options.format) allocator.free(final_html);
+
     // Output
     const stdout_file = std.fs.File.stdout();
-    try stdout_file.writeAll(html);
+    try stdout_file.writeAll(final_html);
 }
 
 pub fn main() !void {
