@@ -3,7 +3,7 @@ const parser = @import("parser.zig");
 const compiler = @import("compiler.zig");
 const runtime = @import("runtime.zig");
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 
 const CliOptions = struct {
     input_files: std.ArrayList([]const u8),

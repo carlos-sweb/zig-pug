@@ -68,18 +68,21 @@ zpug -i template.zpug -o output.html
 zpug template.zpug --var name=Alice --var age=25
 
 # Modo desarrollo (con comentarios e indentación)
-zpug -p template.zpug -o pretty.html
+zpug -p template.zpug -o dev.html
 
-# Modo producción (sin comentarios, minificado)
+# Modo legible (indentación sin comentarios)
+zpug -F template.zpug -o readable.html
+
+# Modo producción (minificado)
 zpug -m template.zpug -o minified.html
 
-# Por defecto (producción: sin comentarios)
+# Por defecto (producción: sin comentarios, minificado)
 zpug template.zpug -o output.html
 ```
 
 **Nota**: Existen dos versiones del CLI:
 - **Simple** (`src/main.zig`) - Funciona en Termux/Android, menos opciones
-- **Completo** (`src/cli.zig`) - Requiere libc, todas las opciones (--var, --pretty, --minify, etc.)
+- **Completo** (`src/cli.zig`) - Requiere libc, todas las opciones (--var, --pretty, --format, --minify, etc.)
 
 📖 **[Ver documentación completa del CLI](docs/es/CLI.md)**
 

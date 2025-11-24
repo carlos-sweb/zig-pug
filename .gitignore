@@ -24,3 +24,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+
+# Test output files (generated)
+tests/cli/output/

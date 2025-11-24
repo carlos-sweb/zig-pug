@@ -111,8 +111,9 @@ zig build -Droot_source_file=src/cli.zig
 -i, --input <file>      Input .pug file (can be used multiple times)
 -o, --output <path>     Output file or directory
 -w, --watch             Watch files for changes and recompile
--p, --pretty            Pretty-print HTML output (with indentation and comments)
--m, --minify            Minify HTML output (remove whitespace and comments)
+-p, --pretty            Pretty-print with comments (development mode)
+-F, --format            Pretty-print without comments (readable mode)
+-m, --minify            Minify HTML output (production mode)
 --stdin                 Read input from stdin
 --stdout                Write output to stdout
 -s, --silent            Suppress all output except errors
@@ -170,7 +171,7 @@ zpug template.pug --vars data.json -o output.html
 
 ```bash
 # Pretty-print with indentation and comments
-zpug -p template.pug -o pretty.html
+zpug -p template.pug -o dev.html
 ```
 
 **Features:**
@@ -181,6 +182,26 @@ zpug -p template.pug -o pretty.html
 **Output**:
 ```html
 <!-- Page header -->
+<div class="container">
+  <h1>Hello World</h1>
+  <p>Welcome</p>
+</div>
+```
+
+#### Format Output (Readable Mode)
+
+```bash
+# Pretty-print without comments
+zpug -F template.pug -o readable.html
+```
+
+**Features:**
+- HTML indentation for readability
+- **No comments** for cleaner output
+- Ideal for code reviews and readable production
+
+**Output**:
+```html
 <div class="container">
   <h1>Hello World</h1>
   <p>Welcome</p>
@@ -258,6 +279,14 @@ zpug -p template.pug -o output.html
 
 **Result:** Buffered comments (`//`) are **included** in the output as HTML comments.
 
+**Readable Mode:**
+```bash
+# Format mode: pretty-print without comments
+zpug -F template.pug -o output.html
+```
+
+**Result:** HTML is indented but buffered comments (`//`) are **removed** for cleaner output.
+
 **Template Example:**
 ```zpug
 doctype html
@@ -286,8 +315,18 @@ html
 </html>
 ```
 
+**Readable output** (`-F`):
+```html
+<!DOCTYPE html>
+<html>
+  <body>
+    <h1>Hello World</h1>
+  </body>
+</html>
+```
+
 **Comment Types:**
-- `//` - **Buffered:** Included only with `--pretty`, stripped in production
+- `//` - **Buffered:** Included only with `--pretty`, stripped in `--format` and production
 - `//-` - **Unbuffered:** Always stripped, never appears in output
 
 #### Watch Mode (Planned)
@@ -493,17 +532,23 @@ zpug template.pug --var "message=Hello World"
 ### Combining Options
 
 ```bash
-# Pretty-print with variables
+# Pretty-print with variables (development)
 zpug -p template.pug \
   --var title="My Page" \
   --var year=2024 \
   -o output.html
 
-# Minify with JSON variables
+# Format with variables (readable)
+zpug -F template.pug \
+  --var title="My Page" \
+  --var year=2024 \
+  -o output.html
+
+# Minify with JSON variables (production)
 zpug -m template.pug --vars data.json -o min.html
 
-# Verbose pretty-print
-zpug -V -p template.pug -o output.html
+# Verbose format output
+zpug -V -F template.pug -o output.html
 ```
 
 ## Future Features
@@ -527,6 +572,6 @@ Planned for future releases:
 
 ---
 
-**Version**: 0.2.0
+**Version**: 0.3.0
 **License**: MIT
 **Homepage**: https://github.com/yourusername/zig-pug

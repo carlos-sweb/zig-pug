@@ -92,13 +92,16 @@ zpug template.zpug --var name=Alice --var age=25
 # With JSON variables (arrays, objects)
 zpug template.zpug --vars data.json
 
-# Pretty-print output (with comments and indentation)
-zpug -p template.zpug -o pretty.html
+# Pretty-print with comments (development mode)
+zpug -p template.zpug -o dev.html
 
-# Minify output (strip comments and whitespace)
+# Pretty-print without comments (readable mode)
+zpug -F template.zpug -o readable.html
+
+# Minify output (production mode)
 zpug -m template.zpug -o minified.html
 
-# Production mode (default: no comments, minified)
+# Default (production: no comments, minified)
 zpug template.zpug -o output.html
 
 # From stdin
@@ -371,14 +374,18 @@ mixin button(text, type)
 
 - **Production mode (default)**: All buffered comments (`//`) are **stripped** for minimal file size
 - **Development mode (`--pretty`)**: Buffered comments (`//`) are **included** for debugging
-- **Unbuffered comments (`//-`)**: Always stripped in both modes
+- **Readable mode (`--format`)**: Pretty-print without comments
+- **Unbuffered comments (`//-`)**: Always stripped in all modes
 
 ```bash
-# Production: no comments
+# Production: no comments, minified
 zpug template.zpug -o output.html
 
-# Development: with comments
+# Development: with comments and indentation
 zpug --pretty template.zpug -o output.html
+
+# Readable: indentation without comments
+zpug --format template.zpug -o output.html
 ```
 
 This matches industry standards (Pug, HTML minifiers) where production output is optimized and development output is readable.

@@ -379,7 +379,8 @@ p!= trustedHtml  // Not escaped
 **Behavior:**
 - **Production mode (default):** Strips all buffered comments (`//`) for minimal output
 - **Development mode (`--pretty`):** Includes buffered comments for debugging
-- **Unbuffered comments (`//-`):** Always stripped in both modes
+- **Readable mode (`--format`):** Pretty-print without comments
+- **Unbuffered comments (`//-`):** Always stripped in all modes
 
 **Security:**
 - Escapes `--` to `- -` to prevent premature comment closing
@@ -388,11 +389,14 @@ p!= trustedHtml  // Not escaped
 **Examples:**
 
 ```bash
-# Production (no comments)
+# Production (no comments, minified)
 zpug template.zpug -o output.html
 
-# Development (with comments)
+# Development (with comments and indentation)
 zpug --pretty template.zpug -o output.html
+
+# Readable (indentation without comments)
+zpug --format template.zpug -o output.html
 ```
 
 **Industry Standard:** Matches behavior of Pug and HTML minifiers where production output is optimized and development output is readable.
@@ -416,8 +420,11 @@ zpug template.zpug --var name=Alice --var age=25
 # JSON file variables
 zpug template.zpug --vars data.json
 
-# Pretty print (development: with comments and indentation)
+# Pretty print with comments (development mode)
 zpug -p template.zpug
+
+# Pretty print without comments (readable mode)
+zpug -F template.zpug
 
 # Minify (production: strip comments and whitespace)
 zpug -m template.zpug
@@ -431,6 +438,7 @@ zpug template.zpug
 **Output Modes:**
 - **Default/Production:** Strips comments for minimal file size
 - **Pretty (`-p`):** Includes comments and indentation for debugging
+- **Format (`-F`):** Indentation without comments for readable production
 - **Minify (`-m`):** Explicitly removes all whitespace and comments
 
 ---
