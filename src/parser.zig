@@ -77,8 +77,26 @@ pub const Parser = struct {
         const arena_allocator = self.arena.allocator();
 
         var children = std.ArrayListUnmanaged(*ast.AstNode){};
+        var doctype: ?[]const u8 = null;
 
         try self.skipNewlines();
+
+        // Check for doctype at the beginning
+        if (self.current.type == .Doctype) {
+            try self.advance(); // consume 'doctype'
+
+            // Collect the rest of the line as doctype value
+            var doctype_value = std.ArrayList(u8){};
+            while (!self.match(&.{ .Newline, .Eof })) {
+                if (doctype_value.items.len > 0) {
+                    try doctype_value.append(arena_allocator, ' ');
+                }
+                try doctype_value.appendSlice(arena_allocator, self.current.value);
+                try self.advance();
+            }
+            doctype = try doctype_value.toOwnedSlice(arena_allocator);
+            try self.skipNewlines();
+        }
 
         while (self.current.type != .Eof) {
             const child = try self.parseStatement();
@@ -93,7 +111,7 @@ pub const Parser = struct {
             1,
             .{ .Document = .{
                 .children = children,
-                .doctype = null,
+                .doctype = doctype,
             } },
         );
     }

@@ -98,6 +98,13 @@ pub const Compiler = struct {
     fn compileDocument(self: *Self, node: *ast.AstNode) !void {
         const doc = &node.data.Document;
 
+        // Output doctype if present
+        if (doc.doctype) |doctype_value| {
+            try self.output.appendSlice(self.allocator, "<!DOCTYPE ");
+            try self.output.appendSlice(self.allocator, doctype_value);
+            try self.output.appendSlice(self.allocator, ">");
+        }
+
         // First pass: register all mixins and check for extends
         var extends_path: ?[]const u8 = null;
         for (doc.children.items) |child| {
@@ -1157,4 +1164,31 @@ test "compiler - comment escaping" {
 
     // Should escape "-->" to prevent injection
     try std.testing.expect(std.mem.indexOf(u8, html, "- ->") != null);
+}
+
+test "compiler - doctype html" {
+    const source =
+        \\doctype html
+        \\html
+        \\  head
+        \\    title Test
+        \\  body
+        \\    p Hello
+    ;
+    var parser = try Parser.init(std.testing.allocator, source);
+    defer parser.deinit();
+
+    const tree = try parser.parse();
+
+    var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
+    defer js_runtime.deinit();
+
+    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    defer compiler.deinit();
+
+    const html = try compiler.compile(tree);
+    defer std.testing.allocator.free(html);
+
+    try std.testing.expect(std.mem.startsWith(u8, html, "<!DOCTYPE html>"));
+    try std.testing.expect(std.mem.indexOf(u8, html, "<html>") != null);
 }

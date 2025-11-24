@@ -48,6 +48,7 @@ pub const TokenType = enum {
     Block,
     Append,
     Prepend,
+    Doctype,
 
     // Especiales
     Indent,
@@ -499,6 +500,7 @@ fn getKeyword(ident: []const u8) ?TokenType {
         .{ "block", .Block },
         .{ "append", .Append },
         .{ "prepend", .Prepend },
+        .{ "doctype", .Doctype },
         .{ "true", .Boolean },
         .{ "false", .Boolean },
     });
