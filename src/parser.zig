@@ -339,11 +339,22 @@ pub const Parser = struct {
         var nodes = std.ArrayListUnmanaged(*ast.AstNode){};
         var text_buffer: std.ArrayList(u8) = .{};
         const start_line = self.current.line;
+        var last_token_end_col: usize = 0;
+        var has_content = false; // Track if we've processed any content
 
         while (!self.match(&.{ .Newline, .Eof })) {
             if (self.match(&.{ .EscapedInterpol, .UnescapedInterpol })) {
+                // Add space before interpolation if there was previous content
+                if (has_content and text_buffer.items.len == 0) {
+                    // Previous content was an interpolation, add space
+                    try text_buffer.append(arena_allocator, ' ');
+                }
+
                 // Flush accumulated text as a Text node
                 if (text_buffer.items.len > 0) {
+                    // Add trailing space before interpolation
+                    try text_buffer.append(arena_allocator, ' ');
+
                     const text_node = try ast.AstNode.create(
                         arena_allocator,
                         .Text,
@@ -363,6 +374,7 @@ pub const Parser = struct {
                 const expr_value = self.current.value;
                 const expr_line = self.current.line;
                 const expr_col = self.current.column;
+                last_token_end_col = expr_col + expr_value.len + 3; // #{...} = 3 extra chars
                 try self.advance();
 
                 const interp_node = try ast.AstNode.create(
@@ -376,12 +388,18 @@ pub const Parser = struct {
                     } },
                 );
                 try nodes.append(arena_allocator, interp_node);
+                has_content = true; // Mark that we have content
             } else {
-                // Accumulate text
-                if (text_buffer.items.len > 0) {
+                // Add space before token if we've already processed content
+                // This preserves spacing between words/interpolations
+                if (has_content) {
                     try text_buffer.append(arena_allocator, ' ');
                 }
+
+                // Accumulate text
                 try text_buffer.appendSlice(arena_allocator, self.current.value);
+                last_token_end_col = self.current.column + self.current.value.len;
+                has_content = true; // Mark that we have content
                 try self.advance();
             }
         }
@@ -411,11 +429,22 @@ pub const Parser = struct {
         var nodes = std.ArrayListUnmanaged(*ast.AstNode){};
         var text_buffer: std.ArrayList(u8) = .{};
         const start_line = self.current.line;
+        var last_token_end_col: usize = 0;
+        var has_content = false; // Track if we've processed any content
 
         while (!self.match(&.{ .Newline, .Eof })) {
             if (self.match(&.{ .EscapedInterpol, .UnescapedInterpol })) {
+                // Add space before interpolation if there was previous content
+                if (has_content and text_buffer.items.len == 0) {
+                    // Previous content was an interpolation, add space
+                    try text_buffer.append(arena_allocator, ' ');
+                }
+
                 // Flush accumulated text as a Text node
                 if (text_buffer.items.len > 0) {
+                    // Add trailing space before interpolation
+                    try text_buffer.append(arena_allocator, ' ');
+
                     const text_node = try ast.AstNode.create(
                         arena_allocator,
                         .Text,
@@ -435,6 +464,7 @@ pub const Parser = struct {
                 const expr_value = self.current.value;
                 const expr_line = self.current.line;
                 const expr_col = self.current.column;
+                last_token_end_col = expr_col + expr_value.len + 3; // #{...} = 3 extra chars
                 try self.advance();
 
                 const interp_node = try ast.AstNode.create(
@@ -448,12 +478,18 @@ pub const Parser = struct {
                     } },
                 );
                 try nodes.append(arena_allocator, interp_node);
+                has_content = true; // Mark that we have content
             } else {
-                // Accumulate text
-                if (text_buffer.items.len > 0) {
+                // Add space before token if we've already processed content
+                // This preserves spacing between words/interpolations
+                if (has_content) {
                     try text_buffer.append(arena_allocator, ' ');
                 }
+
+                // Accumulate text
                 try text_buffer.appendSlice(arena_allocator, self.current.value);
+                last_token_end_col = self.current.column + self.current.value.len;
+                has_content = true; // Mark that we have content
                 try self.advance();
             }
         }
