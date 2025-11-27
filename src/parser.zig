@@ -1,22 +1,103 @@
+//! Parser module - Syntax Analysis
+//!
+//! This module converts a stream of tokens from the tokenizer into an
+//! Abstract Syntax Tree (AST). It's the second phase of compilation.
+//!
+//! Flow:
+//! 1. Parser.init() creates parser with source code
+//! 2. parse() builds complete AST by calling parseStatement() repeatedly
+//! 3. Each statement type has its own parse function
+//! 4. Returns Document node with all parsed content
+//!
+//! Example:
+//! ```zig
+//! var parser = try Parser.init(allocator, "div.container\n  p Hello");
+//! defer parser.deinit();
+//!
+//! const document = try parser.parse();
+//! // document is root AST node containing the parsed tree
+//! ```
+//!
+//! Parser responsibilities:
+//! - Match tokens to grammar rules
+//! - Build AST node hierarchy
+//! - Handle indentation-based nesting
+//! - Parse attributes, expressions, and code blocks
+//! - Validate syntax structure
+//!
+//! Statement types parsed:
+//! - Tags: div, p, span (parseTag)
+//! - Comments: //, //- (parseComment)
+//! - Code: =, !=, - (parseCode)
+//! - Control flow: if, each, case (parseConditional, parseLoop, parseCase)
+//! - Mixins: mixin, + (parseMixinDefinition, parseMixinCall)
+//! - Templates: include, extends, block
+//! - Doctype: doctype html
+//!
+//! The parser uses an arena allocator to simplify memory management for
+//! the AST. All nodes are freed when parser.deinit() is called.
+
 const std = @import("std");
 const tokenizer = @import("tokenizer.zig");
 const ast = @import("ast.zig");
 
-// Parser module - Syntax analysis
-// Converts tokens into Abstract Syntax Tree
-
+/// Errors that can occur during parsing
+///
+/// - UnexpectedToken: Token doesn't match grammar expectations
+/// - OutOfMemory: Allocation failed
+/// - InvalidIndentation: Indentation is malformed
 pub const ParserError = error{
     UnexpectedToken,
     OutOfMemory,
     InvalidIndentation,
 };
 
+/// Parser - Converts token stream into Abstract Syntax Tree
+///
+/// Recursive descent parser that processes tokens and builds an AST.
+/// Uses lookahead of 1 token (self.current) for parsing decisions.
+///
+/// Fields:
+/// - tokenizer: Token stream source
+/// - current: Current token being processed (lookahead)
+/// - allocator: Base memory allocator
+/// - arena: Arena allocator for AST nodes (freed on deinit)
+///
+/// Parsing strategy:
+/// - Recursive descent: Each grammar rule has its own function
+/// - Indentation-aware: INDENT/DEDENT tokens control nesting
+/// - Error recovery: Prints helpful messages and returns errors
+///
+/// Example:
+/// ```zig
+/// var parser = try Parser.init(allocator, source);
+/// defer parser.deinit();
+///
+/// const doc = try parser.parse();
+/// // doc contains complete AST tree
+/// ```
 pub const Parser = struct {
     tokenizer: tokenizer.Tokenizer,
     current: tokenizer.Token,
     allocator: std.mem.Allocator,
     arena: std.heap.ArenaAllocator,
 
+    /// Initialize parser with source code
+    ///
+    /// Creates tokenizer, advances to first token, sets up arena.
+    ///
+    /// Parameters:
+    /// - allocator: Base allocator for parser structures
+    /// - source: Complete Pug template source code
+    ///
+    /// Returns: Initialized parser ready to parse
+    ///
+    /// Example:
+    /// ```zig
+    /// const source = "div\n  p Hello";
+    /// var parser = try Parser.init(allocator, source);
+    /// defer parser.deinit();
+    /// ```
     pub fn init(allocator: std.mem.Allocator, source: []const u8) !Parser {
         var tok = try tokenizer.Tokenizer.init(allocator, source);
         const current = try tok.next();
@@ -29,6 +110,16 @@ pub const Parser = struct {
         };
     }
 
+    /// Free parser and all AST nodes
+    ///
+    /// Destroys arena allocator (freeing all AST nodes at once)
+    /// and cleans up tokenizer.
+    ///
+    /// Example:
+    /// ```zig
+    /// var parser = try Parser.init(allocator, source);
+    /// defer parser.deinit(); // Clean up everything
+    /// ```
     pub fn deinit(self: *Parser) void {
         self.arena.deinit();
         self.tokenizer.deinit();
@@ -38,10 +129,28 @@ pub const Parser = struct {
     // Helper Functions
     // ========================================================================
 
+    /// Advance to next token
+    ///
+    /// Moves self.current to next token from tokenizer.
     fn advance(self: *Parser) !void {
         self.current = try self.tokenizer.next();
     }
 
+    /// Expect specific token type and consume it
+    ///
+    /// Parameters:
+    /// - expected: Token type that must be current
+    ///
+    /// Returns: The consumed token
+    ///
+    /// Errors:
+    /// - UnexpectedToken: Current token doesn't match expected
+    ///
+    /// Example:
+    /// ```zig
+    /// const lparen = try self.expect(.LParen);
+    /// // Now current token is whatever came after (
+    /// ```
     fn expect(self: *Parser, expected: tokenizer.TokenType) !tokenizer.Token {
         if (self.current.type == expected) {
             const result = self.current;
@@ -56,6 +165,19 @@ pub const Parser = struct {
         return error.UnexpectedToken;
     }
 
+    /// Check if current token matches any of the given types
+    ///
+    /// Parameters:
+    /// - types: Slice of token types to check against
+    ///
+    /// Returns: true if current token matches any type
+    ///
+    /// Example:
+    /// ```zig
+    /// if (self.match(&.{ .Class, .Id })) {
+    ///     // Current token is either Class or Id
+    /// }
+    /// ```
     fn match(self: *Parser, types: []const tokenizer.TokenType) bool {
         for (types) |t| {
             if (self.current.type == t) return true;
@@ -63,6 +185,10 @@ pub const Parser = struct {
         return false;
     }
 
+    /// Skip any newline tokens
+    ///
+    /// Advances past all consecutive Newline tokens.
+    /// Used to ignore blank lines between statements.
     fn skipNewlines(self: *Parser) !void {
         while (self.current.type == .Newline) {
             try self.advance();
@@ -73,6 +199,34 @@ pub const Parser = struct {
     // Main Parse Function
     // ========================================================================
 
+    /// Parse complete template into AST Document node
+    ///
+    /// Main entry point for parsing. Processes entire source code and
+    /// returns root Document node containing all parsed statements.
+    ///
+    /// Parsing flow:
+    /// 1. Skip leading newlines
+    /// 2. Check for optional doctype declaration
+    /// 3. Parse statements until EOF
+    /// 4. Return Document node with all children
+    ///
+    /// Returns: Document AST node (root of tree)
+    ///
+    /// Example:
+    /// ```zig
+    /// var parser = try Parser.init(allocator, "div\n  p Hello");
+    /// defer parser.deinit();
+    ///
+    /// const document = try parser.parse();
+    /// // document.data.Document.children contains parsed nodes
+    /// ```
+    ///
+    /// Template structure:
+    /// ```
+    /// doctype html        // Optional, must be first
+    /// div.container       // Statements...
+    ///   p Hello
+    /// ```
     pub fn parse(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
 
@@ -116,6 +270,28 @@ pub const Parser = struct {
         );
     }
 
+    /// Parse a single statement
+    ///
+    /// Dispatches to appropriate parse function based on current token type.
+    /// This is the main switch statement that routes parsing to specific
+    /// functions for each statement type.
+    ///
+    /// Statement types:
+    /// - Tag: div, p, span → parseTag()
+    /// - Pipe text: | text → parsePipeText()
+    /// - Comments: //, //- → parseComment()
+    /// - Code: =, !=, - → parseCode()
+    /// - Conditionals: if, unless → parseConditional()
+    /// - Loops: each, while → parseLoop()
+    /// - Case: case/when → parseCase()
+    /// - Mixins: mixin, + → parseMixinDefinition/Call()
+    /// - Templates: include, extends, block
+    ///
+    /// Returns: AST node for the statement
+    ///
+    /// Errors:
+    /// - UnexpectedToken: Token doesn't start a valid statement
+    /// - DoctypeMustBeFirst: doctype appears after other content
     fn parseStatement(self: *Parser) anyerror!*ast.AstNode {
         return switch (self.current.type) {
             .Ident => try self.parseTag(),
@@ -149,6 +325,29 @@ pub const Parser = struct {
     // Tag Parsing
     // ========================================================================
 
+    /// Parse a tag element (div, p, span, etc.)
+    ///
+    /// Handles complete tag syntax including:
+    /// - Tag name: div
+    /// - Classes: .container.main
+    /// - ID: #header
+    /// - Attributes: (href="/" title="Home")
+    /// - Inline code: = expression
+    /// - Inline text: Hello world
+    /// - Child elements (via indentation)
+    ///
+    /// Returns: Tag AST node
+    ///
+    /// Syntax examples:
+    /// ```
+    /// div                           // Simple tag
+    /// div.container#main            // With class and ID
+    /// a(href="/")                   // With attributes
+    /// p= message                    // With buffered code
+    /// p Hello world                 // With inline text
+    /// div                           // With children
+    ///   p Nested content
+    /// ```
     fn parseTag(self: *Parser) anyerror!*ast.AstNode {
         const token = try self.expect(.Ident);
         const arena_allocator = self.arena.allocator();
@@ -231,6 +430,14 @@ pub const Parser = struct {
     // Attribute Parsing
     // ========================================================================
 
+    /// Parse attribute list (key="value", class=myClass)
+    ///
+    /// Parses attributes within parentheses, handling:
+    /// - Static attributes: href="/", title="Home"
+    /// - Expression attributes: class=myClass, data=userData
+    /// - Boolean attributes: disabled, checked
+    ///
+    /// Syntax: (name=value, name2=value2, ...)
     fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.Attribute)) !void {
         const arena_allocator = self.arena.allocator();
         _ = try self.expect(.LParen);
@@ -422,6 +629,19 @@ pub const Parser = struct {
         return nodes;
     }
 
+    /// Parse piped text (| literal text on its own line)
+    ///
+    /// Pipe syntax forces text to be on its own line, useful for
+    /// multi-line text blocks or when text contains special characters.
+    ///
+    /// Syntax: | This is literal text
+    ///
+    /// Example:
+    /// ```
+    /// p
+    ///   | First line of text
+    ///   | Second line of text
+    /// ```
     fn parsePipeText(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         _ = try self.expect(.Pipe);
@@ -533,6 +753,10 @@ pub const Parser = struct {
     // Children Parsing
     // ========================================================================
 
+    /// Parse indented child elements
+    ///
+    /// Handles INDENT token, parses all children until DEDENT.
+    /// Used by tags, conditionals, loops, etc. to parse nested content.
     fn parseChildren(self: *Parser, children: *std.ArrayListUnmanaged(*ast.AstNode)) anyerror!void {
         const arena_allocator = self.arena.allocator();
 
@@ -552,6 +776,16 @@ pub const Parser = struct {
     // Comment Parsing
     // ========================================================================
 
+    /// Parse comment (// buffered or //- unbuffered)
+    ///
+    /// - Buffered (//): Emitted to HTML as <!-- comment -->
+    /// - Unbuffered (//-): Not included in output (code comment)
+    ///
+    /// Example:
+    /// ```
+    /// // This appears in HTML
+    /// //- This is for developers only
+    /// ```
     fn parseComment(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const is_buffered = self.current.type == .BufferedComment;
@@ -576,6 +810,18 @@ pub const Parser = struct {
     // Code Parsing
     // ========================================================================
 
+    /// Parse code markers (=, !=, -)
+    ///
+    /// - Buffered (=): Evaluate and output escaped HTML
+    /// - Unescaped (!=): Evaluate and output raw HTML
+    /// - Unbuffered (-): Execute code without output
+    ///
+    /// Example:
+    /// ```
+    /// = user.name          // Escaped output
+    /// != rawHtml           // Unescaped output
+    /// - var x = 10         // Execute only
+    /// ```
     fn parseCode(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const token = self.current;
@@ -618,6 +864,17 @@ pub const Parser = struct {
     // Conditional Parsing (if/else/unless)
     // ========================================================================
 
+    /// Parse conditional (if/unless with optional else)
+    ///
+    /// Syntax:
+    /// ```
+    /// if condition
+    ///   p True branch
+    /// else
+    ///   p False branch
+    /// ```
+    ///
+    /// unless is inverse of if (executes when condition is false)
     fn parseConditional(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const is_unless = self.current.type == .Unless;
@@ -691,6 +948,19 @@ pub const Parser = struct {
     // Loop Parsing (each/while)
     // ========================================================================
 
+    /// Parse loop (each or while)
+    ///
+    /// Each loop syntax:
+    /// ```
+    /// each item in items
+    ///   li= item
+    /// ```
+    ///
+    /// While loop syntax:
+    /// ```
+    /// while condition
+    ///   p Loop content
+    /// ```
     fn parseLoop(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const is_while = self.current.type == .While;
@@ -777,6 +1047,18 @@ pub const Parser = struct {
     // Case Statement Parsing
     // ========================================================================
 
+    /// Parse case/when switch statement
+    ///
+    /// Syntax:
+    /// ```
+    /// case variable
+    ///   when "value1"
+    ///     p First case
+    ///   when "value2"
+    ///     p Second case
+    ///   default
+    ///     p Default case
+    /// ```
     fn parseCase(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const start_line = self.current.line;
@@ -896,6 +1178,17 @@ pub const Parser = struct {
     // Mixin Definition Parsing
     // ========================================================================
 
+    /// Parse mixin definition
+    ///
+    /// Defines reusable template blocks with optional parameters.
+    ///
+    /// Syntax:
+    /// ```
+    /// mixin card(title, content)
+    ///   div.card
+    ///     h3= title
+    ///     p= content
+    /// ```
     fn parseMixinDefinition(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const start_line = self.current.line;
@@ -970,6 +1263,11 @@ pub const Parser = struct {
     // Mixin Call Parsing
     // ========================================================================
 
+    /// Parse mixin call (+mixinName)
+    ///
+    /// Invokes a previously defined mixin with arguments.
+    ///
+    /// Syntax: +card("Title", "Content")
     fn parseMixinCall(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const start_line = self.current.line;
@@ -1051,6 +1349,11 @@ pub const Parser = struct {
     // Include Parsing
     // ========================================================================
 
+    /// Parse include directive
+    ///
+    /// Includes another template file.
+    ///
+    /// Syntax: include header.pug
     fn parseInclude(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const start_line = self.current.line;
@@ -1094,6 +1397,11 @@ pub const Parser = struct {
     // Extends Parsing
     // ========================================================================
 
+    /// Parse extends directive
+    ///
+    /// Declares that this template extends a parent layout.
+    ///
+    /// Syntax: extends layout.pug
     fn parseExtends(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const start_line = self.current.line;
@@ -1124,6 +1432,15 @@ pub const Parser = struct {
     // Block Parsing
     // ========================================================================
 
+    /// Parse block directive
+    ///
+    /// Defines a content block that can be overridden in child templates.
+    ///
+    /// Syntax:
+    /// ```
+    /// block content
+    ///   p Default content
+    /// ```
     fn parseBlock(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const start_line = self.current.line;

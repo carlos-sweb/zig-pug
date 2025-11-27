@@ -1,7 +1,45 @@
+//! Cache module - Template Caching
+//!
+//! This module provides a template cache to store compiled HTML and avoid
+//! re-parsing and re-compiling unchanged templates. Improves performance for
+//! applications that repeatedly render the same templates.
+//!
+//! Features:
+//! - LRU (Least Recently Used) eviction when max size reached
+//! - Source hash validation to detect template changes
+//! - Cache statistics (hits, misses, hit rate)
+//! - Per-entry invalidation
+//!
+//! Example:
+//! ```zig
+//! var cache = TemplateCache.init(allocator, 100); // Max 100 entries
+//! defer cache.deinit();
+//!
+//! // Check if template is cached
+//! const hash = hashSource(source_code);
+//! if (cache.getIfValid("template.pug", hash)) |html| {
+//!     // Use cached HTML
+//! } else {
+//!     // Compile template
+//!     const html = try compile(source_code);
+//!     try cache.put("template.pug", html, hash);
+//! }
+//!
+//! // View cache statistics
+//! const stats = cache.stats();
+//! std.debug.print("Hit rate: {d:.2}%\n", .{stats.hit_rate * 100});
+//! ```
+
 const std = @import("std");
 
 /// Template Cache - Stores compiled HTML for reuse
-/// Avoids re-parsing and re-compiling unchanged templates
+///
+/// In-memory cache using file paths as keys. Each entry stores:
+/// - Compiled HTML
+/// - Timestamp (for LRU eviction)
+/// - Source hash (for change detection)
+///
+/// Thread-safety: Not thread-safe. Caller must synchronize access.
 pub const TemplateCache = struct {
     allocator: std.mem.Allocator,
     entries: std.StringHashMap(CacheEntry),
@@ -17,7 +55,19 @@ pub const TemplateCache = struct {
         source_hash: u64,
     };
 
-    /// Initialize cache with optional max size (0 = unlimited)
+    /// Initialize cache with optional max size
+    ///
+    /// Parameters:
+    /// - allocator: Memory allocator for cache entries
+    /// - max_size: Maximum number of entries (0 = unlimited)
+    ///
+    /// Returns: Initialized cache
+    ///
+    /// Example:
+    /// ```zig
+    /// var cache = TemplateCache.init(allocator, 100);
+    /// defer cache.deinit();
+    /// ```
     pub fn init(allocator: std.mem.Allocator, max_size: usize) Self {
         return .{
             .allocator = allocator,
@@ -28,6 +78,9 @@ pub const TemplateCache = struct {
         };
     }
 
+    /// Free cache and all stored entries
+    ///
+    /// Frees all HTML strings and keys. Cache cannot be used after this.
     pub fn deinit(self: *Self) void {
         var it = self.entries.iterator();
         while (it.next()) |entry| {
@@ -37,7 +90,15 @@ pub const TemplateCache = struct {
         self.entries.deinit();
     }
 
-    /// Get cached HTML for a key (file path or template name)
+    /// Get cached HTML for a key without hash validation
+    ///
+    /// Returns cached HTML regardless of whether source changed.
+    /// Use getIfValid() for safer cache lookups with change detection.
+    ///
+    /// Parameters:
+    /// - key: Template identifier (usually file path)
+    ///
+    /// Returns: Cached HTML or null if not found
     pub fn get(self: *Self, key: []const u8) ?[]const u8 {
         if (self.entries.get(key)) |entry| {
             self.hits += 1;
@@ -47,7 +108,26 @@ pub const TemplateCache = struct {
         return null;
     }
 
-    /// Get cached HTML only if source hash matches
+    /// Get cached HTML only if source hash matches (safe cache lookup)
+    ///
+    /// Recommended method for cache lookups. Returns cached HTML only if
+    /// the source hash matches, ensuring template hasn't changed.
+    ///
+    /// Parameters:
+    /// - key: Template identifier
+    /// - source_hash: Hash of current template source (from hashSource())
+    ///
+    /// Returns: Cached HTML if found and valid, null otherwise
+    ///
+    /// Example:
+    /// ```zig
+    /// const hash = hashSource(source);
+    /// if (cache.getIfValid("template.pug", hash)) |html| {
+    ///     return html; // Template unchanged, use cache
+    /// } else {
+    ///     // Template changed or not cached, recompile
+    /// }
+    /// ```
     pub fn getIfValid(self: *Self, key: []const u8, source_hash: u64) ?[]const u8 {
         if (self.entries.get(key)) |entry| {
             if (entry.source_hash == source_hash) {
@@ -60,6 +140,21 @@ pub const TemplateCache = struct {
     }
 
     /// Store compiled HTML in cache
+    ///
+    /// Adds or updates cache entry. If max_size is reached, evicts
+    /// the oldest entry (LRU). Copies both key and HTML to cache.
+    ///
+    /// Parameters:
+    /// - key: Template identifier
+    /// - html: Compiled HTML to cache
+    /// - source_hash: Hash of source code (for validation)
+    ///
+    /// Example:
+    /// ```zig
+    /// const html = try compiler.compile(ast);
+    /// const hash = hashSource(source_code);
+    /// try cache.put("template.pug", html, hash);
+    /// ```
     pub fn put(self: *Self, key: []const u8, html: []const u8, source_hash: u64) !void {
         // Check max size
         if (self.max_size > 0 and self.entries.count() >= self.max_size) {
@@ -88,6 +183,12 @@ pub const TemplateCache = struct {
     }
 
     /// Invalidate a specific cache entry
+    ///
+    /// Removes entry from cache and frees its memory.
+    /// Safe to call with non-existent keys (no-op).
+    ///
+    /// Parameters:
+    /// - key: Template identifier to invalidate
     pub fn invalidate(self: *Self, key: []const u8) void {
         if (self.entries.fetchRemove(key)) |old| {
             self.allocator.free(old.key);
@@ -95,7 +196,10 @@ pub const TemplateCache = struct {
         }
     }
 
-    /// Clear all cache entries
+    /// Clear all cache entries and reset statistics
+    ///
+    /// Removes all entries and resets hit/miss counters.
+    /// Does not free the cache itself (use deinit() for that).
     pub fn clear(self: *Self) void {
         var it = self.entries.iterator();
         while (it.next()) |entry| {
@@ -107,7 +211,18 @@ pub const TemplateCache = struct {
         self.misses = 0;
     }
 
-    /// Get cache statistics
+    /// Get cache performance statistics
+    ///
+    /// Returns current cache metrics including hit rate.
+    ///
+    /// Returns: CacheStats struct with metrics
+    ///
+    /// Example:
+    /// ```zig
+    /// const s = cache.stats();
+    /// std.debug.print("Entries: {d}, Hit rate: {d:.1}%\n",
+    ///     .{s.entries, s.hit_rate * 100});
+    /// ```
     pub fn stats(self: *const Self) CacheStats {
         const total = self.hits + self.misses;
         return .{
@@ -118,6 +233,10 @@ pub const TemplateCache = struct {
         };
     }
 
+    /// Evict oldest cache entry (LRU eviction)
+    ///
+    /// Called automatically when cache reaches max_size.
+    /// Finds and removes the entry with oldest timestamp.
     fn evictOldest(self: *Self) void {
         var oldest_key: ?[]const u8 = null;
         var oldest_time: i64 = std.math.maxInt(i64);
@@ -135,6 +254,13 @@ pub const TemplateCache = struct {
         }
     }
 
+    /// Cache statistics structure
+    ///
+    /// Fields:
+    /// - entries: Current number of cached templates
+    /// - hits: Number of successful cache lookups
+    /// - misses: Number of cache misses
+    /// - hit_rate: Percentage of hits (0.0 to 1.0)
     pub const CacheStats = struct {
         entries: usize,
         hits: usize,
@@ -144,6 +270,21 @@ pub const TemplateCache = struct {
 };
 
 /// Compute hash of template source for cache validation
+///
+/// Uses Wyhash algorithm for fast, high-quality hashing.
+/// Used to detect template changes between cache lookups.
+///
+/// Parameters:
+/// - source: Template source code
+///
+/// Returns: 64-bit hash value
+///
+/// Example:
+/// ```zig
+/// const hash1 = hashSource("div Hello");
+/// const hash2 = hashSource("div World");
+/// // hash1 != hash2 (different source)
+/// ```
 pub fn hashSource(source: []const u8) u64 {
     return std.hash.Wyhash.hash(0, source);
 }

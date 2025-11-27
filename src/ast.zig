@@ -1,12 +1,57 @@
-const std = @import("std");
+//! Abstract Syntax Tree (AST) module for zig-pug
+//!
+//! This module defines the data structures that represent a parsed Pug template.
+//! The parser converts a token stream into an AST, which is then walked by the
+//! compiler to generate HTML.
+//!
+//! Main components:
+//! - NodeType: Enum of all possible AST node types
+//! - AstNode: The actual tree node with type and data
+//! - NodeData: Union containing type-specific data
+//! - Attribute: Tag attribute representation
+//!
+//! Example AST for "div.container\n  p Hello":
+//! ```
+//! Document {
+//!   children: [
+//!     Tag {
+//!       name: "div",
+//!       attributes: [Attribute{name: "class", value: "container"}],
+//!       children: [
+//!         Tag {
+//!           name: "p",
+//!           children: [Text{content: "Hello"}]
+//!         }
+//!       ]
+//!     }
+//!   ]
+//! }
+//! ```
 
-// AST module - Abstract Syntax Tree representation
-// Represents the structure of a Pug template
+const std = @import("std");
 
 // ============================================================================
 // Node Types
 // ============================================================================
 
+/// All possible AST node types in a Pug template
+///
+/// Each type corresponds to a different Pug construct:
+/// - Document: Root node containing all top-level nodes
+/// - Tag: HTML tag (div, p, span, etc.)
+/// - Text: Plain text content
+/// - Interpolation: #{...} or !{...} expressions
+/// - Code: - code or = code
+/// - Conditional: if/else/unless statements
+/// - Loop: each/while loops
+/// - MixinDef: mixin definition
+/// - MixinCall: +mixin call
+/// - Include: include statement
+/// - Block: block definition
+/// - Extends: template inheritance
+/// - Comment: // or //- comments
+/// - Case: case/when statements
+/// - When: individual when clause
 pub const NodeType = enum {
     Document,
     Tag,
@@ -29,12 +74,50 @@ pub const NodeType = enum {
 // Main AST Node
 // ============================================================================
 
+/// AST Node - Core data structure representing a single node in the parse tree
+///
+/// Every node has:
+/// - type: What kind of node (Tag, Text, etc.)
+/// - line/column: Source location for error reporting
+/// - data: Type-specific data (union based on type)
+///
+/// Nodes are allocated on the heap and form a tree structure through
+/// parent-child relationships in their data fields (e.g., Tag.children).
+///
+/// Memory management:
+/// - Nodes are created with create() which allocates on heap
+/// - They must be freed with deinit() which recursively frees children
+/// - Use ArenaAllocator for automatic cleanup
 pub const AstNode = struct {
-    type: NodeType,
-    line: usize,
-    column: usize,
-    data: NodeData,
+    type: NodeType,        // Type of this node (Tag, Text, etc.)
+    line: usize,           // Source line number (1-indexed) for error messages
+    column: usize,         // Source column number (1-indexed)
+    data: NodeData,        // Type-specific data (union)
 
+    /// Create a new AST node on the heap
+    ///
+    /// Allocates memory for the node and initializes all fields.
+    /// The node must later be freed with deinit() or use an ArenaAllocator.
+    ///
+    /// Parameters:
+    /// - allocator: Memory allocator
+    /// - node_type: Type of node to create
+    /// - line: Source line number
+    /// - column: Source column number
+    /// - data: Type-specific data (must match node_type)
+    ///
+    /// Returns: Pointer to newly created node
+    ///
+    /// Example:
+    /// ```zig
+    /// const text_node = try AstNode.create(
+    ///     allocator,
+    ///     .Text,
+    ///     5,  // line 5
+    ///     12, // column 12
+    ///     .{ .Text = .{ .content = "Hello", .is_raw = false } }
+    /// );
+    /// ```
     pub fn create(allocator: std.mem.Allocator, node_type: NodeType, line: usize, column: usize, data: NodeData) !*AstNode {
         const node = try allocator.create(AstNode);
         node.* = .{
@@ -46,6 +129,33 @@ pub const AstNode = struct {
         return node;
     }
 
+    /// Recursively free all memory associated with this node and its children
+    ///
+    /// This method walks the AST tree depth-first and frees all allocated memory:
+    /// 1. Recursively calls deinit() on all child nodes
+    /// 2. Destroys (frees) all child node pointers
+    /// 3. Frees all ArrayLists (children, attributes, etc.)
+    ///
+    /// Important: This does NOT free the node itself, only its contents.
+    /// The caller must call allocator.destroy(node) after deinit().
+    ///
+    /// Alternatively, use an ArenaAllocator which frees everything at once.
+    ///
+    /// Parameters:
+    /// - allocator: Same allocator used to create the node
+    ///
+    /// Example:
+    /// ```zig
+    /// // Manual cleanup
+    /// node.deinit(allocator);
+    /// allocator.destroy(node);
+    ///
+    /// // Or use ArenaAllocator (recommended)
+    /// var arena = std.heap.ArenaAllocator.init(allocator);
+    /// defer arena.deinit(); // Frees everything at once
+    /// const node = try AstNode.create(arena.allocator(), ...);
+    /// // No need to call deinit
+    /// ```
     pub fn deinit(self: *AstNode, allocator: std.mem.Allocator) void {
         switch (self.data) {
             .Document => |*doc| {
@@ -144,6 +254,19 @@ pub const AstNode = struct {
     }
 };
 
+/// Tagged union containing type-specific data for each node type
+///
+/// This is a discriminated union where the active field is determined by
+/// the AstNode.type field. Each variant contains a struct with the data
+/// specific to that node type.
+///
+/// Example:
+/// ```zig
+/// if (node.type == .Tag) {
+///     const tag = node.data.Tag;
+///     std.debug.print("Tag: {s}\n", .{tag.name});
+/// }
+/// ```
 pub const NodeData = union(NodeType) {
     Document: DocumentNode,
     Tag: TagNode,
@@ -166,11 +289,43 @@ pub const NodeData = union(NodeType) {
 // Specific Node Types
 // ============================================================================
 
+/// Root document node containing all top-level nodes
+///
+/// This is the root of the AST tree. All templates have exactly one Document node.
+///
+/// Fields:
+/// - children: Top-level nodes (tags, text, etc.)
+/// - doctype: Optional doctype declaration (e.g., "html")
+///
+/// Example:
+/// ```zpug
+/// doctype html
+/// html
+///   body
+///     p Hello
+/// ```
+/// Creates Document with doctype="html" and one child (html tag).
 pub const DocumentNode = struct {
     children: std.ArrayListUnmanaged(*AstNode),
     doctype: ?[]const u8,
 };
 
+/// HTML tag node (div, p, span, etc.)
+///
+/// Represents any HTML tag with its attributes and children.
+///
+/// Fields:
+/// - name: Tag name (e.g., "div", "p", "span")
+/// - attributes: List of attributes (class, id, href, etc.)
+/// - children: Child nodes (nested tags, text, etc.)
+/// - is_self_closing: True for void elements (img, br, input)
+///
+/// Example:
+/// ```zpug
+/// div.container#main(data-value="test")
+///   p Hello
+/// ```
+/// Creates Tag{name="div", attributes=[class, id, data-value], children=[p tag]}
 pub const TagNode = struct {
     name: []const u8,
     attributes: std.ArrayListUnmanaged(Attribute),
@@ -178,18 +333,62 @@ pub const TagNode = struct {
     is_self_closing: bool,
 };
 
+/// Plain text content node
+///
+/// Represents text that should be output as-is (with HTML escaping unless raw).
+///
+/// Fields:
+/// - content: The text content
+/// - is_raw: If true, from pipe (|) and HTML entities not escaped
+///
+/// Example:
+/// ```zpug
+/// p Hello world         // TextNode{content="Hello world", is_raw=false}
+/// | <strong>Bold</strong>  // TextNode{content="<strong>...", is_raw=true}
+/// ```
 pub const TextNode = struct {
     content: []const u8,
-    is_raw: bool, // For pipe | text
+    is_raw: bool, // For pipe | text (no HTML escaping)
 };
 
+/// HTML tag attribute
+///
+/// Represents a single attribute on an HTML tag.
+///
+/// Fields:
+/// - name: Attribute name (e.g., "class", "href", "data-value")
+/// - value: Attribute value (can be null for boolean attributes)
+/// - is_unescaped: If true, value is not HTML-escaped (for !=)
+/// - is_expression: If true, value is a JS expression to evaluate
+///
+/// Examples:
+/// ```zpug
+/// div(class="container")           // {name="class", value="container", is_expression=false}
+/// div(class=myVar)                 // {name="class", value="myVar", is_expression=true}
+/// input(type="checkbox" checked)   // {name="checked", value=null}
+/// div(data-html!=htmlContent)      // {name="data-html", is_unescaped=true, is_expression=true}
+/// ```
 pub const Attribute = struct {
     name: []const u8,
     value: ?[]const u8,
-    is_unescaped: bool,
-    is_expression: bool, // true if value should be evaluated as JS expression
+    is_unescaped: bool,      // For != (don't HTML-escape)
+    is_expression: bool,     // true if value should be evaluated as JS expression
 };
 
+/// Interpolation node for #{...} and !{...}
+///
+/// Represents a JavaScript expression to be evaluated and inserted into output.
+///
+/// Fields:
+/// - expression: The JS code to evaluate (e.g., "name", "user.email", "items.length")
+/// - is_unescaped: If true (!{...}), don't HTML-escape the result
+///
+/// Examples:
+/// ```zpug
+/// p Hello #{name}              // {expression="name", is_unescaped=false}
+/// p Count: #{items.length}     // {expression="items.length", is_unescaped=false}
+/// div!{htmlContent}            // {expression="htmlContent", is_unescaped=true}
+/// ```
 pub const InterpolationNode = struct {
     expression: []const u8,
     is_unescaped: bool,

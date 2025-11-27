@@ -1,12 +1,63 @@
+//! Compiler module - Code Generation
+//!
+//! This module converts an Abstract Syntax Tree (AST) into HTML output.
+//! It's the final phase of the compilation pipeline.
+//!
+//! Flow:
+//! 1. Compiler.init() creates compiler with JavaScript runtime
+//! 2. compile() walks AST and generates HTML
+//! 3. Each node type has its own compile function
+//! 4. Returns complete HTML string
+//!
+//! Example:
+//! ```zig
+//! var parser = try Parser.init(allocator, source);
+//! defer parser.deinit();
+//!
+//! const document = try parser.parse();
+//!
+//! var js_runtime = try runtime.JsRuntime.init(allocator);
+//! defer js_runtime.deinit();
+//!
+//! var compiler = try Compiler.init(allocator, js_runtime);
+//! defer compiler.deinit();
+//!
+//! const html = try compiler.compile(document);
+//! defer allocator.free(html);
+//! ```
+//!
+//! Compiler features:
+//! - HTML generation from AST nodes
+//! - JavaScript expression evaluation via runtime
+//! - Template inheritance (extends/block)
+//! - Mixin definitions and calls
+//! - Include directive support
+//! - Pretty-print mode with indentation
+//! - Comment inclusion control
+//! - Template caching
+//!
+//! Output modes:
+//! - Standard: Minified HTML (no indentation, no comments)
+//! - Pretty: Indented HTML with comments (--pretty flag)
+//! - Format: Indented HTML without comments (--format flag)
+
 const std = @import("std");
 const ast = @import("ast.zig");
 const runtime = @import("runtime.zig");
 const cache = @import("cache.zig");
 const Parser = @import("parser.zig").Parser;
 
-// Compiler module - Converts AST to HTML
-// Takes the parsed AST and generates HTML output
-
+/// Errors that can occur during compilation
+///
+/// - OutOfMemory: Allocation failed
+/// - RuntimeError: JavaScript evaluation error
+/// - InvalidNode: Malformed AST node
+/// - MixinNotFound: Called undefined mixin
+/// - IncludeFileNotFound: Include file doesn't exist
+/// - IncludeParseError: Include file has syntax errors
+/// - LoopIterableNotArray: Loop target isn't an array
+/// - ExtendsFileNotFound: Parent template doesn't exist
+/// - ExtendsParseError: Parent template has syntax errors
 pub const CompilerError = error{
     OutOfMemory,
     RuntimeError,
@@ -19,6 +70,33 @@ pub const CompilerError = error{
     ExtendsParseError,
 };
 
+/// Compiler - Generates HTML from AST
+///
+/// Stateful code generator that walks AST and outputs HTML.
+/// Maintains context for template features like mixins, blocks, includes.
+///
+/// Fields:
+/// - allocator: Memory allocator
+/// - runtime: JavaScript runtime for expression evaluation
+/// - output: HTML output buffer
+/// - indent_level: Current indentation depth (for pretty mode)
+/// - pretty: Enable indentation and formatting
+/// - mixins: Map of mixin name → definition node
+/// - base_path: Directory path for resolving relative includes
+/// - template_cache: Optional cache for compiled includes
+/// - child_blocks: Blocks defined in child template (for extends)
+/// - include_comments: Whether to emit HTML comments
+/// - has_errors: Whether any errors occurred (strict mode)
+///
+/// Usage:
+/// ```zig
+/// var compiler = try Compiler.init(allocator, js_runtime);
+/// defer compiler.deinit();
+///
+/// compiler.pretty = true;  // Enable pretty-print
+/// const html = try compiler.compile(ast_document);
+/// defer allocator.free(html);
+/// ```
 pub const Compiler = struct {
     allocator: std.mem.Allocator,
     runtime: *runtime.JsRuntime,
@@ -34,6 +112,22 @@ pub const Compiler = struct {
 
     const Self = @This();
 
+    /// Initialize compiler with JavaScript runtime
+    ///
+    /// Parameters:
+    /// - allocator: Memory allocator
+    /// - js_runtime: JavaScript runtime for evaluating expressions
+    ///
+    /// Returns: Initialized compiler
+    ///
+    /// Example:
+    /// ```zig
+    /// var js_runtime = try runtime.JsRuntime.init(allocator);
+    /// defer js_runtime.deinit();
+    ///
+    /// var compiler = try Compiler.init(allocator, js_runtime);
+    /// defer compiler.deinit();
+    /// ```
     pub fn init(allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime) !*Self {
         const compiler = try allocator.create(Self);
         compiler.* = .{
@@ -52,16 +146,31 @@ pub const Compiler = struct {
         return compiler;
     }
 
-    /// Set base path for resolving includes
+    /// Set base directory path for resolving relative includes
+    ///
+    /// When template uses 'include header.pug', this path is used
+    /// to locate the included file.
+    ///
+    /// Parameters:
+    /// - path: Absolute or relative path to template directory
     pub fn setBasePath(self: *Self, path: []const u8) void {
         self.base_path = path;
     }
 
-    /// Set template cache for caching compiled includes
+    /// Set template cache for faster compilation
+    ///
+    /// Cache stores parsed and compiled templates to avoid
+    /// re-parsing includes on every compilation.
+    ///
+    /// Parameters:
+    /// - template_cache: Cache instance to use
     pub fn setCache(self: *Self, template_cache: *cache.TemplateCache) void {
         self.template_cache = template_cache;
     }
 
+    /// Free compiler resources
+    ///
+    /// Cleans up output buffer, mixin map, and block map.
     pub fn deinit(self: *Self) void {
         self.output.deinit(self.allocator);
         self.mixins.deinit();
@@ -69,12 +178,30 @@ pub const Compiler = struct {
         self.allocator.destroy(self);
     }
 
-    /// Compile an AST to HTML
+    /// Compile AST document to HTML string
+    ///
+    /// Main entry point for compilation. Walks the AST and
+    /// generates HTML output based on compiler settings.
+    ///
+    /// Parameters:
+    /// - node: Root AST node (usually Document)
+    ///
+    /// Returns: HTML string (caller owns memory)
+    ///
+    /// Example:
+    /// ```zig
+    /// const html = try compiler.compile(document);
+    /// defer allocator.free(html);
+    /// ```
     pub fn compile(self: *Self, node: *ast.AstNode) ![]const u8 {
         try self.compileNode(node);
         return try self.output.toOwnedSlice(self.allocator);
     }
 
+    /// Dispatch compilation to appropriate function based on node type
+    ///
+    /// Central dispatcher that routes each AST node type to its
+    /// corresponding compile function.
     fn compileNode(self: *Self, node: *ast.AstNode) anyerror!void {
         switch (node.data) {
             .Document => try self.compileDocument(node),
@@ -99,6 +226,14 @@ pub const Compiler = struct {
     // Document Compilation
     // ========================================================================
 
+    /// Compile root Document node
+    ///
+    /// Handles:
+    /// 1. Doctype declaration output
+    /// 2. Mixin registration
+    /// 3. Template inheritance (extends)
+    /// 4. Block collection for child templates
+    /// 5. Normal content compilation
     fn compileDocument(self: *Self, node: *ast.AstNode) !void {
         const doc = &node.data.Document;
 
@@ -141,6 +276,10 @@ pub const Compiler = struct {
     // Template Inheritance (Extends/Block)
     // ========================================================================
 
+    /// Compile extends directive - load and compile parent template
+    ///
+    /// Resolves parent template path, loads and parses it,
+    /// then compiles with child blocks available for override.
     fn compileExtends(self: *Self, parent_path: []const u8) !void {
         // Resolve path relative to base_path
         const full_path = if (self.base_path) |base| blk: {
@@ -178,6 +317,10 @@ pub const Compiler = struct {
         try self.compileNode(parent_ast);
     }
 
+    /// Compile block directive
+    ///
+    /// If child template overrode this block (in child_blocks map),
+    /// use child content. Otherwise use default content.
     fn compileBlock(self: *Self, node: *ast.AstNode) !void {
         const block = &node.data.Block;
 
@@ -199,6 +342,11 @@ pub const Compiler = struct {
     // Tag Compilation
     // ========================================================================
 
+    /// Compile HTML tag element
+    ///
+    /// Generates opening tag, attributes, content, and closing tag.
+    /// Handles void elements (img, input, br, etc.) correctly.
+    /// Applies pretty-print indentation if enabled.
     fn compileTag(self: *Self, node: *ast.AstNode) !void {
         const tag = &node.data.Tag;
 
@@ -297,11 +445,16 @@ pub const Compiler = struct {
     // Text & Interpolation Compilation
     // ========================================================================
 
+    /// Compile text node - outputs literal text content
     fn compileText(self: *Self, node: *ast.AstNode) !void {
         const text = &node.data.Text;
         try self.output.appendSlice(self.allocator, text.content);
     }
 
+    /// Compile interpolation - evaluates JavaScript expression
+    ///
+    /// Handles #{expr} (escaped) and !{expr} (unescaped).
+    /// Evaluates expression using JavaScript runtime.
     fn compileInterpolation(self: *Self, node: *ast.AstNode) !void {
         const interp = &node.data.Interpolation;
 
@@ -327,6 +480,12 @@ pub const Compiler = struct {
         }
     }
 
+    /// Compile code node (=, !=, -)
+    ///
+    /// Evaluates JavaScript code and optionally outputs result.
+    /// - Buffered (=): Output escaped result
+    /// - Unescaped (!=): Output raw result
+    /// - Unbuffered (-): Execute only, no output
     fn compileCode(self: *Self, node: *ast.AstNode) !void {
         const code = &node.data.Code;
 
