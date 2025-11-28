@@ -193,9 +193,19 @@ pub const Compiler = struct {
     /// const html = try compiler.compile(document);
     /// defer allocator.free(html);
     /// ```
+    /// Compile AST document to HTML string
+    ///
+    /// This method compiles the entire AST and returns the result as an owned slice.
+    /// The caller is responsible for freeing the returned memory.
     pub fn compile(self: *Self, node: *ast.AstNode) ![]const u8 {
         try self.compileNode(node);
         return try self.output.toOwnedSlice(self.allocator);
+    }
+
+    /// Helper to get a writer for the output buffer
+    /// This allows for more efficient writing operations
+    inline fn writer(self: *Self) std.ArrayList(u8).Writer {
+        return self.output.writer(self.allocator);
     }
 
     /// Dispatch compilation to appropriate function based on node type
@@ -239,9 +249,8 @@ pub const Compiler = struct {
 
         // Output doctype if present
         if (doc.doctype) |doctype_value| {
-            try self.output.appendSlice(self.allocator, "<!DOCTYPE ");
-            try self.output.appendSlice(self.allocator, doctype_value);
-            try self.output.appendSlice(self.allocator, ">");
+            const w = self.writer();
+            try w.print("<!DOCTYPE {s}>", .{doctype_value});
         }
 
         // First pass: register all mixins and check for extends
@@ -359,42 +368,42 @@ pub const Compiler = struct {
             return;
         }
 
-        // Opening tag
-        try self.output.appendSlice(self.allocator, "<");
-        try self.output.appendSlice(self.allocator, tag.name);
+        const w = self.writer();
+
+        // Opening tag - use print for better performance
+        try w.print("<{s}", .{tag.name});
 
         // Attributes
         if (tag.attributes.items.len > 0) {
             try self.compileAttributes(&tag.attributes);
         }
 
+        try w.writeByte('>');
+
         // Self-closing tags
         const is_void_element = isVoidElement(tag.name);
         if (is_void_element or tag.is_self_closing) {
-            try self.output.appendSlice(self.allocator, ">");
             return;
         }
-
-        try self.output.appendSlice(self.allocator, ">");
 
         // Children
         for (tag.children.items) |child| {
             try self.compileNode(child);
         }
 
-        // Closing tag
-        try self.output.appendSlice(self.allocator, "</");
-        try self.output.appendSlice(self.allocator, tag.name);
-        try self.output.appendSlice(self.allocator, ">");
+        // Closing tag - use print for better performance
+        try w.print("</{s}>", .{tag.name});
     }
 
     fn compileAttributes(self: *Self, attributes: *const std.ArrayListUnmanaged(ast.Attribute)) !void {
+        const w = self.writer();
+
         for (attributes.items) |attr| {
-            try self.output.appendSlice(self.allocator, " ");
-            try self.output.appendSlice(self.allocator, attr.name);
+            // Use print for better performance
+            try w.print(" {s}", .{attr.name});
 
             if (attr.value) |value| {
-                try self.output.appendSlice(self.allocator, "=\"");
+                try w.writeAll("=\"");
 
                 // Evaluate expression if needed
                 if (attr.is_expression) {
@@ -405,40 +414,39 @@ pub const Compiler = struct {
                         std.debug.print("  Error: {}\n", .{err});
                         std.debug.print("  Hint: Make sure the variable '{s}' is defined\n", .{value});
                         // Skip attribute on error (strict mode)
-                        try self.output.appendSlice(self.allocator, "\"");
+                        try w.writeByte('"');
                         continue;
                     };
                     defer self.allocator.free(result);
 
                     // Escape the result if not unescaped
                     if (attr.is_unescaped) {
-                        try self.output.appendSlice(self.allocator, result);
+                        try w.writeAll(result);
                     } else {
                         const escaped = try self.escapeHtml(result);
                         defer self.allocator.free(escaped);
-                        try self.output.appendSlice(self.allocator, escaped);
+                        try w.writeAll(escaped);
                     }
                 } else {
-                    try self.output.appendSlice(self.allocator, value);
+                    try w.writeAll(value);
                 }
 
-                try self.output.appendSlice(self.allocator, "\"");
+                try w.writeByte('"');
             }
         }
     }
 
-    fn isVoidElement(tag_name: []const u8) bool {
-        const void_elements = [_][]const u8{
-            "area", "base", "br", "col", "embed", "hr", "img", "input",
-            "link", "meta", "param", "source", "track", "wbr",
-        };
+    /// HTML void elements that don't have closing tags.
+    /// Uses StaticStringMap for O(1) lookup with compile-time perfect hash generation.
+    const void_elements = std.StaticStringMap(void).initComptime(.{
+        .{"area"}, .{"base"},   .{"br"},     .{"col"},
+        .{"embed"}, .{"hr"},    .{"img"},    .{"input"},
+        .{"link"}, .{"meta"},   .{"param"},  .{"source"},
+        .{"track"}, .{"wbr"},
+    });
 
-        for (void_elements) |void_elem| {
-            if (std.mem.eql(u8, tag_name, void_elem)) {
-                return true;
-            }
-        }
-        return false;
+    fn isVoidElement(tag_name: []const u8) bool {
+        return void_elements.has(tag_name);
     }
 
     // ========================================================================
@@ -448,7 +456,7 @@ pub const Compiler = struct {
     /// Compile text node - outputs literal text content
     fn compileText(self: *Self, node: *ast.AstNode) !void {
         const text = &node.data.Text;
-        try self.output.appendSlice(self.allocator, text.content);
+        try self.writer().writeAll(text.content);
     }
 
     /// Compile interpolation - evaluates JavaScript expression
@@ -471,12 +479,13 @@ pub const Compiler = struct {
         defer self.allocator.free(result);
 
         // Apply HTML escaping unless explicitly unescaped
+        const w = self.writer();
         if (interp.is_unescaped) {
-            try self.output.appendSlice(self.allocator, result);
+            try w.writeAll(result);
         } else {
             const escaped = try self.escapeHtml(result);
             defer self.allocator.free(escaped);
-            try self.output.appendSlice(self.allocator, escaped);
+            try w.writeAll(escaped);
         }
     }
 
@@ -501,13 +510,14 @@ pub const Compiler = struct {
 
         // If buffered, output the result
         if (code.is_buffered) {
+            const w = self.writer();
             // Apply HTML escaping unless explicitly unescaped
             if (code.is_unescaped) {
-                try self.output.appendSlice(self.allocator, result);
+                try w.writeAll(result);
             } else {
                 const escaped = try self.escapeHtml(result);
                 defer self.allocator.free(escaped);
-                try self.output.appendSlice(self.allocator, escaped);
+                try w.writeAll(escaped);
             }
         }
         // If unbuffered, we just executed it but don't output
@@ -516,32 +526,27 @@ pub const Compiler = struct {
     /// Escape HTML special characters to prevent XSS attacks
     /// Optimized version that pre-calculates size to avoid reallocations
     fn escapeHtml(self: *Self, input: []const u8) ![]const u8 {
+        // Helper to get escape sequence length
+        const escapeLen = struct {
+            inline fn get(c: u8) usize {
+                return switch (c) {
+                    '&' => 5,  // &amp;
+                    '<', '>' => 4,  // &lt; or &gt;
+                    '"' => 6,  // &quot;
+                    '\'' => 5,  // &#39;
+                    else => 1,
+                };
+            }
+        }.get;
+
         // First pass: check if escaping is needed and calculate exact size
         var needs_escaping = false;
         var final_size: usize = 0;
 
         for (input) |c| {
-            switch (c) {
-                '&' => {
-                    needs_escaping = true;
-                    final_size += 5; // &amp;
-                },
-                '<', '>' => {
-                    needs_escaping = true;
-                    final_size += 4; // &lt; or &gt;
-                },
-                '"' => {
-                    needs_escaping = true;
-                    final_size += 6; // &quot;
-                },
-                '\'' => {
-                    needs_escaping = true;
-                    final_size += 5; // &#39;
-                },
-                else => {
-                    final_size += 1;
-                },
-            }
+            const len = escapeLen(c);
+            if (len > 1) needs_escaping = true;
+            final_size += len;
         }
 
         // If no escaping needed, return a copy of the input
@@ -554,7 +559,7 @@ pub const Compiler = struct {
         errdefer result.deinit(self.allocator);
         try result.ensureTotalCapacity(self.allocator, final_size);
 
-        // Second pass: build escaped string
+        // Second pass: build escaped string - modern Zig switch
         for (input) |c| {
             switch (c) {
                 '&' => result.appendSliceAssumeCapacity("&amp;"),
@@ -579,13 +584,14 @@ pub const Compiler = struct {
         // Only include buffered comments if include_comments is true
         // Unbuffered comments (//-) are never included
         if (comment.is_buffered and self.include_comments) {
-            try self.output.appendSlice(self.allocator, "<!--");
+            const w = self.writer();
+            try w.writeAll("<!--");
             // Escape comment content to prevent injection attacks
             // Replace "--" with "- -" to prevent premature comment closing
             const escaped = try self.escapeComment(comment.content);
             defer self.allocator.free(escaped);
-            try self.output.appendSlice(self.allocator, escaped);
-            try self.output.appendSlice(self.allocator, "-->");
+            try w.writeAll(escaped);
+            try w.writeAll("-->");
         }
         // Production mode (include_comments=false): comments are stripped
         // Development mode (include_comments=true): comments are included
@@ -594,15 +600,8 @@ pub const Compiler = struct {
     /// Escape HTML comment content to prevent XSS/injection attacks
     /// Replaces "--" with "- -" to prevent premature comment closing
     fn escapeComment(self: *Self, input: []const u8) ![]const u8 {
-        // Check if escaping is needed
-        var needs_escaping = false;
-        var i: usize = 0;
-        while (i < input.len) : (i += 1) {
-            if (i + 1 < input.len and input[i] == '-' and input[i + 1] == '-') {
-                needs_escaping = true;
-                break;
-            }
-        }
+        // Check if escaping is needed - modern Zig idiom
+        const needs_escaping = std.mem.indexOf(u8, input, "--") != null;
 
         if (!needs_escaping) {
             return try self.allocator.dupe(u8, input);
@@ -612,7 +611,7 @@ pub const Compiler = struct {
         var result = std.ArrayList(u8){};
         errdefer result.deinit(self.allocator);
 
-        i = 0;
+        var i: usize = 0;
         while (i < input.len) {
             if (i + 1 < input.len and input[i] == '-' and input[i + 1] == '-') {
                 try result.appendSlice(self.allocator, "- -");
@@ -719,9 +718,8 @@ pub const Compiler = struct {
             return;
         }
 
-        // Iterate over array
-        var i: usize = 0;
-        while (i < length) : (i += 1) {
+        // Iterate over array - modern Zig range syntax
+        for (0..length) |i| {
             // Set iterator variable: item = array[i]
             const set_item_expr = try std.fmt.allocPrint(
                 self.allocator,

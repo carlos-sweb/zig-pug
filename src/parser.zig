@@ -562,15 +562,12 @@ pub const Parser = struct {
                     // Add trailing space before interpolation
                     try text_buffer.append(arena_allocator, ' ');
 
-                    const text_node = try ast.AstNode.create(
+                    // Modern Zig: use helper constructor
+                    const text_node = try ast.AstNode.text(
                         arena_allocator,
-                        .Text,
                         start_line,
                         1,
-                        .{ .Text = .{
-                            .content = try text_buffer.toOwnedSlice(arena_allocator),
-                            .is_raw = false,
-                        } },
+                        try text_buffer.toOwnedSlice(arena_allocator),
                     );
                     try nodes.append(arena_allocator, text_node);
                     text_buffer = .{};
@@ -584,15 +581,13 @@ pub const Parser = struct {
                 last_token_end_col = expr_col + expr_value.len + 3; // #{...} = 3 extra chars
                 try self.advance();
 
-                const interp_node = try ast.AstNode.create(
+                // Modern Zig: use helper constructor
+                const interp_node = try ast.AstNode.interpolation(
                     arena_allocator,
-                    .Interpolation,
                     expr_line,
                     expr_col,
-                    .{ .Interpolation = .{
-                        .expression = expr_value,
-                        .is_unescaped = is_unescaped,
-                    } },
+                    expr_value,
+                    is_unescaped,
                 );
                 try nodes.append(arena_allocator, interp_node);
                 has_content = true; // Mark that we have content
@@ -687,15 +682,13 @@ pub const Parser = struct {
                 last_token_end_col = expr_col + expr_value.len + 3; // #{...} = 3 extra chars
                 try self.advance();
 
-                const interp_node = try ast.AstNode.create(
+                // Modern Zig: use helper constructor
+                const interp_node = try ast.AstNode.interpolation(
                     arena_allocator,
-                    .Interpolation,
                     expr_line,
                     expr_col,
-                    .{ .Interpolation = .{
-                        .expression = expr_value,
-                        .is_unescaped = is_unescaped,
-                    } },
+                    expr_value,
+                    is_unescaped,
                 );
                 try nodes.append(arena_allocator, interp_node);
                 has_content = true; // Mark that we have content

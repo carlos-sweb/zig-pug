@@ -165,13 +165,13 @@ pub const AstNode = struct {
                 }
                 doc.children.deinit(allocator);
             },
-            .Tag => |*tag| {
-                tag.attributes.deinit(allocator);
-                for (tag.children.items) |child| {
+            .Tag => |*tag_data| {
+                tag_data.attributes.deinit(allocator);
+                for (tag_data.children.items) |child| {
                     child.deinit(allocator);
                     allocator.destroy(child);
                 }
-                tag.children.deinit(allocator);
+                tag_data.children.deinit(allocator);
             },
             .Conditional => |*cond| {
                 for (cond.then_branch.items) |child| {
@@ -251,6 +251,81 @@ pub const AstNode = struct {
             },
             else => {},
         }
+    }
+
+    // ========================================================================
+    // Helper Constructors - Modern Zig idiom to simplify parser code
+    // ========================================================================
+
+    /// Create a Tag node with sensible defaults
+    pub fn tag(allocator: std.mem.Allocator, line: usize, column: usize, name: []const u8) !*AstNode {
+        return create(allocator, .Tag, line, column, .{
+            .Tag = .{
+                .name = name,
+                .attributes = .{},
+                .children = .{},
+                .is_self_closing = false,
+            },
+        });
+    }
+
+    /// Create a Text node
+    pub fn text(allocator: std.mem.Allocator, line: usize, column: usize, content: []const u8) !*AstNode {
+        return create(allocator, .Text, line, column, .{
+            .Text = .{
+                .content = content,
+                .is_raw = false,
+            },
+        });
+    }
+
+    /// Create an Interpolation node (#{...})
+    pub fn interpolation(allocator: std.mem.Allocator, line: usize, column: usize, expression: []const u8, is_unescaped: bool) !*AstNode {
+        return create(allocator, .Interpolation, line, column, .{
+            .Interpolation = .{
+                .expression = expression,
+                .is_unescaped = is_unescaped,
+            },
+        });
+    }
+
+    /// Create a Code node (-, =, !=)
+    pub fn code(allocator: std.mem.Allocator, line: usize, column: usize, code_str: []const u8, is_buffered: bool, is_unescaped: bool) !*AstNode {
+        return create(allocator, .Code, line, column, .{
+            .Code = .{
+                .code = code_str,
+                .is_buffered = is_buffered,
+                .is_unescaped = is_unescaped,
+            },
+        });
+    }
+
+    /// Create a Comment node
+    pub fn comment(allocator: std.mem.Allocator, line: usize, column: usize, content: []const u8, is_buffered: bool) !*AstNode {
+        return create(allocator, .Comment, line, column, .{
+            .Comment = .{
+                .content = content,
+                .is_buffered = is_buffered,
+            },
+        });
+    }
+
+    /// Create an Include node
+    pub fn include(allocator: std.mem.Allocator, line: usize, column: usize, path: []const u8) !*AstNode {
+        return create(allocator, .Include, line, column, .{
+            .Include = .{
+                .path = path,
+            },
+        });
+    }
+
+    /// Create an Extends node
+    pub fn extends(allocator: std.mem.Allocator, line: usize, column: usize, path: []const u8) !*AstNode {
+        return create(allocator, .Extends, line, column, .{
+            .Extends = .{
+                .path = path,
+            },
+        });
     }
 };
 

@@ -7,36 +7,27 @@ const VERSION = "0.3.0";
 
 const CliOptions = struct {
     input_files: std.ArrayList([]const u8),
-    output_path: ?[]const u8,
-    variables_file: ?[]const u8,
+    output_path: ?[]const u8 = null,
+    variables_file: ?[]const u8 = null,
     variables: std.StringHashMap([]const u8),
-    watch: bool,
-    pretty: bool,
-    format: bool,
-    minify: bool,
-    verbose: bool,
-    silent: bool,
-    stdin: bool,
-    stdout: bool,
-    force: bool,
+    watch: bool = false,
+    pretty: bool = false,
+    format: bool = false,
+    minify: bool = false,
+    verbose: bool = false,
+    silent: bool = false,
+    stdin: bool = false,
+    stdout: bool = false,
+    force: bool = false,
     allocator: std.mem.Allocator,
 
+    /// Modern Zig initialization with default values
     pub fn init(allocator: std.mem.Allocator) CliOptions {
         return .{
             .input_files = std.ArrayList([]const u8){},
-            .output_path = null,
-            .variables_file = null,
             .variables = std.StringHashMap([]const u8).init(allocator),
-            .watch = false,
-            .pretty = false,
-            .format = false,
-            .minify = false,
-            .verbose = false,
-            .silent = false,
-            .stdin = false,
-            .stdout = false,
-            .force = false,
             .allocator = allocator,
+            // All other fields use their default values
         };
     }
 
@@ -141,7 +132,7 @@ fn printHelp() void {
         \\  3  Invalid arguments
         \\
         \\DOCUMENTATION:
-        \\  https://github.com/yourusername/zpug
+        \\  https://github.com/carlos-sweb/zig-pug
         \\
     ;
     std.debug.print("{s}", .{help_text});
@@ -439,7 +430,7 @@ fn minifyHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
 /// Check if a tag name is a void element (self-closing HTML element)
 fn isVoidElement(tag_name: []const u8) bool {
     const void_elements = [_][]const u8{
-        "area", "base", "br", "col", "embed", "hr", "img",
+        "area",  "base", "br",   "col",   "embed",  "hr",    "img",
         "input", "link", "meta", "param", "source", "track", "wbr",
     };
     for (void_elements) |void_elem| {
