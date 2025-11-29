@@ -83,7 +83,10 @@ fn printHelp() void {
         \\  # Compile with variables
         \\  zpug template.pug --var name=Alice --var age=25
         \\
-        \\  # Compile with JSON variables
+        \\  # Compile with arrays (JSON syntax)
+        \\  zpug template.pug --var 'items=["js","php","zig"]'
+        \\
+        \\  # Compile with JSON variables from file
         \\  zpug template.pug --vars data.json -o output.html
         \\
         \\  # Pretty-print with comments (development)
@@ -114,6 +117,8 @@ fn printHelp() void {
         \\  - Numbers: --var count=42
         \\  - Booleans: --var active=true
         \\  - Strings: --var name=Alice
+        \\  - Arrays: --var 'items=["a","b","c"]'
+        \\  - Objects: --var 'user={"name":"Alice","age":30}'
         \\
         \\SUPPORTED PUG SYNTAX:
         \\  - Tags: div, p, span, etc.
@@ -265,6 +270,33 @@ fn setVariablesFromMap(variables: std.StringHashMap([]const u8), js_runtime: *ru
     while (it.next()) |entry| {
         const key = entry.key_ptr.*;
         const value = entry.value_ptr.*;
+
+        // Try to parse as JSON (supports arrays, objects, etc.)
+        // JSON values start with [ or {
+        if (value.len > 0 and (value[0] == '[' or value[0] == '{')) {
+            const parsed = std.json.parseFromSlice(
+                std.json.Value,
+                js_runtime.allocator,
+                value,
+                .{},
+            ) catch {
+                // If JSON parsing fails, treat as string
+                try js_runtime.setString(key, value);
+                continue;
+            };
+            defer parsed.deinit();
+
+            const json_value = parsed.value;
+            switch (json_value) {
+                .array => |arr| try js_runtime.setArrayFromJson(key, arr.items),
+                .object => |obj| try js_runtime.setObjectFromJson(key, obj),
+                else => {
+                    // Fallback to string if not array or object
+                    try js_runtime.setString(key, value);
+                },
+            }
+            continue;
+        }
 
         // Try to parse as number
         if (std.fmt.parseFloat(f64, value)) |num| {

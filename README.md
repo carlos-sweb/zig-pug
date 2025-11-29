@@ -86,10 +86,13 @@ zpug template.zpug
 # Compile with output file
 zpug -i template.zpug -o output.html
 
-# With variables (simple)
-zpug template.zpug --var name=Alice --var age=25
+# With variables (simple types)
+zpug template.zpug --var name=Alice --var age=25 --var active=true
 
-# With JSON variables (arrays, objects)
+# With arrays and objects (JSON syntax)
+zpug template.zpug --var 'items=["js","php","zig"]' --var 'user={"name":"Alice"}'
+
+# With JSON variables file (arrays, objects, nested data)
 zpug template.zpug --vars data.json
 
 # Pretty-print with comments (development mode)
