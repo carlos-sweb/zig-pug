@@ -280,15 +280,26 @@ If precompiled binaries are not available for your platform:
 From the repository root:
 
 ```bash
-# Build the addon
+# Build the addon (builds library + addon + copies library to build dir)
 zig build node
 
-# Test
-cd nodejs && npm test
-
-# Run example
-cd nodejs && npm run example
+# Or from nodejs directory
+cd nodejs && npm run build
 ```
+
+### Running Examples and Tests
+
+```bash
+# From nodejs directory
+npm test        # Run test suite
+npm run example # Run example
+
+# Or directly with node (after building)
+node test/test.js
+node example.js
+```
+
+**Note:** The build process automatically copies `libzigpug.so` to the `build/Release/` directory, so you don't need to set `LD_LIBRARY_PATH` manually.
 
 See [BUILD_GUIDE.md](BUILD_GUIDE.md) for detailed build instructions.
 

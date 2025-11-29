@@ -5,8 +5,25 @@
 
 const binary = require('@mapbox/node-pre-gyp');
 const path = require('path');
-const binding_path = binary.find(path.resolve(path.join(__dirname, './package.json')));
-const binding = require(binding_path);
+const fs = require('fs');
+
+// Try to find precompiled binary first, fallback to development build
+let binding;
+try {
+    const binding_path = binary.find(path.resolve(path.join(__dirname, './package.json')));
+    binding = require(binding_path);
+} catch (err) {
+    // Fallback to development build location
+    const dev_path = path.join(__dirname, 'build', 'Release', 'zigpug.node');
+    if (fs.existsSync(dev_path)) {
+        binding = require(dev_path);
+    } else {
+        throw new Error(
+            'zig-pug native addon not found. ' +
+            'Please build it with: cd .. && zig build node'
+        );
+    }
+}
 
 /**
  * PugCompiler class - High-level API for compiling Pug templates
