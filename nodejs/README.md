@@ -75,14 +75,14 @@ const html = compileFile('./views/index.pug', {
 
 **Returns:** Compiled HTML string
 
-### PugCompiler Class
+### ZigPugCompiler Class
 
-For multiple compilations, use the `PugCompiler` class to reuse the context:
+For multiple compilations, use the `ZigPugCompiler` class to reuse the context:
 
 ```javascript
-const { PugCompiler } = require('zig-pug');
+const { ZigPugCompiler } = require('zig-pug');
 
-const compiler = new PugCompiler();
+const compiler = new ZigPugCompiler();
 
 // Set variables
 compiler.setString('name', 'Alice');

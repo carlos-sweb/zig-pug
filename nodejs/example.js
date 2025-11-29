@@ -30,9 +30,9 @@ console.log(`Template:`);
 console.log(template2);
 console.log(`\nOutput:   ${html2}\n`);
 
-// Example 3: Using PugCompiler class
-console.log('Example 3: Using PugCompiler class for multiple compilations');
-const compiler = new pug.PugCompiler();
+// Example 3: Using ZigPugCompiler class
+console.log('Example 3: Using ZigPugCompiler class for multiple compilations');
+const compiler = new pug.ZigPugCompiler();
 
 compiler.setVariables({
     siteName: 'My Website',

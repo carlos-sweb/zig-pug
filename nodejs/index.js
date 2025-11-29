@@ -26,9 +26,9 @@ try {
 }
 
 /**
- * PugCompiler class - High-level API for compiling Pug templates
+ * ZigPugCompiler class - High-level API for compiling Pug templates
  */
-class PugCompiler {
+class ZigPugCompiler {
     constructor() {
         this.context = binding.createContext();
         if (!this.context) {
@@ -40,7 +40,7 @@ class PugCompiler {
      * Set a string variable in the template context
      * @param {string} key - Variable name
      * @param {string} value - String value
-     * @returns {PugCompiler} - Returns this for chaining
+     * @returns {ZigPugCompiler} - Returns this for chaining
      */
     setString(key, value) {
         if (typeof key !== 'string') {
@@ -61,7 +61,7 @@ class PugCompiler {
      * Set a number variable in the template context
      * @param {string} key - Variable name
      * @param {number} value - Number value
-     * @returns {PugCompiler} - Returns this for chaining
+     * @returns {ZigPugCompiler} - Returns this for chaining
      */
     setNumber(key, value) {
         if (typeof key !== 'string') {
@@ -82,7 +82,7 @@ class PugCompiler {
      * Set a boolean variable in the template context
      * @param {string} key - Variable name
      * @param {boolean} value - Boolean value
-     * @returns {PugCompiler} - Returns this for chaining
+     * @returns {ZigPugCompiler} - Returns this for chaining
      */
     setBool(key, value) {
         if (typeof key !== 'string') {
@@ -103,7 +103,7 @@ class PugCompiler {
      * Set a variable (automatically detects type)
      * @param {string} key - Variable name
      * @param {string|number|boolean} value - Value of any supported type
-     * @returns {PugCompiler} - Returns this for chaining
+     * @returns {ZigPugCompiler} - Returns this for chaining
      */
     set(key, value) {
         if (typeof value === 'string') {
@@ -120,7 +120,7 @@ class PugCompiler {
     /**
      * Set multiple variables from an object
      * @param {Object} variables - Object with key-value pairs
-     * @returns {PugCompiler} - Returns this for chaining
+     * @returns {ZigPugCompiler} - Returns this for chaining
      */
     setVariables(variables) {
         if (typeof variables !== 'object' || variables === null) {
@@ -171,7 +171,7 @@ class PugCompiler {
  * @returns {string} - Compiled HTML
  */
 function compile(template, variables = {}) {
-    const compiler = new PugCompiler();
+    const compiler = new ZigPugCompiler();
     return compiler.render(template, variables);
 }
 
@@ -196,8 +196,10 @@ function version() {
 }
 
 module.exports = {
-    PugCompiler,
+    ZigPugCompiler,
     compile,
     compileFile,
-    version
+    version,
+    // Backward compatibility alias
+    PugCompiler: ZigPugCompiler
 };

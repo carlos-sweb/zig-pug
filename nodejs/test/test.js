@@ -80,10 +80,10 @@ try {
     process.exit(1);
 }
 
-// Test 5: PugCompiler class API
-console.log('📋 Test 5: PugCompiler class API');
+// Test 5: ZigPugCompiler class API
+console.log('📋 Test 5: ZigPugCompiler class API');
 try {
-    const compiler = new pug.PugCompiler();
+    const compiler = new pug.ZigPugCompiler();
     compiler.setString('title', 'My Page');
     compiler.setNumber('year', 2024);
     compiler.setBool('active', true);
@@ -106,7 +106,7 @@ try {
 // Test 6: Multiple variables
 console.log('📋 Test 6: Multiple variables with setVariables');
 try {
-    const compiler = new pug.PugCompiler();
+    const compiler = new pug.ZigPugCompiler();
     compiler.setVariables({
         name: 'Bob',
         age: 30,
