@@ -1,19 +1,19 @@
 # zig-pug
 
-High-performance Pug template engine powered by Zig and mujs.
+High-performance Pug template engine powered by Zig and mujs - Native N-API addon with ES5.1 JavaScript support.
 
 [![npm version](https://img.shields.io/npm/v/zig-pug.svg)](https://www.npmjs.com/package/zig-pug)
-[![license](https://img.shields.io/npm/l/zig-pug.svg)](https://github.com/yourusername/zig-pug/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
-- ✅ **Pug syntax** - Tags, attributes, classes, IDs
-- ✅ **JavaScript expressions** - ES5.1 interpolation powered by mujs
-- ✅ **Conditionals** - if/else/unless
-- ✅ **Mixins** - Reusable components
-- ✅ **Bun.js compatible** - 2-5x faster than Node.js
-- ⚡ **Native performance** - Written in Zig, compiled to native code
-- 🔋 **Zero dependencies** - Only Zig and embedded mujs
+- **Blazing Fast**: Written in Zig with native N-API bindings
+- **Lightweight**: ~500KB total (includes mujs JavaScript engine)
+- **Modern**: Zig 0.15 best practices with StaticStringMap O(1) lookups
+- **Secure**: Built-in XSS protection with automatic HTML escaping
+- **Simple API**: Easy-to-use JavaScript interface
+- **Cross-Platform**: Precompiled binaries for Linux, macOS, and Windows
+- **Node.js Compatible**: Works with Node.js 14+ and Bun.js
 
 ## Installation
 
@@ -21,303 +21,315 @@ High-performance Pug template engine powered by Zig and mujs.
 npm install zig-pug
 ```
 
-**Requirements:**
-- Node.js >= 14.0.0
-- C/C++ compiler (GCC, Clang, or MSVC)
-- Python (for node-gyp)
-
-The addon will compile automatically during installation.
+Precompiled binaries are automatically downloaded for your platform. If no binary is available, it will build from source (requires Zig 0.15+).
 
 ## Quick Start
 
-### Simple API
-
 ```javascript
-const zigpug = require('zig-pug');
+const { compile } = require('zig-pug');
 
-const html = zigpug.compile('p Hello #{name}!', { name: 'World' });
-console.log(html);
-// <p>Hello World!</p>
+// Simple template
+const html = compile('h1 Hello, World!');
+console.log(html); // <h1>Hello, World!</h1>
+
+// With variables
+const html2 = compile('h1 Hello, #{name}!', { name: 'Alice' });
+console.log(html2); // <h1>Hello, Alice!</h1>
 ```
 
-### Object-Oriented API
+## API Reference
+
+### compile(template, variables)
+
+Compile a Pug template string to HTML.
+
+```javascript
+const { compile } = require('zig-pug');
+
+const html = compile('p Hello, #{name}!', { name: 'Bob' });
+console.log(html); // <p>Hello, Bob!</p>
+```
+
+**Parameters:**
+- `template` (string): Pug template string
+- `variables` (object, optional): Variables to interpolate
+
+**Returns:** Compiled HTML string
+
+### compileFile(filename, variables)
+
+Compile a Pug template file to HTML.
+
+```javascript
+const { compileFile } = require('zig-pug');
+
+const html = compileFile('./views/index.pug', {
+  title: 'My Page',
+  user: 'Alice'
+});
+```
+
+**Parameters:**
+- `filename` (string): Path to Pug template file
+- `variables` (object, optional): Variables to interpolate
+
+**Returns:** Compiled HTML string
+
+### PugCompiler Class
+
+For multiple compilations, use the `PugCompiler` class to reuse the context:
 
 ```javascript
 const { PugCompiler } = require('zig-pug');
 
 const compiler = new PugCompiler();
-compiler
-    .set('title', 'My Page')
-    .set('version', 1.5)
-    .setBool('isDev', false);
 
-const html = compiler.compile('h1 #{title}');
-console.log(html);
-// <h1>My Page</h1>
+// Set variables
+compiler.setString('name', 'Alice');
+compiler.setNumber('age', 30);
+compiler.setBool('premium', true);
+
+// Or set multiple at once
+compiler.setVariables({
+  name: 'Bob',
+  age: 25,
+  premium: false
+});
+
+// Compile templates
+const html1 = compiler.compile('p Hello, #{name}!');
+const html2 = compiler.compile('p Age: #{age}');
 ```
+
+**Methods:**
+- `setString(key, value)` - Set a string variable
+- `setNumber(key, value)` - Set a number variable
+- `setBool(key, value)` - Set a boolean variable
+- `set(key, value)` - Auto-detect type and set variable
+- `setVariables(obj)` - Set multiple variables from object
+- `compile(template)` - Compile template with current variables
+- `render(template, variables)` - Set variables and compile in one call
+
+### version()
+
+Get the zig-pug version.
+
+```javascript
+const { version } = require('zig-pug');
+console.log(version()); // 0.2.0
+```
+
+## Pug Syntax Support
+
+### Tags
+
+```pug
+div
+  p Hello, World!
+  span.class-name#id-name Text content
+```
+
+```html
+<div>
+  <p>Hello, World!</p>
+  <span class="class-name" id="id-name">Text content</span>
+</div>
+```
+
+### Attributes
+
+```pug
+a(href="https://example.com" target="_blank") Link
+input(type="text" name="username" required)
+```
+
+```html
+<a href="https://example.com" target="_blank">Link</a>
+<input type="text" name="username" required />
+```
+
+### Interpolation
+
+```pug
+p Hello, #{name}!
+p Age: #{age}
+p Premium: #{premium}
+```
+
+With variables: `{ name: 'Alice', age: 30, premium: true }`
+
+```html
+<p>Hello, Alice!</p>
+<p>Age: 30</p>
+<p>Premium: true</p>
+```
+
+### HTML Escaping
+
+Automatic XSS protection:
+
+```javascript
+const html = compile('p #{userInput}', {
+  userInput: '<script>alert("XSS")</script>'
+});
+// <p>&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;</p>
+```
+
+### Void Elements
+
+Self-closing tags are handled automatically:
+
+```pug
+br
+hr
+img(src="logo.png")
+input(type="text")
+```
+
+```html
+<br />
+<hr />
+<img src="logo.png" />
+<input type="text" />
+```
+
+## Usage Examples
 
 ### Express Integration
 
 ```javascript
 const express = require('express');
-const zigpug = require('zig-pug');
-const fs = require('fs');
-
+const { compileFile } = require('zig-pug');
 const app = express();
 
-// Load template once at startup
-const homeTemplate = fs.readFileSync('./views/home.pug', 'utf-8');
-
 app.get('/', (req, res) => {
-    const html = zigpug.compile(homeTemplate, {
-        title: 'Home',
-        user: req.user
-    });
-    res.send(html);
+  const html = compileFile('./views/index.pug', {
+    title: 'Home Page',
+    user: req.user
+  });
+  res.send(html);
 });
 
 app.listen(3000);
 ```
 
-## Bun.js Support
-
-zig-pug works seamlessly with Bun, the ultra-fast JavaScript runtime:
-
-```bash
-bun install zig-pug
-bun run app.js
-```
-
-**Performance:** Bun is 2-5x faster than Node.js for template compilation.
-
-See [examples/bun/](https://github.com/yourusername/zig-pug/tree/main/examples/bun) for complete examples.
-
-## Pug Syntax
-
-### Tags and Attributes
-
-```pug
-div.container
-  h1#title Hello World
-  p.text(data-id="123") Content
-  a(href="/" target="_blank") Link
-```
-
-### JavaScript Interpolation
-
-```pug
-p Hello #{name}!
-p Age: #{age + 1}
-p Email: #{email.toLowerCase()}
-p Status: #{age >= 18 ? 'Adult' : 'Minor'}
-p Max: #{Math.max(10, 20)}
-```
-
-**Supported JavaScript (ES5.1):**
-- String methods: `toLowerCase()`, `toUpperCase()`, `split()`, etc.
-- Math: `Math.max()`, `Math.min()`, `Math.random()`, etc.
-- Operators: `+`, `-`, `*`, `/`, `%`, `&&`, `||`, `?:`
-- Object/Array access: `obj.prop`, `arr[0]`, `arr.length`
-
-### Conditionals
-
-```pug
-if isLoggedIn
-  p Welcome back!
-else
-  p Please log in
-
-unless isAdmin
-  p Access denied
-```
-
-### Mixins
-
-```pug
-mixin button(text)
-  button.btn= text
-
-+button('Click me')
-+button('Submit')
-```
-
-## API Reference
-
-### `compile(template, data)`
-
-Compile a template with data.
-
-**Parameters:**
-- `template` (string) - Pug template source
-- `data` (object) - Variables to interpolate
-
-**Returns:** (string) Compiled HTML
+### Koa Integration
 
 ```javascript
-const html = zigpug.compile(
-    'p Hello #{name}!',
-    { name: 'Alice' }
-);
+const Koa = require('koa');
+const { compileFile } = require('zig-pug');
+const app = new Koa();
+
+app.use(async ctx => {
+  const html = compileFile('./views/index.pug', {
+    title: 'Home Page',
+    path: ctx.path
+  });
+  ctx.body = html;
+});
+
+app.listen(3000);
 ```
 
-### `PugCompiler`
-
-Reusable compiler with state.
+### Bun.js Integration
 
 ```javascript
-const { PugCompiler } = require('zig-pug');
+import { compile } from 'zig-pug';
 
-const compiler = new PugCompiler();
-compiler.set('key', 'value');      // String/Number
-compiler.setBool('flag', true);    // Boolean
-
-const html = compiler.compile(template);
+Bun.serve({
+  port: 3000,
+  fetch(req) {
+    const html = compile('h1 Hello from Bun!');
+    return new Response(html, {
+      headers: { 'Content-Type': 'text/html' }
+    });
+  }
+});
 ```
-
-**Methods:**
-- `set(key, value)` - Set string or number variable
-- `setBool(key, value)` - Set boolean variable
-- `compile(template)` - Compile template with current variables
-
-### `version()`
-
-Get zig-pug version.
-
-```javascript
-console.log(zigpug.version()); // "0.2.0"
-```
-
-## Platform Support
-
-### Supported Platforms
-
-- ✅ **Linux** (x64, ARM64)
-- ✅ **macOS** (x64, Apple Silicon)
-- ✅ **Windows** (x64)
-- ✅ **Bun.js** (all platforms)
-
-### Termux/Android
-
-The addon compiles on Termux but cannot be loaded due to Android namespace restrictions. Use the standalone CLI binary instead:
-
-```bash
-# Install Zig
-pkg install zig
-
-# Clone and build
-git clone https://github.com/yourusername/zig-pug
-cd zig-pug
-zig build
-
-# Use CLI
-./zig-out/bin/zig-pug template.pug
-```
-
-See [docs/TERMUX.md](https://github.com/yourusername/zig-pug/blob/main/docs/TERMUX.md) for details.
 
 ## Performance
 
-### Benchmark
+zig-pug is designed for performance:
 
-```javascript
-const iterations = 10000;
-const start = Date.now();
+- **O(1) lookups**: StaticStringMap for void element checks
+- **Optimized I/O**: Writer pattern reduces allocations
+- **Native code**: Zig compiles to machine code
+- **Lightweight**: No heavy dependencies
+- **Fast startup**: mujs has minimal overhead
 
-for (let i = 0; i < iterations; i++) {
-    zigpug.compile(template, data);
-}
+## Security
 
-const elapsed = Date.now() - start;
-console.log(`${iterations} in ${elapsed}ms`);
-// ~100-250k ops/sec depending on runtime
-```
+- **Automatic HTML escaping**: All interpolated values are escaped by default
+- **XSS prevention**: Built-in protection against cross-site scripting
+- **Safe parsing**: Zig's memory safety prevents buffer overflows
+- **No eval()**: Templates are compiled, not evaluated
 
-### Tips
+## Building from Source
 
-1. **Reuse PugCompiler** - Faster than creating new context each time
-2. **Pre-load templates** - Read files once at startup
-3. **Use Bun.js** - 2-5x faster than Node.js
+If precompiled binaries are not available for your platform:
 
-## Examples
+### Prerequisites
 
-See the [examples](https://github.com/yourusername/zig-pug/tree/main/examples) directory:
+- Node.js 14+
+- Zig 0.15+
+- Python 3
+- C compiler (gcc/clang)
 
-- **Node.js**: `examples/nodejs/`
-- **Bun.js**: `examples/bun/`
-- **Express**: `examples/nodejs/05-express-integration.js`
+### Build Steps
 
-## Documentation
-
-- **[Getting Started](https://github.com/yourusername/zig-pug/blob/main/docs/GETTING-STARTED.md)**
-- **[Node.js Integration](https://github.com/yourusername/zig-pug/blob/main/docs/NODEJS-INTEGRATION.md)**
-- **[Pug Syntax Reference](https://github.com/yourusername/zig-pug/blob/main/docs/PUG-SYNTAX.md)**
-- **[API Reference](https://github.com/yourusername/zig-pug/blob/main/docs/API-REFERENCE.md)**
-
-## Troubleshooting
-
-### Installation fails
-
-**Error:** `node-gyp rebuild` fails
-
-**Solution:** Install build tools:
+From the repository root:
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install build-essential python3
+# Build the addon
+zig build node
 
-# macOS
-xcode-select --install
+# Test
+cd nodejs && npm test
 
-# Windows
-npm install --global windows-build-tools
+# Run example
+cd nodejs && npm run example
 ```
 
-### Module not found
+See [BUILD_GUIDE.md](BUILD_GUIDE.md) for detailed build instructions.
 
-**Error:** `Cannot find module 'zig-pug'`
+## Architecture
 
-**Solution:** Rebuild the addon:
-
-```bash
-cd node_modules/zig-pug
-npm run build
 ```
-
-### Compilation errors
-
-If you encounter compilation errors, please [open an issue](https://github.com/yourusername/zig-pug/issues) with:
-- Your OS and version
-- Node.js version (`node --version`)
-- Complete error output
+┌─────────────────────────────────────────────┐
+│  Node.js Application                        │
+│  (your code)                                │
+└────────────┬────────────────────────────────┘
+             │ require('zig-pug')
+             ↓
+┌─────────────────────────────────────────────┐
+│  N-API Addon (binding.c)                    │
+│  - JavaScript API wrapper                   │
+└────────────┬────────────────────────────────┘
+             │ FFI calls
+             ↓
+┌─────────────────────────────────────────────┐
+│  libzigpug.so (Zig + mujs)                  │
+│  - Tokenizer → Parser → Compiler → HTML    │
+└─────────────────────────────────────────────┘
+```
 
 ## Contributing
 
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `npm test`
-5. Submit a pull request
+Contributions are welcome! Please see the main repository for contributing guidelines.
 
 ## License
 
-MIT License - see [LICENSE](https://github.com/yourusername/zig-pug/blob/main/LICENSE) for details.
-
-## Credits
-
-- **[Pug](https://pugjs.org/)** - Original inspiration
-- **[Zig](https://ziglang.org/)** - Programming language
-- **[mujs](https://mujs.com/)** - Embedded JavaScript engine
-- **[Artifex Software](https://artifex.com/)** - Creators of mujs
+MIT License - see [LICENSE](LICENSE) for details.
 
 ## Links
 
-- **GitHub**: https://github.com/yourusername/zig-pug
-- **npm**: https://www.npmjs.com/package/zig-pug
-- **Issues**: https://github.com/yourusername/zig-pug/issues
-- **Documentation**: https://github.com/yourusername/zig-pug#readme
+- [GitHub Repository](https://github.com/carlos-sweb/zig-pug)
+- [npm Package](https://www.npmjs.com/package/zig-pug)
+- [Issue Tracker](https://github.com/carlos-sweb/zig-pug/issues)
+- [Build Guide](BUILD_GUIDE.md)
 
----
+## Credits
 
-Made with ❤️ using Zig 0.15.2 and mujs
+- Built by [carlos-sweb](https://github.com/carlos-sweb)
+- Powered by [Zig](https://ziglang.org/) and [mujs](https://mujs.com/)
+- Inspired by the original [Pug](https://pugjs.org/) template engine

@@ -3,22 +3,36 @@
     {
       "target_name": "zigpug",
       "sources": [
-        "binding.c",
-        "vendor/mujs/one.c"
+        "binding.c"
       ],
       "include_dirs": [
         "include",
-        "vendor/mujs"
+        "../vendor/mujs"
       ],
       "libraries": [
+        "-L<(module_root_dir)/../zig-out/nodejs",
+        "-lzigpug",
         "-lm"
       ],
       "cflags": [
-        "-std=c99",
-        "-DHAVE_STRLCPY=0"
+        "-std=c99"
       ],
       "defines": [
         "NAPI_VERSION=8"
+      ],
+      "conditions": [
+        ["OS=='linux'", {
+          "ldflags": [
+            "-Wl,-rpath,'$$ORIGIN/../zig-out/nodejs'"
+          ]
+        }],
+        ["OS=='mac'", {
+          "xcode_settings": {
+            "OTHER_LDFLAGS": [
+              "-Wl,-rpath,@loader_path/../zig-out/nodejs"
+            ]
+          }
+        }]
       ]
     }
   ]

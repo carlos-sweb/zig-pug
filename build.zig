@@ -67,6 +67,59 @@ pub fn build(b: *std.Build) void {
     lib_all_step.dependOn(lib_shared_step);
 
     // ========================================================================
+    // Node.js Addon - Build shared library for Node.js/Bun.js
+    // ========================================================================
+    const node_step = b.step("node", "Build Node.js/Bun.js addon (requires npm/node-gyp)");
+    {
+        // Step 1: Build shared library for Node.js
+        const node_lib = b.addLibrary(.{
+            .name = "zigpug",
+            .linkage = .dynamic,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/lib.zig"),
+                .target = target,
+                .optimize = .ReleaseFast, // Always use ReleaseFast for Node.js addon
+            }),
+        });
+
+        // Add mujs source
+        node_lib.addIncludePath(b.path("vendor/mujs"));
+        node_lib.addCSourceFile(.{
+            .file = b.path("vendor/mujs/one.c"),
+            .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
+        });
+        node_lib.linkLibC();
+
+        // Install to nodejs directory
+        const install_node_lib = b.addInstallArtifact(node_lib, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = "nodejs",
+                },
+            },
+        });
+        node_step.dependOn(&install_node_lib.step);
+
+        // Step 2: Run node-gyp rebuild
+        const node_gyp = b.addSystemCommand(&.{ "npm", "run", "rebuild" });
+        node_gyp.setCwd(b.path("nodejs"));
+        node_gyp.step.dependOn(&install_node_lib.step);
+        node_step.dependOn(&node_gyp.step);
+
+        // Step 3: Print success message
+        const success_msg = b.addSystemCommand(&.{
+            "echo",
+            "\n✨ Node.js addon built successfully!",
+            "\n📦 Library: zig-out/nodejs/libzigpug.{so,dylib,dll}",
+            "\n📦 Addon: nodejs/build/Release/zigpug.node",
+            "\n\n🧪 Test with: cd nodejs && npm test",
+            "\n",
+        });
+        success_msg.step.dependOn(&node_gyp.step);
+        node_step.dependOn(&success_msg.step);
+    }
+
+    // ========================================================================
     // Executable (CLI tool)
     // ========================================================================
 

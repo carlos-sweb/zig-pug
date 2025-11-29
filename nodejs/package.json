@@ -4,11 +4,16 @@
   "description": "High-performance Pug template engine powered by Zig and mujs - Native N-API addon with ES5.1 JavaScript support",
   "main": "index.js",
   "scripts": {
-    "install": "node-gyp rebuild",
-    "build": "node-gyp configure build",
+    "install": "node-pre-gyp install --fallback-to-build || (cd .. && zig build node)",
+    "build": "cd .. && zig build node",
+    "build:from-source": "cd .. && zig build node",
     "rebuild": "node-gyp rebuild",
-    "clean": "node-gyp clean",
-    "test": "node test/test.js",
+    "clean": "node-gyp clean && rm -rf ../zig-out/nodejs lib/binding",
+    "test": "LD_LIBRARY_PATH=../zig-out/nodejs:$LD_LIBRARY_PATH node test/test.js",
+    "example": "LD_LIBRARY_PATH=../zig-out/nodejs:$LD_LIBRARY_PATH node example.js",
+    "package": "node-pre-gyp package",
+    "upload": "node-pre-gyp publish",
+    "upload:github": "node scripts/upload-binary.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -37,31 +42,36 @@
     "haml"
   ],
   "author": {
-    "name": "zig-pug contributors",
-    "url": "https://github.com/yourusername/zig-pug/graphs/contributors"
+    "name": "carlos-sweb",
+    "url": "https://github.com/carlos-sweb"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/zig-pug.git",
+    "url": "git+https://github.com/carlos-sweb/zig-pug.git",
     "directory": "nodejs"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/zig-pug/issues"
+    "url": "https://github.com/carlos-sweb/zig-pug/issues"
   },
-  "homepage": "https://github.com/yourusername/zig-pug#readme",
+  "homepage": "https://github.com/carlos-sweb/zig-pug#readme",
   "engines": {
     "node": ">=14.0.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@mapbox/node-pre-gyp": "^1.0.11"
+  },
   "devDependencies": {
-    "node-gyp": "^10.0.0"
+    "node-gyp": "^10.0.0",
+    "aws-sdk": "^2.1691.0"
   },
   "gypfile": true,
   "binary": {
     "module_name": "zigpug",
-    "module_path": "./build/Release/",
-    "host": "https://github.com/yourusername/zig-pug/releases/download/"
+    "module_path": "./lib/binding/{configuration}/{node_abi}-{platform}-{arch}",
+    "remote_path": "./{version}",
+    "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz",
+    "host": "https://github.com/carlos-sweb/zig-pug/releases/download/"
   },
   "files": [
     "index.js",
