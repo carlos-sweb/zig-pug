@@ -463,12 +463,23 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
                 html[i + 2] == '-' and
                 html[i + 3] == '-';
 
+            // Check if it's DOCTYPE declaration (e.g., <!DOCTYPE html>)
+            const is_doctype = i + 8 < html.len and
+                html[i + 1] == '!' and
+                std.ascii.toUpper(html[i + 2]) == 'D' and
+                std.ascii.toUpper(html[i + 3]) == 'O' and
+                std.ascii.toUpper(html[i + 4]) == 'C' and
+                std.ascii.toUpper(html[i + 5]) == 'T' and
+                std.ascii.toUpper(html[i + 6]) == 'Y' and
+                std.ascii.toUpper(html[i + 7]) == 'P' and
+                std.ascii.toUpper(html[i + 8]) == 'E';
+
             // Check if closing tag
             const is_closing = i + 1 < html.len and html[i + 1] == '/';
 
             // Extract tag name to check if it's a void element
             const tag_name = blk: {
-                if (is_closing or is_comment) break :blk "";
+                if (is_closing or is_comment or is_doctype) break :blk "";
 
                 var j = i + 1;
                 // Skip whitespace after '<'
@@ -563,8 +574,8 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
                 i += 1;
             }
 
-            // Don't increase indent for comments or self-closing tags
-            if (!is_closing and !is_self_closing and !is_comment) {
+            // Don't increase indent for comments, doctype, or self-closing tags
+            if (!is_closing and !is_self_closing and !is_comment and !is_doctype) {
                 indent += 1;
             }
         } else {

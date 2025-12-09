@@ -6,7 +6,7 @@
 //! - Keywords and identifiers
 //! - Literals (strings, numbers, booleans)
 //! - Special syntax (.class, #id, #{interpolation})
-//! - Comments (// buffered, //- unbuffered)
+//! - Comments (// buffered, //- unbuffered, //! documentation)
 //! - Code markers (=, !=, -, |)
 //!
 //! Flow:
@@ -33,7 +33,7 @@
 //! - Indentation tracking with INDENT/DEDENT tokens (like Python)
 //! - Shorthand syntax: .class and #id recognized as single tokens
 //! - Interpolation: #{expr} and !{expr} parsed as single tokens
-//! - Comments: // for HTML comments, //- for code comments
+//! - Comments: // for HTML comments, //- for code comments, //! for documentation (ignored)
 //! - Position tracking: Every token has line and column info
 
 const std = @import("std");
@@ -266,6 +266,58 @@ pub const Tokenizer = struct {
         self.pending_tokens.deinit(self.allocator);
     }
 
+    // ========================================================================
+    // UTF-8 Support Functions
+    // ========================================================================
+
+    /// Check if a byte is the start of a UTF-8 multi-byte sequence
+    ///
+    /// UTF-8 encoding:
+    /// - 0x00-0x7F: Single byte (ASCII)
+    /// - 0x80-0xBF: Continuation byte
+    /// - 0xC0-0xDF: Start of 2-byte sequence
+    /// - 0xE0-0xEF: Start of 3-byte sequence
+    /// - 0xF0-0xF7: Start of 4-byte sequence
+    ///
+    /// Returns: true if byte starts a UTF-8 sequence (>= 0xC0)
+    fn isUtf8Start(byte: u8) bool {
+        return byte >= 0xC0;
+    }
+
+    /// Get the length of a UTF-8 sequence from its first byte
+    ///
+    /// Returns: Number of bytes in the UTF-8 sequence (1-4)
+    fn utf8SequenceLength(first_byte: u8) usize {
+        if (first_byte < 0x80) return 1; // ASCII
+        if (first_byte < 0xC0) return 1; // Invalid, treat as 1 byte
+        if (first_byte < 0xE0) return 2; // 2-byte sequence
+        if (first_byte < 0xF0) return 3; // 3-byte sequence
+        return 4; // 4-byte sequence
+    }
+
+    /// Check if a byte is valid in identifiers or text (including UTF-8)
+    ///
+    /// Allows:
+    /// - ASCII alphanumeric, underscore, hyphen
+    /// - UTF-8 multi-byte sequences (for accented characters, etc.)
+    ///
+    /// Returns: true if byte can appear in identifiers/text
+    fn isValidTextByte(byte: u8) bool {
+        // ASCII alphanumeric, underscore, hyphen
+        if (std.ascii.isAlphanumeric(byte) or byte == '_' or byte == '-') {
+            return true;
+        }
+        // UTF-8 multi-byte start or continuation
+        if (byte >= 0x80) {
+            return true;
+        }
+        return false;
+    }
+
+    // ========================================================================
+    // Character Navigation Functions
+    // ========================================================================
+
     /// Peek at current character without advancing position
     ///
     /// Returns: Current character or null if at end of source
@@ -405,6 +457,29 @@ pub const Tokenizer = struct {
     /// // This appears in HTML
     /// //- This is a code comment
     /// ```
+    /// Skip documentation comment //!
+    ///
+    /// Documentation comments are completely ignored by the parser.
+    /// They can appear anywhere, including before doctype declarations.
+    ///
+    /// Example:
+    /// ```pug
+    /// //! This is a doc comment - ignored completely
+    /// //! Author: John Doe
+    /// doctype html
+    /// ```
+    fn skipDocComment(self: *Tokenizer) void {
+        _ = self.advance(); // First /
+        _ = self.advance(); // Second /
+        _ = self.advance(); // !
+
+        // Skip the entire line
+        while (self.peekChar()) |ch| {
+            if (ch == '\n') break;
+            _ = self.advance();
+        }
+    }
+
     fn scanComment(self: *Tokenizer) !Token {
         const start_line = self.line;
         const start_col = self.column;
@@ -508,8 +583,18 @@ pub const Tokenizer = struct {
         const start_col = self.column;
 
         while (self.peekChar()) |ch| {
-            if (std.ascii.isAlphanumeric(ch) or ch == '_' or ch == '-') {
-                _ = self.advance();
+            // Allow ASCII alphanumeric, underscore, hyphen, and UTF-8 sequences
+            if (isValidTextByte(ch)) {
+                // If UTF-8 multi-byte, advance by full sequence length
+                if (isUtf8Start(ch)) {
+                    const len = utf8SequenceLength(ch);
+                    var i: usize = 0;
+                    while (i < len and self.peekChar() != null) : (i += 1) {
+                        _ = self.advance();
+                    }
+                } else {
+                    _ = self.advance();
+                }
             } else {
                 break;
             }
@@ -620,15 +705,24 @@ pub const Tokenizer = struct {
         const start_col = self.column;
         const ch = self.peekChar().?;
 
-        // Handle .class shorthand
+        // Handle .class shorthand (with UTF-8 support)
         if (ch == '.') {
             _ = self.advance();
             if (self.peekChar()) |next_ch| {
-                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-') {
+                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-' or isUtf8Start(next_ch)) {
                     const start = self.pos;
                     while (self.peekChar()) |c| {
-                        if (std.ascii.isAlphanumeric(c) or c == '_' or c == '-') {
-                            _ = self.advance();
+                        if (isValidTextByte(c)) {
+                            // If UTF-8 multi-byte, advance by full sequence
+                            if (isUtf8Start(c)) {
+                                const len = utf8SequenceLength(c);
+                                var i: usize = 0;
+                                while (i < len and self.peekChar() != null) : (i += 1) {
+                                    _ = self.advance();
+                                }
+                            } else {
+                                _ = self.advance();
+                            }
                         } else {
                             break;
                         }
@@ -641,15 +735,24 @@ pub const Tokenizer = struct {
             return Token.init(.Dot, value, start_line, start_col);
         }
 
-        // Handle #id shorthand
+        // Handle #id shorthand (with UTF-8 support)
         if (ch == '#') {
             _ = self.advance();
             if (self.peekChar()) |next_ch| {
-                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-') {
+                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-' or isUtf8Start(next_ch)) {
                     const start = self.pos;
                     while (self.peekChar()) |c| {
-                        if (std.ascii.isAlphanumeric(c) or c == '_' or c == '-') {
-                            _ = self.advance();
+                        if (isValidTextByte(c)) {
+                            // If UTF-8 multi-byte, advance by full sequence
+                            if (isUtf8Start(c)) {
+                                const len = utf8SequenceLength(c);
+                                var i: usize = 0;
+                                while (i < len and self.peekChar() != null) : (i += 1) {
+                                    _ = self.advance();
+                                }
+                            } else {
+                                _ = self.advance();
+                            }
                         } else {
                             break;
                         }
@@ -765,8 +868,13 @@ pub const Tokenizer = struct {
             return Token.init(.Newline, "\n", line, 1);
         }
 
-        // Comments //
+        // Comments //, //-, //!
         if (ch == '/' and self.peekAhead(1) == '/') {
+            // Check for doc comment //! which should be completely ignored
+            if (self.peekAhead(2) == '!') {
+                self.skipDocComment();
+                return self.next(); // Recursively get next token
+            }
             return self.scanComment();
         }
 
@@ -790,8 +898,8 @@ pub const Tokenizer = struct {
             return self.scanNumber();
         }
 
-        // Identifiers and keywords
-        if (std.ascii.isAlphabetic(ch) or ch == '_') {
+        // Identifiers and keywords (including UTF-8 characters like á, é, etc.)
+        if (std.ascii.isAlphabetic(ch) or ch == '_' or isUtf8Start(ch)) {
             return self.scanIdentifier();
         }
 

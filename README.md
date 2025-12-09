@@ -21,6 +21,7 @@ html(lang="en")
 ## Features
 
 - **Complete Pug syntax** - Tags, attributes, classes, IDs, doctype
+- **Full UTF-8 support** - Accented characters (á, é, ñ, ü), emoji 🎉, all Unicode
 - **JavaScript ES5.1** - Interpolations with methods, operators and expressions
 - **Real JavaScript engine** - Powered by [mujs](https://mujs.com/)
 - **Conditionals** - if/else/unless
@@ -30,6 +31,7 @@ html(lang="en")
 - **JSON variables** - Full support for strings, numbers, bools, arrays, and objects
 - **Attribute expressions** - Dynamic attribute values (`class=myVar`)
 - **Buffered/unbuffered code** - `=`, `!=`, and `-` operators
+- **Documentation comments** - `//!` for file metadata (ignored by parser)
 - **Node.js addon** - Native integration via N-API
 - **Bun.js compatible** - 2-5x faster than Node.js
 - **Editor support** - VS Code, Sublime Text, CodeMirror
@@ -359,6 +361,9 @@ mixin button(text, type)
 ### Comments
 
 ```zpug
+//! Documentation comment (completely ignored)
+//! Can appear before doctype declarations
+
 // Buffered comment (visible in HTML with --pretty)
 // This appears only in development mode
 
@@ -370,8 +375,17 @@ mixin button(text, type)
 // Output: <!-- Comment with - -> injection attempt -->
 ```
 
+**Comment Types:**
+
+| Syntax | Name | Processed? | In HTML? | Use Case |
+|--------|------|------------|----------|----------|
+| `//!` | Documentation | ❌ No | ❌ No | File metadata, author notes |
+| `//` | Buffered | ✅ Yes | ✅ Yes (--pretty only) | Development debugging |
+| `//-` | Unbuffered | ✅ Yes | ❌ No | Code comments |
+
 **Comment Behavior:**
 
+- **Documentation comments (`//!`)**: Completely ignored by tokenizer (can appear before `doctype`)
 - **Production mode (default)**: All buffered comments (`//`) are **stripped** for minimal file size
 - **Development mode (`--pretty`)**: Buffered comments (`//`) are **included** for debugging
 - **Readable mode (`--format`)**: Pretty-print without comments
@@ -389,6 +403,42 @@ zpug --format template.zpug -o output.html
 ```
 
 This matches industry standards (Pug, HTML minifiers) where production output is optimized and development output is readable.
+
+### UTF-8 Support
+
+Full Unicode support for international characters in all template elements:
+
+```zpug
+doctype html
+html(lang="es")
+  head
+    title Página en Español
+  body
+    h1 Bienvenido 🎉
+
+    // Spanish
+    p.información Este es un párrafo con acentos: José, María, Ángel
+
+    // Portuguese
+    p.português Programação em português com ã, õ, ç
+
+    // French
+    p.français Génération française avec é, è, ê, ç
+
+    // German
+    p#größe Deutsche Größe mit ä, ö, ü, ß
+
+    // Emoji and symbols
+    p Symbols: © ™ € £ ¥ • Emoji: 🚀 ✨ 💻 🌍
+```
+
+**Supported:**
+- ✅ Accented characters in text: `á é í ó ú ñ ü ç`
+- ✅ Accented characters in class names: `.información`
+- ✅ Accented characters in IDs: `#descripción`
+- ✅ Accented characters in comments: `// útil`
+- ✅ Emoji and Unicode symbols: `🎉 © ™ €`
+- ✅ All UTF-8 sequences (1-4 bytes)
 
 ## Programming API (Zig)
 

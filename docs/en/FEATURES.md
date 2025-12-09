@@ -364,6 +364,10 @@ p!= trustedHtml  // Not escaped
 ### Comments (Production vs Development)
 
 ```zpug
+//! Documentation comment (completely ignored)
+//! Author: John Doe
+//! Purpose: Main template
+
 // Buffered comment (conditionally included)
 // This appears only in --pretty mode
 
@@ -377,10 +381,29 @@ p!= trustedHtml  // Not escaped
 **Status:** ✅ Fully implemented (Phase 6)
 
 **Behavior:**
+- **Documentation comments (`//!`):** Completely ignored by tokenizer (never processed)
 - **Production mode (default):** Strips all buffered comments (`//`) for minimal output
 - **Development mode (`--pretty`):** Includes buffered comments for debugging
 - **Readable mode (`--format`):** Pretty-print without comments
 - **Unbuffered comments (`//-`):** Always stripped in all modes
+
+**Comment Types:**
+
+| Syntax | Name | In AST? | In HTML (--pretty)? | In HTML (default)? | Use Case |
+|--------|------|---------|---------------------|-------------------|----------|
+| `//!` | Documentation | ❌ No | ❌ No | ❌ No | File metadata, notes |
+| `//` | Buffered | ✅ Yes | ✅ Yes | ❌ No | Development comments |
+| `//-` | Unbuffered | ✅ Yes | ❌ No | ❌ No | Code comments |
+
+**Key Feature:** Documentation comments (`//!`) can appear before `doctype` declarations:
+
+```zpug
+//! File: index.zpug
+//! Author: John Doe
+doctype html
+html
+  body
+```
 
 **Security:**
 - Escapes `--` to `- -` to prevent premature comment closing
@@ -400,6 +423,75 @@ zpug --format template.zpug -o output.html
 ```
 
 **Industry Standard:** Matches behavior of Pug and HTML minifiers where production output is optimized and development output is readable.
+
+---
+
+## 🌍 UTF-8 Support
+
+### Full Unicode Support
+
+zig-pug has complete UTF-8 support for international characters in all template elements.
+
+```zpug
+doctype html
+html(lang="es")
+  head
+    meta(charset="UTF-8")
+    title Página Internacional
+  body
+    // Spanish - Español
+    section.español
+      h1 Bienvenido 🎉
+      p.información Información sobre José, María y Ángel
+      p#descripción Este párrafo tiene ID con acento
+
+    // Portuguese - Português
+    section.português
+      h2 Português
+      p Programação em português: ã, õ, ç, Ç
+
+    // French - Français
+    section.français
+      h2 Français
+      p Génération française: é, è, ê, ë, ï, ô, ç
+
+    // German - Deutsch
+    section.deutsch
+      h2 Deutsch
+      p#größe Größe und Qualität: ä, ö, ü, ß
+
+    // Emoji and symbols
+    p Emoji: 🚀 ✨ 💻 🌍 📝 ⚡ 🔥
+    p Symbols: © ® ™ € £ ¥ § ¶ † ‡
+```
+
+**Status:** ✅ Fully implemented
+
+**Supported:**
+
+| Feature | Example | Status |
+|---------|---------|--------|
+| Text content | `p José, María, Ángel` | ✅ |
+| Class names | `.información`, `.português` | ✅ |
+| ID attributes | `#descripción`, `#größe` | ✅ |
+| Comments | `// útil para depuración` | ✅ |
+| Emoji | `h1 Welcome 🎉` | ✅ |
+| Unicode symbols | `p © 2025 • € 100` | ✅ |
+| All UTF-8 (1-4 bytes) | Any Unicode character | ✅ |
+
+**Technical Details:**
+- Proper UTF-8 multi-byte sequence handling in tokenizer
+- Correctly advances through 2-byte (á, ñ), 3-byte (€, ™), and 4-byte (🎉, 🚀) sequences
+- Column tracking counts bytes (for now) but parsing is correct
+- Works in identifiers, classes, IDs, text content, and comments
+
+**Languages Tested:**
+- ✅ Spanish (español): á, é, í, ó, ú, ñ, Ñ, ¿, ¡
+- ✅ Portuguese (português): ã, õ, ç, Ç, à, â, ê, ô
+- ✅ French (français): é, è, ê, ë, à, ù, ô, î, ï, ç
+- ✅ German (Deutsch): ä, ö, ü, ß, Ä, Ö, Ü
+- ✅ Emoji: 🎉 🚀 ✨ 💻 🌍 📝 ⚡ 🔥
+- ✅ Symbols: © ® ™ € £ ¥ § ¶ † ‡
 
 ---
 
