@@ -331,7 +331,27 @@ fn compileFile(
     defer pars.deinit();
 
     const tree = pars.parse() catch |err| {
-        std.debug.print("Error: Parsing failed: {}\n", .{err});
+        if (err == error.InvalidIndentation) {
+            const line = pars.tokenizer.line;
+            std.debug.print("Error: Invalid indentation at line {d}\n", .{line});
+            std.debug.print("\n", .{});
+            std.debug.print("Indentation errors can be caused by:\n", .{});
+            std.debug.print("  1. Using TABS instead of SPACES (only spaces are allowed)\n", .{});
+            std.debug.print("  2. Inconsistent dedentation (dedent must match a previous indent level)\n", .{});
+            std.debug.print("\n", .{});
+            std.debug.print("Example of CORRECT indentation:\n", .{});
+            std.debug.print("  div\n", .{});
+            std.debug.print("    p Text      // 2 spaces\n", .{});
+            std.debug.print("      span      // 4 spaces (consistent)\n", .{});
+            std.debug.print("    p More      // back to 2 spaces (matches previous level)\n", .{});
+            std.debug.print("\n", .{});
+            std.debug.print("Example of INCORRECT indentation:\n", .{});
+            std.debug.print("  div\n", .{});
+            std.debug.print("    p Text      // 2 spaces\n", .{});
+            std.debug.print("   span         // 3 spaces (ERROR: doesn't match any level)\n", .{});
+        } else {
+            std.debug.print("Error: Parsing failed: {}\n", .{err});
+        }
         std.process.exit(1);
     };
 
