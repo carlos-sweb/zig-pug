@@ -13,6 +13,7 @@ High-performance Pug template engine powered by Zig and mujs.
 - ✅ **Documentation comments** - `//!` for file metadata (ignored by parser)
 - ✅ **Conditionals** - if/else/unless
 - ✅ **Mixins** - Reusable components
+- ✅ **Dual package** - CommonJS (`require`) and ES Modules (`import`)
 - ✅ **Bun.js compatible** - 2-5x faster than Node.js
 - ⚡ **Native performance** - Written in Zig, compiled to native code
 - 🔋 **Zero dependencies** - Only Zig and embedded mujs
@@ -35,6 +36,7 @@ The addon will compile automatically during installation.
 
 ### Simple API
 
+**CommonJS (Node.js):**
 ```javascript
 const zigpug = require('zig-pug');
 
@@ -43,10 +45,35 @@ console.log(html);
 // <p>Hello World!</p>
 ```
 
+**ES Modules (Node.js, Bun):**
+```javascript
+import { compile } from 'zig-pug';
+
+const html = compile('p Hello #{name}!', { name: 'World' });
+console.log(html);
+// <p>Hello World!</p>
+```
+
 ### Object-Oriented API
 
+**CommonJS (Node.js):**
 ```javascript
 const { PugCompiler } = require('zig-pug');
+
+const compiler = new PugCompiler();
+compiler
+    .set('title', 'My Page')
+    .set('version', 1.5)
+    .setBool('isDev', false);
+
+const html = compiler.compile('h1 #{title}');
+console.log(html);
+// <h1>My Page</h1>
+```
+
+**ES Modules (Node.js, Bun):**
+```javascript
+import { PugCompiler } from 'zig-pug';
 
 const compiler = new PugCompiler();
 compiler

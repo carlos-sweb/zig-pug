@@ -1,8 +1,15 @@
 {
   "name": "zig-pug",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "High-performance Pug template engine powered by Zig and mujs. Native N-API addon with ES5.1 JavaScript support, full UTF-8 (emoji, accents), documentation comments (//!), and fast compilation. Compatible with Node.js and Bun.",
+  "type": "commonjs",
   "main": "index.js",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.js"
+    }
+  },
   "scripts": {
     "install": "node-gyp rebuild",
     "build": "node-gyp configure build",
@@ -76,6 +83,7 @@
   },
   "files": [
     "index.js",
+    "index.mjs",
     "binding.c",
     "binding.gyp",
     "common.gypi",
