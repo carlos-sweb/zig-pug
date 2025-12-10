@@ -3,17 +3,20 @@
 High-performance Pug template engine powered by Zig and mujs.
 
 [![npm version](https://img.shields.io/npm/v/zig-pug.svg)](https://www.npmjs.com/package/zig-pug)
-[![license](https://img.shields.io/npm/l/zig-pug.svg)](https://github.com/yourusername/zig-pug/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/zig-pug.svg)](https://github.com/carlos-sweb/zig-pug/blob/main/LICENSE)
 
 ## Features
 
 - ✅ **Pug syntax** - Tags, attributes, classes, IDs
 - ✅ **JavaScript expressions** - ES5.1 interpolation powered by mujs
+- ✅ **Full UTF-8 support** - Emoji 🎉, accents (á é ñ ü), all Unicode
+- ✅ **Documentation comments** - `//!` for file metadata (ignored by parser)
 - ✅ **Conditionals** - if/else/unless
 - ✅ **Mixins** - Reusable components
 - ✅ **Bun.js compatible** - 2-5x faster than Node.js
 - ⚡ **Native performance** - Written in Zig, compiled to native code
 - 🔋 **Zero dependencies** - Only Zig and embedded mujs
+- 🌍 **i18n ready** - Spanish, Portuguese, French, German, and more
 
 ## Installation
 
@@ -90,7 +93,7 @@ bun run app.js
 
 **Performance:** Bun is 2-5x faster than Node.js for template compilation.
 
-See [examples/bun/](https://github.com/yourusername/zig-pug/tree/main/examples/bun) for complete examples.
+See [examples/bun/](https://github.com/carlos-sweb/zig-pug/tree/main/examples/bun) for complete examples.
 
 ## Pug Syntax
 
@@ -140,6 +143,66 @@ mixin button(text)
 +button('Click me')
 +button('Submit')
 ```
+
+### UTF-8 & Unicode Support
+
+Full support for international characters, emoji, and symbols:
+
+```pug
+//! File: index.pug
+//! Author: Carlos
+doctype html
+html(lang="es")
+  head
+    title #{titulo}
+  body
+    h1 ¡Bienvenido! 🎉
+
+    section.español
+      p.información Información sobre José y María
+      p#descripción Este párrafo tiene ID con acento
+
+    section.português
+      h2 Programação em português
+      p Características: ã, õ, ç
+
+    section.français
+      h2 Génération française
+      p Avec é, è, ê, ç
+
+    footer
+      p © 2025 - Creado con zig-pug 🚀
+```
+
+**Supported everywhere:**
+- ✅ Text content: `p José, María, Ángel`
+- ✅ Class names: `.información .português`
+- ✅ ID attributes: `#descripción #größe`
+- ✅ Comments: `// útil para depuración`
+- ✅ Emoji: `h1 Hello 🎉 🚀 ✨`
+- ✅ Symbols: `p © ™ € £ ¥`
+
+### Documentation Comments
+
+Use `//!` for file metadata that won't appear in output:
+
+```pug
+//! Template: homepage.pug
+//! Author: John Doe
+//! Version: 1.0
+//! Description: Main landing page
+doctype html
+html
+  body
+    // Regular comment (appears in --pretty mode)
+    //- Code comment (never appears)
+```
+
+| Syntax | Name | In HTML? | Use Case |
+|--------|------|----------|----------|
+| `//!` | Documentation | ❌ Never | File metadata, notes |
+| `//` | Buffered | ✅ Dev mode | Development debugging |
+| `//-` | Unbuffered | ❌ Never | Code comments |
 
 ## API Reference
 

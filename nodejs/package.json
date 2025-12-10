@@ -1,7 +1,7 @@
 {
   "name": "zig-pug",
-  "version": "0.2.0",
-  "description": "High-performance Pug template engine powered by Zig and mujs - Native N-API addon with ES5.1 JavaScript support",
+  "version": "0.3.0",
+  "description": "High-performance Pug template engine powered by Zig and mujs. Native N-API addon with ES5.1 JavaScript support, full UTF-8 (emoji, accents), documentation comments (//!), and fast compilation. Compatible with Node.js and Bun.",
   "main": "index.js",
   "scripts": {
     "install": "node-gyp rebuild",
@@ -34,22 +34,33 @@
     "view-engine",
     "express",
     "jade",
-    "haml"
+    "haml",
+    "utf-8",
+    "utf8",
+    "unicode",
+    "emoji",
+    "i18n",
+    "internationalization",
+    "multilingual",
+    "spanish",
+    "portuguese",
+    "french",
+    "german"
   ],
   "author": {
     "name": "zig-pug contributors",
-    "url": "https://github.com/yourusername/zig-pug/graphs/contributors"
+    "url": "https://github.com/carlos-sweb/zig-pug/graphs/contributors"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/zig-pug.git",
+    "url": "git+https://github.com/carlos-sweb/zig-pug.git",
     "directory": "nodejs"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/zig-pug/issues"
+    "url": "https://github.com/carlos-sweb/zig-pug/issues"
   },
-  "homepage": "https://github.com/yourusername/zig-pug#readme",
+  "homepage": "https://github.com/carlos-sweb/zig-pug#readme",
   "engines": {
     "node": ">=14.0.0"
   },
@@ -61,7 +72,7 @@
   "binary": {
     "module_name": "zigpug",
     "module_path": "./build/Release/",
-    "host": "https://github.com/yourusername/zig-pug/releases/download/"
+    "host": "https://github.com/carlos-sweb/zig-pug/releases/download/"
   },
   "files": [
     "index.js",
