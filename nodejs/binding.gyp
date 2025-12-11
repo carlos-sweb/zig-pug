@@ -3,19 +3,25 @@
     {
       "target_name": "zigpug",
       "sources": [
-        "binding.c",
-        "vendor/mujs/one.c"
+        "binding.c"
       ],
       "include_dirs": [
-        "include",
-        "vendor/mujs"
+        "include"
       ],
-      "libraries": [
-        "-lm"
-      ],
-      "cflags": [
-        "-std=c99",
-        "-DHAVE_STRLCPY=0"
+      "conditions": [
+        ["OS=='win'", {
+          "libraries": [
+            "<(module_root_dir)/prebuilts/win32-<(target_arch)/zig-pug.lib"
+          ]
+        }, {
+          "libraries": [
+            "-lm",
+            "<(module_root_dir)/prebuilts/<(OS)-<(target_arch)/libzig-pug.a"
+          ],
+          "cflags": [
+            "-std=c99"
+          ]
+        }]
       ],
       "defines": [
         "NAPI_VERSION=8"

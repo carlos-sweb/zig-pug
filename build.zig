@@ -32,9 +32,16 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("src/lib.zig"),
                 .target = target,
                 .optimize = optimize,
+                .pic = true, // Position Independent Code for Node.js addons
             }),
         });
         lib_static.linkLibC();
+        // Include mujs
+        lib_static.addIncludePath(b.path("vendor/mujs"));
+        lib_static.addCSourceFile(.{
+            .file = b.path("vendor/mujs/one.c"),
+            .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
+        });
         const install_lib_static = b.addInstallArtifact(lib_static, .{});
         lib_static_step.dependOn(&install_lib_static.step);
     }

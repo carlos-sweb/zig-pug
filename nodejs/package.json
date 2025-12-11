@@ -1,6 +1,6 @@
 {
   "name": "zig-pug",
-  "version": "0.3.1",
+  "version": "0.3.4",
   "description": "High-performance Pug template engine powered by Zig and mujs. Native N-API addon with ES5.1 JavaScript support, full UTF-8 (emoji, accents), documentation comments (//!), and fast compilation. Compatible with Node.js and Bun.",
   "type": "commonjs",
   "main": "index.js",
@@ -11,12 +11,15 @@
     }
   },
   "scripts": {
-    "install": "node-gyp rebuild",
+    "install": "node install.js",
+    "postinstall": "node install.js",
     "build": "node-gyp configure build",
     "rebuild": "node-gyp rebuild",
     "clean": "node-gyp clean",
     "test": "node test/test.js",
-    "prepublishOnly": "npm run build"
+    "build-prebuilts": "./build-prebuilts.sh",
+    "build-binaries": "./build-node-binaries.sh",
+    "prepublishOnly": "npm run build-prebuilts && npm run build-binaries"
   },
   "keywords": [
     "pug",
@@ -71,10 +74,10 @@
   "engines": {
     "node": ">=14.0.0"
   },
-  "dependencies": {},
-  "devDependencies": {
+  "dependencies": {
     "node-gyp": "^10.0.0"
   },
+  "devDependencies": {},
   "gypfile": true,
   "binary": {
     "module_name": "zigpug",
@@ -84,12 +87,14 @@
   "files": [
     "index.js",
     "index.mjs",
+    "install.js",
     "binding.c",
     "binding.gyp",
     "common.gypi",
     "README.md",
     "LICENSE",
     "include/",
-    "vendor/"
+    "prebuilts/",
+    "prebuilt-binaries/"
   ]
 }

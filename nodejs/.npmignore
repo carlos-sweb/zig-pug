@@ -1,6 +1,7 @@
-# Build artifacts (will be rebuilt on user's machine)
+# Build artifacts (will be rebuilt on user's machine, but keep prebuilts)
 build/
 *.node
+!prebuilts/
 
 # Development files
 .git/
@@ -32,6 +33,7 @@ examples/
 
 # Build scripts for Termux (specific use case)
 build-termux.sh
+build-prebuilts.sh
 
 # Temporary files
 *.tmp

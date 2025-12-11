@@ -5,14 +5,47 @@
 
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const require = createRequire(import.meta.url);
 
-const binding = require('./build/Release/zigpug.node');
+// Detect platform and architecture
+const platform = os.platform(); // 'linux', 'darwin', 'win32'
+const arch = os.arch(); // 'x64', 'arm64'
+const platformKey = `${platform}-${arch}`;
+
+// Try to load prebuilt binary first
+const prebuiltPath = join(__dirname, 'prebuilt-binaries', platformKey, 'zigpug.node');
+const builtPath = join(__dirname, 'build', 'Release', 'zigpug.node');
+
+let binding;
+
+if (existsSync(prebuiltPath)) {
+    // Use prebuilt binary
+    binding = require(prebuiltPath);
+} else if (existsSync(builtPath)) {
+    // Use locally built binary
+    binding = require(builtPath);
+} else {
+    console.error('');
+    console.error('zig-pug native addon not found!');
+    console.error('');
+    console.error(`Platform: ${platformKey}`);
+    console.error('');
+    console.error('The native addon needs to be built. Please run:');
+    console.error('');
+    console.error('  cd node_modules/zig-pug && npm run install');
+    console.error('');
+    console.error('Or if using Bun:');
+    console.error('');
+    console.error('  cd node_modules/zig-pug && bun run install');
+    console.error('');
+    throw new Error('zig-pug native addon not found. See instructions above.');
+}
 
 /**
  * PugCompiler class - High-level API for compiling Pug templates

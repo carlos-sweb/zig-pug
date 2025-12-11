@@ -95,8 +95,15 @@ export fn zigpug_set_int(ctx: ?*ZigPugContext, key: [*:0]const u8, value: i64) b
     const context: *Context = @ptrCast(@alignCast(ctx orelse return false));
     const key_str = std.mem.span(key);
 
-    const js_value = runtime.jsValueFromInt(value);
-    context.runtime.setContext(key_str, js_value) catch return false;
+    const js_value = runtime.jsValueFromNumber(context.allocator, @floatFromInt(value)) catch return false;
+    context.runtime.setContext(key_str, js_value) catch {
+        var val_copy = js_value;
+        val_copy.deinit(context.allocator);
+        return false;
+    };
+
+    var val_copy = js_value;
+    val_copy.deinit(context.allocator);
     return true;
 }
 
@@ -105,8 +112,15 @@ export fn zigpug_set_bool(ctx: ?*ZigPugContext, key: [*:0]const u8, value: bool)
     const context: *Context = @ptrCast(@alignCast(ctx orelse return false));
     const key_str = std.mem.span(key);
 
-    const js_value = runtime.jsValueFromBool(value);
-    context.runtime.setContext(key_str, js_value) catch return false;
+    const js_value = runtime.jsValueFromBool(context.allocator, value) catch return false;
+    context.runtime.setContext(key_str, js_value) catch {
+        var val_copy = js_value;
+        val_copy.deinit(context.allocator);
+        return false;
+    };
+
+    var val_copy = js_value;
+    val_copy.deinit(context.allocator);
     return true;
 }
 
