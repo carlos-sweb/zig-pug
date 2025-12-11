@@ -58,7 +58,7 @@ fn printHelp() void {
         \\USAGE:
         \\  zpug [OPTIONS] <input-files...>
         \\  zpug [OPTIONS] -i <input> -o <output>
-        \\  zpug [OPTIONS] < input.pug > output.html
+        \\  zpug [OPTIONS] < input.zpug > output.html
         \\
         \\OPTIONS:
         \\  -h, --help              Show this help message
@@ -81,37 +81,37 @@ fn printHelp() void {
         \\
         \\EXAMPLES:
         \\  # Compile single file to stdout
-        \\  zpug template.pug
+        \\  zpug template.zpug
         \\
         \\  # Compile with output file
-        \\  zpug -i template.pug -o output.html
+        \\  zpug -i template.zpug -o output.html
         \\
         \\  # Compile multiple files to directory
-        \\  zpug -i *.pug -o dist/
+        \\  zpug -i *.zpug -o dist/
         \\
         \\  # Compile with variables
-        \\  zpug template.pug --var name=Alice --var age=25
+        \\  zpug template.zpug --var name=Alice --var age=25
         \\
         \\  # Compile with JSON variables
-        \\  zpug template.pug --vars data.json -o output.html
+        \\  zpug template.zpug --vars data.json -o output.html
         \\
         \\  # Pretty-print with comments (development)
-        \\  zpug -p template.pug -o dev.html
+        \\  zpug -p template.zpug -o dev.html
         \\
         \\  # Pretty-print without comments (readable)
-        \\  zpug -F template.pug -o readable.html
+        \\  zpug -F template.zpug -o readable.html
         \\
         \\  # Minify output (production)
-        \\  zpug -m template.pug -o minified.html
+        \\  zpug -m template.zpug -o minified.html
         \\
         \\  # Watch for changes
-        \\  zpug -w -i template.pug -o output.html
+        \\  zpug -w -i template.zpug -o output.html
         \\
         \\  # Use stdin/stdout (Unix pipe)
-        \\  cat template.pug | zpug --stdin --stdout > output.html
+        \\  cat template.zpug | zpug --stdin --stdout > output.html
         \\
         \\  # Compile with verbose output
-        \\  zpug -V template.pug -o output.html
+        \\  zpug -V template.zpug -o output.html
         \\
         \\TEMPLATE VARIABLES:
         \\  Variables can be set via:
@@ -141,7 +141,7 @@ fn printHelp() void {
         \\  3  Invalid arguments
         \\
         \\DOCUMENTATION:
-        \\  https://github.com/yourusername/zpug
+        \\  https://github.com/carlos-sweb/zig-pug
         \\
     ;
     std.debug.print("{s}", .{help_text});
@@ -459,7 +459,7 @@ fn minifyHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
 /// Check if a tag name is a void element (self-closing HTML element)
 fn isVoidElement(tag_name: []const u8) bool {
     const void_elements = [_][]const u8{
-        "area", "base", "br", "col", "embed", "hr", "img",
+        "area",  "base", "br",   "col",   "embed",  "hr",    "img",
         "input", "link", "meta", "param", "source", "track", "wbr",
     };
     for (void_elements) |void_elem| {
