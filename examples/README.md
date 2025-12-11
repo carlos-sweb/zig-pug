@@ -211,4 +211,4 @@ _ = try js_runtime.eval(
 
 ---
 
-¿Encontraste un bug o tienes una sugerencia? [Abre un issue](https://github.com/yourusername/zig-pug/issues)
+¿Encontraste un bug o tienes una sugerencia? [Abre un issue](https://github.com/carlos-sweb/zig-pug/issues)

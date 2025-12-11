@@ -355,7 +355,7 @@ codemirror/
 
 ## Links
 
-- **zig-pug Project:** https://github.com/yourusername/zig-pug
+- **zig-pug Project:** https://github.com/carlos-sweb/zig-pug
 - **CodeMirror Docs:** https://codemirror.net/doc/manual.html
 - **Mode Development:** https://codemirror.net/doc/manual.html#modeapi
 

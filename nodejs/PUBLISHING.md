@@ -164,7 +164,7 @@ git push --tags
 
 ### 8. Create GitHub Release
 
-1. Go to https://github.com/yourusername/zig-pug/releases
+1. Go to https://github.com/carlos-sweb/zig-pug/releases
 2. Click "Create a new release"
 3. Select the version tag (e.g., `v0.2.1`)
 4. Add release notes
@@ -294,7 +294,7 @@ If you encounter issues during publishing:
 
 1. Check npm documentation: https://docs.npmjs.com/
 2. Check node-gyp documentation: https://github.com/nodejs/node-gyp
-3. Open an issue: https://github.com/yourusername/zig-pug/issues
+3. Open an issue: https://github.com/carlos-sweb/zig-pug/issues
 
 ---
 

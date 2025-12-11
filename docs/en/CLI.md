@@ -7,7 +7,7 @@ Command-line interface for compiling Pug templates to HTML.
 ### Build from Source
 
 ```bash
-git clone https://github.com/yourusername/zig-pug
+git clone https://github.com/carlos-sweb/zig-pug
 cd zig-pug
 zig build
 ```
@@ -574,4 +574,4 @@ Planned for future releases:
 
 **Version**: 0.3.0
 **License**: MIT
-**Homepage**: https://github.com/yourusername/zig-pug
+**Homepage**: https://github.com/carlos-sweb/zig-pug

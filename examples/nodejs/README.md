@@ -280,4 +280,4 @@ npm install --global windows-build-tools
 
 ---
 
-**Need help?** Open an issue on [GitHub](https://github.com/yourusername/zig-pug/issues)
+**Need help?** Open an issue on [GitHub](https://github.com/carlos-sweb/zig-pug/issues)

@@ -52,7 +52,7 @@ html(lang="en")
 ### Clone and build
 
 ```bash
-git clone https://github.com/yourusername/zig-pug
+git clone https://github.com/carlos-sweb/zig-pug
 cd zig-pug
 zig build
 ```
@@ -646,8 +646,8 @@ MIT License - see [LICENSE](LICENSE) for details
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/zig-pug/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/zig-pug/discussions)
+- **Issues**: [GitHub Issues](https://github.com/carlos-sweb/zig-pug/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/carlos-sweb/zig-pug/discussions)
 
 ---
 

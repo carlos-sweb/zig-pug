@@ -20,12 +20,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/zig-pug"
+    "url": "https://github.com/carlos-sweb/zig-pug"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/zig-pug/issues"
+    "url": "https://github.com/carlos-sweb/zig-pug/issues"
   },
-  "homepage": "https://github.com/yourusername/zig-pug#readme",
+  "homepage": "https://github.com/carlos-sweb/zig-pug#readme",
   "license": "MIT",
   "contributes": {
     "languages": [

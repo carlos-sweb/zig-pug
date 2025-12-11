@@ -289,7 +289,7 @@ vsce publish
 
 ## Links
 
-- **zig-pug Project:** https://github.com/yourusername/zig-pug
+- **zig-pug Project:** https://github.com/carlos-sweb/zig-pug
 - **VS Code Extension API:** https://code.visualstudio.com/api
 - **TextMate Grammars:** https://macromates.com/manual/en/language_grammars
 
@@ -299,8 +299,8 @@ MIT License - Same as zig-pug project
 
 ## Support
 
-- **Issues:** https://github.com/yourusername/zig-pug/issues
-- **Discussions:** https://github.com/yourusername/zig-pug/discussions
+- **Issues:** https://github.com/carlos-sweb/zig-pug/issues
+- **Discussions:** https://github.com/carlos-sweb/zig-pug/discussions
 
 ---
 

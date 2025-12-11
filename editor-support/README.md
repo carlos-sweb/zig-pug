@@ -338,15 +338,15 @@ Have a favorite editor not listed? Open an issue or contribute!
 
 ## Links
 
-- **zig-pug Project:** https://github.com/yourusername/zig-pug
+- **zig-pug Project:** https://github.com/carlos-sweb/zig-pug
 - **npm Package:** https://www.npmjs.com/package/zig-pug
 - **Documentation:** [docs/](../docs/)
 - **Examples:** [examples/](../examples/)
 
 ## Support
 
-- **Issues:** https://github.com/yourusername/zig-pug/issues
-- **Discussions:** https://github.com/yourusername/zig-pug/discussions
+- **Issues:** https://github.com/carlos-sweb/zig-pug/issues
+- **Discussions:** https://github.com/carlos-sweb/zig-pug/discussions
 
 ## License
 

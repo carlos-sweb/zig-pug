@@ -41,7 +41,7 @@ html(lang="es")
 ### Clonar y compilar
 
 ```bash
-git clone https://github.com/yourusername/zig-pug
+git clone https://github.com/carlos-sweb/zig-pug
 cd zig-pug
 zig build
 ```
@@ -556,7 +556,7 @@ Ver [PLAN.md](PLAN.md) para el plan completo de desarrollo.
 
 ## 💬 Propuestas (RFC)
 
-Las siguientes características están en evaluación. Tu feedback es bienvenido en [GitHub Discussions](https://github.com/yourusername/zig-pug/discussions).
+Las siguientes características están en evaluación. Tu feedback es bienvenido en [GitHub Discussions](https://github.com/carlos-sweb/zig-pug/discussions).
 
 ### RFC-001: Filtros de Valor
 
@@ -627,8 +627,8 @@ MIT License - ver [LICENSE](LICENSE) para detalles
 
 ## 📞 Soporte
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/zig-pug/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/zig-pug/discussions)
+- **Issues**: [GitHub Issues](https://github.com/carlos-sweb/zig-pug/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/carlos-sweb/zig-pug/discussions)
 
 ---
 

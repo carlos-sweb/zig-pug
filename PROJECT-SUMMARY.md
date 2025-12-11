@@ -399,7 +399,7 @@ zigpug_free(ctx);
 
 1. **Probar el proyecto:**
    ```bash
-   git clone https://github.com/yourusername/zig-pug
+   git clone https://github.com/carlos-sweb/zig-pug
    cd zig-pug
    zig build
    ./zig-out/bin/zig-pug examples/basic.pug
@@ -485,9 +485,9 @@ zigpug_free(ctx);
 
 ## 📞 Contacto y Soporte
 
-- **GitHub:** https://github.com/yourusername/zig-pug
-- **Issues:** https://github.com/yourusername/zig-pug/issues
-- **Discussions:** https://github.com/yourusername/zig-pug/discussions
+- **GitHub:** https://github.com/carlos-sweb/zig-pug
+- **Issues:** https://github.com/carlos-sweb/zig-pug/issues
+- **Discussions:** https://github.com/carlos-sweb/zig-pug/discussions
 - **npm:** https://www.npmjs.com/package/zig-pug (próximamente)
 
 ## 📄 Licencia

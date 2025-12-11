@@ -295,7 +295,7 @@ The addon compiles on Termux but cannot be loaded due to Android namespace restr
 pkg install zig
 
 # Clone and build
-git clone https://github.com/yourusername/zig-pug
+git clone https://github.com/carlos-sweb/zig-pug
 cd zig-pug
 zig build
 
@@ -303,7 +303,7 @@ zig build
 ./zig-out/bin/zig-pug template.pug
 ```
 
-See [docs/TERMUX.md](https://github.com/yourusername/zig-pug/blob/main/docs/TERMUX.md) for details.
+See [docs/TERMUX.md](https://github.com/carlos-sweb/zig-pug/blob/main/docs/TERMUX.md) for details.
 
 ## Performance
 
@@ -330,7 +330,7 @@ console.log(`${iterations} in ${elapsed}ms`);
 
 ## Examples
 
-See the [examples](https://github.com/yourusername/zig-pug/tree/main/examples) directory:
+See the [examples](https://github.com/carlos-sweb/zig-pug/tree/main/examples) directory:
 
 - **Node.js**: `examples/nodejs/`
 - **Bun.js**: `examples/bun/`
@@ -338,10 +338,10 @@ See the [examples](https://github.com/yourusername/zig-pug/tree/main/examples) d
 
 ## Documentation
 
-- **[Getting Started](https://github.com/yourusername/zig-pug/blob/main/docs/GETTING-STARTED.md)**
-- **[Node.js Integration](https://github.com/yourusername/zig-pug/blob/main/docs/NODEJS-INTEGRATION.md)**
-- **[Pug Syntax Reference](https://github.com/yourusername/zig-pug/blob/main/docs/PUG-SYNTAX.md)**
-- **[API Reference](https://github.com/yourusername/zig-pug/blob/main/docs/API-REFERENCE.md)**
+- **[Getting Started](https://github.com/carlos-sweb/zig-pug/blob/main/docs/GETTING-STARTED.md)**
+- **[Node.js Integration](https://github.com/carlos-sweb/zig-pug/blob/main/docs/NODEJS-INTEGRATION.md)**
+- **[Pug Syntax Reference](https://github.com/carlos-sweb/zig-pug/blob/main/docs/PUG-SYNTAX.md)**
+- **[API Reference](https://github.com/carlos-sweb/zig-pug/blob/main/docs/API-REFERENCE.md)**
 
 ## Troubleshooting
 
@@ -375,7 +375,7 @@ npm run build
 
 ### Compilation errors
 
-If you encounter compilation errors, please [open an issue](https://github.com/yourusername/zig-pug/issues) with:
+If you encounter compilation errors, please [open an issue](https://github.com/carlos-sweb/zig-pug/issues) with:
 - Your OS and version
 - Node.js version (`node --version`)
 - Complete error output
@@ -392,7 +392,7 @@ Contributions are welcome! Please:
 
 ## License
 
-MIT License - see [LICENSE](https://github.com/yourusername/zig-pug/blob/main/LICENSE) for details.
+MIT License - see [LICENSE](https://github.com/carlos-sweb/zig-pug/blob/main/LICENSE) for details.
 
 ## Credits
 
@@ -403,10 +403,10 @@ MIT License - see [LICENSE](https://github.com/yourusername/zig-pug/blob/main/LI
 
 ## Links
 
-- **GitHub**: https://github.com/yourusername/zig-pug
+- **GitHub**: https://github.com/carlos-sweb/zig-pug
 - **npm**: https://www.npmjs.com/package/zig-pug
-- **Issues**: https://github.com/yourusername/zig-pug/issues
-- **Documentation**: https://github.com/yourusername/zig-pug#readme
+- **Issues**: https://github.com/carlos-sweb/zig-pug/issues
+- **Documentation**: https://github.com/carlos-sweb/zig-pug#readme
 
 ---
 

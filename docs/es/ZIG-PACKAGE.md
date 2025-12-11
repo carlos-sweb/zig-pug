@@ -19,7 +19,7 @@ Agrega zig-pug a tu `build.zig.zon`:
     .fingerprint = 0x...,  // Tu fingerprint
     .dependencies = .{
         .zig_pug = .{
-            .url = "https://github.com/yourusername/zig-pug/archive/refs/tags/v0.2.0.tar.gz",
+            .url = "https://github.com/carlos-sweb/zig-pug/archive/refs/tags/v0.2.0.tar.gz",
             .hash = "...",  // Se obtiene al ejecutar `zig build`
         },
     },
@@ -229,7 +229,7 @@ my-project/
     .fingerprint = 0xabc123...,
     .dependencies = .{
         .zig_pug = .{
-            .url = "https://github.com/yourusername/zig-pug/archive/v0.2.0.tar.gz",
+            .url = "https://github.com/carlos-sweb/zig-pug/archive/v0.2.0.tar.gz",
             .hash = "122...",
         },
     },
@@ -307,7 +307,7 @@ exe.linkLibC();
 ## Recursos
 
 - **Zig Package Manager Docs:** https://ziglang.org/documentation/master/#Package-Management
-- **zig-pug GitHub:** https://github.com/yourusername/zig-pug
+- **zig-pug GitHub:** https://github.com/carlos-sweb/zig-pug
 - **zig-pug API Reference:** [docs/API-REFERENCE.md](API-REFERENCE.md)
 
 ## Soporte

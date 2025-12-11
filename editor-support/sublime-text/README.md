@@ -179,7 +179,7 @@ To modify the syntax:
 
 ## Links
 
-- **zig-pug GitHub:** https://github.com/yourusername/zig-pug
+- **zig-pug GitHub:** https://github.com/carlos-sweb/zig-pug
 - **Sublime Text Docs:** https://www.sublimetext.com/docs/
 - **Syntax Definition:** https://www.sublimetext.com/docs/syntax.html
 

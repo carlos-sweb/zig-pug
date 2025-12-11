@@ -21,7 +21,7 @@ zig version
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/zig-pug
+git clone https://github.com/carlos-sweb/zig-pug
 cd zig-pug
 
 # Build the project
