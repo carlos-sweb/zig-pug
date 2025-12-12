@@ -122,13 +122,59 @@ export class PugCompiler {
     }
 
     /**
+     * Set an array variable in the template context
+     * @param {string} key - Variable name
+     * @param {Array} value - Array value
+     * @returns {PugCompiler} - Returns this for chaining
+     */
+    setArray(key, value) {
+        if (typeof key !== 'string') {
+            throw new TypeError('Key must be a string');
+        }
+        if (!Array.isArray(value)) {
+            throw new TypeError('Value must be an array');
+        }
+
+        const success = binding.setArray(this.context, key, value);
+        if (!success) {
+            throw new Error(`Failed to set array variable: ${key}`);
+        }
+        return this;
+    }
+
+    /**
+     * Set an object variable in the template context
+     * @param {string} key - Variable name
+     * @param {Object} value - Object value (plain object, not array)
+     * @returns {PugCompiler} - Returns this for chaining
+     */
+    setObject(key, value) {
+        if (typeof key !== 'string') {
+            throw new TypeError('Key must be a string');
+        }
+        if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+            throw new TypeError('Value must be a plain object');
+        }
+
+        const success = binding.setObject(this.context, key, value);
+        if (!success) {
+            throw new Error(`Failed to set object variable: ${key}`);
+        }
+        return this;
+    }
+
+    /**
      * Set a variable (automatically detects type)
      * @param {string} key - Variable name
-     * @param {string|number|boolean} value - Value of any supported type
+     * @param {string|number|boolean|Array|Object} value - Value of any supported type
      * @returns {PugCompiler} - Returns this for chaining
      */
     set(key, value) {
-        if (typeof value === 'string') {
+        if (Array.isArray(value)) {
+            return this.setArray(key, value);
+        } else if (typeof value === 'object' && value !== null) {
+            return this.setObject(key, value);
+        } else if (typeof value === 'string') {
             return this.setString(key, value);
         } else if (typeof value === 'number') {
             return this.setNumber(key, value);
