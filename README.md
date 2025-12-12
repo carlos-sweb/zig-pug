@@ -91,7 +91,13 @@ zpug -i template.zpug -o output.html
 # With variables (simple)
 zpug template.zpug --var name=Alice --var age=25
 
-# With JSON variables (arrays, objects)
+# With arrays (CSV format)
+zpug template.zpug --array items=apple,banana,orange
+
+# With JSON (objects and complex structures)
+zpug template.zpug --json user='{"name":"Alice","age":30}'
+
+# With JSON file (arrays, objects, nested data)
 zpug template.zpug --vars data.json
 
 # Pretty-print with comments (development mode)
@@ -108,6 +114,25 @@ zpug template.zpug -o output.html
 
 # From stdin
 cat template.zpug | zpug --stdin > output.html
+```
+
+**Example with inline arrays and objects:**
+```bash
+# CSV arrays (simple values)
+zpug template.zpug --array fruits=apple,banana,orange --array scores=95,87,92
+
+# JSON objects
+zpug template.zpug --json user='{"name":"Alice","age":30,"email":"alice@example.com"}'
+
+# JSON arrays (for complex data)
+zpug template.zpug --json items='["apple","banana","orange"]'
+
+# Mix all types
+zpug template.zpug \
+  --var title="Dashboard" \
+  --array tags=prod,stable \
+  --json user='{"name":"Alice","role":"admin"}' \
+  --pretty
 ```
 
 **Example JSON variables file:**

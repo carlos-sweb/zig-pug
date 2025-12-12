@@ -17,6 +17,8 @@ extern char* zigpug_compile(ZigPugContext* ctx, const char* pug_source);
 extern int zigpug_set_string(ZigPugContext* ctx, const char* key, const char* value);
 extern int zigpug_set_int(ZigPugContext* ctx, const char* key, long long value);
 extern int zigpug_set_bool(ZigPugContext* ctx, const char* key, int value);
+extern int zigpug_set_array_json(ZigPugContext* ctx, const char* key, const char* json_str);
+extern int zigpug_set_object_json(ZigPugContext* ctx, const char* key, const char* json_str);
 extern void zigpug_free_string(char* str);
 extern const char* zigpug_version(void);
 
@@ -310,6 +312,208 @@ static napi_value Compile(napi_env env, napi_callback_info info) {
     return result;
 }
 
+// Set an array variable from JavaScript array
+// JavaScript: zigpug.setArray(ctx, 'items', ['a', 'b', 'c'])
+static napi_value SetArray(napi_env env, napi_callback_info info) {
+    napi_status status;
+    size_t argc = 3;
+    napi_value args[3];
+
+    status = napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+    if (status != napi_ok || argc < 3) {
+        napi_throw_error(env, NULL, "Expected 3 arguments: context, key, array");
+        return NULL;
+    }
+
+    // Get context
+    PugContextWrapper* wrapper;
+    status = napi_get_value_external(env, args[0], (void**)&wrapper);
+    if (status != napi_ok || !wrapper || !wrapper->ctx) {
+        napi_throw_error(env, NULL, "Invalid context");
+        return NULL;
+    }
+
+    // Get key string
+    size_t key_len;
+    status = napi_get_value_string_utf8(env, args[1], NULL, 0, &key_len);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Invalid key");
+        return NULL;
+    }
+
+    char* key = malloc(key_len + 1);
+    status = napi_get_value_string_utf8(env, args[1], key, key_len + 1, &key_len);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get key string");
+        return NULL;
+    }
+
+    // Convert JavaScript array to JSON string
+    napi_value json_value;
+    napi_value global;
+    napi_value json_obj;
+    napi_value stringify_fn;
+
+    status = napi_get_global(env, &global);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get global object");
+        return NULL;
+    }
+
+    status = napi_get_named_property(env, global, "JSON", &json_obj);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get JSON object");
+        return NULL;
+    }
+
+    status = napi_get_named_property(env, json_obj, "stringify", &stringify_fn);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get JSON.stringify");
+        return NULL;
+    }
+
+    napi_value argv[1] = { args[2] };
+    status = napi_call_function(env, json_obj, stringify_fn, 1, argv, &json_value);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to stringify array");
+        return NULL;
+    }
+
+    // Get JSON string
+    size_t json_len;
+    status = napi_get_value_string_utf8(env, json_value, NULL, 0, &json_len);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get JSON string length");
+        return NULL;
+    }
+
+    char* json_str = malloc(json_len + 1);
+    status = napi_get_value_string_utf8(env, json_value, json_str, json_len + 1, &json_len);
+    if (status != napi_ok) {
+        free(key);
+        free(json_str);
+        napi_throw_error(env, NULL, "Failed to get JSON string");
+        return NULL;
+    }
+
+    // Set in zig-pug
+    int result = zigpug_set_array_json(wrapper->ctx, key, json_str);
+
+    free(key);
+    free(json_str);
+
+    napi_value js_result;
+    status = napi_get_boolean(env, result != 0, &js_result);
+    return js_result;
+}
+
+// Set an object variable from JavaScript object
+// JavaScript: zigpug.setObject(ctx, 'user', {name: 'Alice', age: 30})
+static napi_value SetObject(napi_env env, napi_callback_info info) {
+    napi_status status;
+    size_t argc = 3;
+    napi_value args[3];
+
+    status = napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+    if (status != napi_ok || argc < 3) {
+        napi_throw_error(env, NULL, "Expected 3 arguments: context, key, object");
+        return NULL;
+    }
+
+    // Get context
+    PugContextWrapper* wrapper;
+    status = napi_get_value_external(env, args[0], (void**)&wrapper);
+    if (status != napi_ok || !wrapper || !wrapper->ctx) {
+        napi_throw_error(env, NULL, "Invalid context");
+        return NULL;
+    }
+
+    // Get key string
+    size_t key_len;
+    status = napi_get_value_string_utf8(env, args[1], NULL, 0, &key_len);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Invalid key");
+        return NULL;
+    }
+
+    char* key = malloc(key_len + 1);
+    status = napi_get_value_string_utf8(env, args[1], key, key_len + 1, &key_len);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get key string");
+        return NULL;
+    }
+
+    // Convert JavaScript object to JSON string
+    napi_value json_value;
+    napi_value global;
+    napi_value json_obj;
+    napi_value stringify_fn;
+
+    status = napi_get_global(env, &global);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get global object");
+        return NULL;
+    }
+
+    status = napi_get_named_property(env, global, "JSON", &json_obj);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get JSON object");
+        return NULL;
+    }
+
+    status = napi_get_named_property(env, json_obj, "stringify", &stringify_fn);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get JSON.stringify");
+        return NULL;
+    }
+
+    napi_value argv[1] = { args[2] };
+    status = napi_call_function(env, json_obj, stringify_fn, 1, argv, &json_value);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to stringify object");
+        return NULL;
+    }
+
+    // Get JSON string
+    size_t json_len;
+    status = napi_get_value_string_utf8(env, json_value, NULL, 0, &json_len);
+    if (status != napi_ok) {
+        free(key);
+        napi_throw_error(env, NULL, "Failed to get JSON string length");
+        return NULL;
+    }
+
+    char* json_str = malloc(json_len + 1);
+    status = napi_get_value_string_utf8(env, json_value, json_str, json_len + 1, &json_len);
+    if (status != napi_ok) {
+        free(key);
+        free(json_str);
+        napi_throw_error(env, NULL, "Failed to get JSON string");
+        return NULL;
+    }
+
+    // Set in zig-pug
+    int result = zigpug_set_object_json(wrapper->ctx, key, json_str);
+
+    free(key);
+    free(json_str);
+
+    napi_value js_result;
+    status = napi_get_boolean(env, result != 0, &js_result);
+    return js_result;
+}
+
 // Get zig-pug version
 // JavaScript: const version = zigpug.version()
 static napi_value Version(napi_env env, napi_callback_info info) {
@@ -355,6 +559,18 @@ static napi_value Init(napi_env env, napi_value exports) {
     status = napi_create_function(env, NULL, 0, SetBool, NULL, &fn);
     if (status != napi_ok) return NULL;
     status = napi_set_named_property(env, exports, "setBool", fn);
+    if (status != napi_ok) return NULL;
+
+    // setArray
+    status = napi_create_function(env, NULL, 0, SetArray, NULL, &fn);
+    if (status != napi_ok) return NULL;
+    status = napi_set_named_property(env, exports, "setArray", fn);
+    if (status != napi_ok) return NULL;
+
+    // setObject
+    status = napi_create_function(env, NULL, 0, SetObject, NULL, &fn);
+    if (status != napi_ok) return NULL;
+    status = napi_set_named_property(env, exports, "setObject", fn);
     if (status != napi_ok) return NULL;
 
     // compile

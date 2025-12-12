@@ -124,6 +124,58 @@ export fn zigpug_set_bool(ctx: ?*ZigPugContext, key: [*:0]const u8, value: bool)
     return true;
 }
 
+/// Set an array variable from JSON string
+/// Parameters:
+///   - ctx: Context handle
+///   - key: Variable name (null-terminated C string)
+///   - json_str: JSON array string (e.g., '["a","b","c"]')
+/// Returns: true on success, false on error
+export fn zigpug_set_array_json(ctx: ?*ZigPugContext, key: [*:0]const u8, json_str: [*:0]const u8) bool {
+    const context: *Context = @ptrCast(@alignCast(ctx orelse return false));
+    const key_string = std.mem.span(key);
+    const json_string = std.mem.span(json_str);
+
+    // Parse JSON array
+    const parsed = std.json.parseFromSlice(std.json.Value, context.allocator, json_string, .{}) catch return false;
+    defer parsed.deinit();
+
+    // Verify it's an array
+    if (parsed.value != .array) {
+        return false;
+    }
+
+    // Set array in runtime
+    context.runtime.setArrayFromJson(key_string, parsed.value.array.items) catch return false;
+
+    return true;
+}
+
+/// Set an object variable from JSON string
+/// Parameters:
+///   - ctx: Context handle
+///   - key: Variable name (null-terminated C string)
+///   - json_str: JSON object string (e.g., '{"name":"Alice","age":30}')
+/// Returns: true on success, false on error
+export fn zigpug_set_object_json(ctx: ?*ZigPugContext, key: [*:0]const u8, json_str: [*:0]const u8) bool {
+    const context: *Context = @ptrCast(@alignCast(ctx orelse return false));
+    const key_string = std.mem.span(key);
+    const json_string = std.mem.span(json_str);
+
+    // Parse JSON object
+    const parsed = std.json.parseFromSlice(std.json.Value, context.allocator, json_string, .{}) catch return false;
+    defer parsed.deinit();
+
+    // Verify it's an object
+    if (parsed.value != .object) {
+        return false;
+    }
+
+    // Set object in runtime
+    context.runtime.setObjectFromJson(key_string, parsed.value.object) catch return false;
+
+    return true;
+}
+
 /// Free a string returned by zig-pug
 export fn zigpug_free_string(str: ?[*:0]u8) void {
     if (str) |s| {

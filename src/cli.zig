@@ -10,6 +10,8 @@ const CliOptions = struct {
     output_path: ?[]const u8,
     variables_file: ?[]const u8,
     variables: std.StringHashMap([]const u8),
+    json_variables: std.StringHashMap([]const u8),
+    array_variables: std.StringHashMap([]const u8),
     watch: bool,
     pretty: bool,
     format: bool,
@@ -27,6 +29,8 @@ const CliOptions = struct {
             .output_path = null,
             .variables_file = null,
             .variables = std.StringHashMap([]const u8).init(allocator),
+            .json_variables = std.StringHashMap([]const u8).init(allocator),
+            .array_variables = std.StringHashMap([]const u8).init(allocator),
             .watch = false,
             .pretty = false,
             .format = false,
@@ -43,6 +47,8 @@ const CliOptions = struct {
     pub fn deinit(self: *CliOptions) void {
         self.input_files.deinit(self.allocator);
         self.variables.deinit();
+        self.json_variables.deinit();
+        self.array_variables.deinit();
     }
 };
 
@@ -76,8 +82,10 @@ fn printHelp() void {
         \\  -f, --force             Overwrite output files without asking
         \\
         \\VARIABLES:
-        \\  --var <key>=<value>     Set template variable (can be used multiple times)
-        \\  --vars <file.json>      Load variables from JSON file
+        \\  --var <key>=<value>            Set simple variable (string/number/boolean)
+        \\  --array <key>=<val1>,<val2>    Set array from CSV values
+        \\  --json <key>=<json>            Set variable from JSON string
+        \\  --vars <file.json>             Load all variables from JSON file
         \\
         \\EXAMPLES:
         \\  # Compile single file to stdout
@@ -89,10 +97,23 @@ fn printHelp() void {
         \\  # Compile multiple files to directory
         \\  zpug -i *.zpug -o dist/
         \\
-        \\  # Compile with variables
+        \\  # Compile with simple variables
         \\  zpug template.zpug --var name=Alice --var age=25
         \\
-        \\  # Compile with JSON variables
+        \\  # Compile with arrays (CSV format)
+        \\  zpug template.zpug --array items=apple,banana,orange
+        \\  zpug template.zpug --array scores=95,87,92
+        \\
+        \\  # Compile with JSON objects
+        \\  zpug template.zpug --json user='{"name":"Alice","age":30}'
+        \\
+        \\  # Compile with JSON arrays
+        \\  zpug template.zpug --json items='["apple","banana","orange"]'
+        \\
+        \\  # Mixed types
+        \\  zpug template.zpug --var title="Dashboard" --array tags=prod,stable --json user='{"name":"Alice","role":"admin"}' -o output.html
+        \\
+        \\  # Load all variables from JSON file
         \\  zpug template.zpug --vars data.json -o output.html
         \\
         \\  # Pretty-print with comments (development)
@@ -199,6 +220,44 @@ fn parseArguments(allocator: std.mem.Allocator) !CliOptions {
                 std.debug.print("Error: --vars requires a JSON file path\n", .{});
                 std.process.exit(3);
             };
+        } else if (std.mem.eql(u8, arg, "--array")) {
+            const array_str = args.next() orelse {
+                std.debug.print("Error: --array requires key=val1,val2,...\n", .{});
+                std.process.exit(3);
+            };
+
+            var it = std.mem.splitScalar(u8, array_str, '=');
+            const key = it.next() orelse {
+                std.debug.print("Error: --array format is key=val1,val2,...\n", .{});
+                std.process.exit(3);
+            };
+            const csv_values = it.rest();
+
+            if (csv_values.len == 0) {
+                std.debug.print("Error: --array requires comma-separated values\n", .{});
+                std.process.exit(3);
+            }
+
+            try options.array_variables.put(key, csv_values);
+        } else if (std.mem.eql(u8, arg, "--json")) {
+            const json_str = args.next() orelse {
+                std.debug.print("Error: --json requires key=json_value\n", .{});
+                std.process.exit(3);
+            };
+
+            var it = std.mem.splitScalar(u8, json_str, '=');
+            const key = it.next() orelse {
+                std.debug.print("Error: --json format is key=json_value\n", .{});
+                std.process.exit(3);
+            };
+            const json_value = it.rest();
+
+            if (json_value.len == 0) {
+                std.debug.print("Error: --json requires a JSON value\n", .{});
+                std.process.exit(3);
+            }
+
+            try options.json_variables.put(key, json_value);
         } else if (std.mem.eql(u8, arg, "-w") or std.mem.eql(u8, arg, "--watch")) {
             options.watch = true;
         } else if (std.mem.eql(u8, arg, "-p") or std.mem.eql(u8, arg, "--pretty")) {
@@ -293,6 +352,88 @@ fn setVariablesFromMap(variables: std.StringHashMap([]const u8), js_runtime: *ru
         // Default to string
         try js_runtime.setString(key, value);
     }
+}
+
+fn setJsonVariable(
+    allocator: std.mem.Allocator,
+    key: []const u8,
+    json_str: []const u8,
+    js_runtime: *runtime.JsRuntime,
+) !void {
+    // Parse JSON
+    const parsed = std.json.parseFromSlice(
+        std.json.Value,
+        allocator,
+        json_str,
+        .{},
+    ) catch |err| {
+        std.debug.print("Error: Invalid JSON for key '{s}': {}\n", .{ key, err });
+        std.debug.print("JSON string: {s}\n", .{json_str});
+        return err;
+    };
+    defer parsed.deinit();
+
+    const value = parsed.value;
+
+    // Determine type and set
+    switch (value) {
+        .string => |str| try js_runtime.setString(key, str),
+        .integer => |num| try js_runtime.setNumber(key, @floatFromInt(num)),
+        .float => |num| try js_runtime.setNumber(key, num),
+        .number_string => |str| {
+            // Try to parse as number
+            if (std.fmt.parseFloat(f64, str)) |num| {
+                try js_runtime.setNumber(key, num);
+            } else |_| {
+                try js_runtime.setString(key, str);
+            }
+        },
+        .bool => |b| try js_runtime.setBool(key, b),
+        .array => |arr| try js_runtime.setArrayFromJson(key, arr.items),
+        .object => |obj| try js_runtime.setObjectFromJson(key, obj),
+        .null => {
+            // Set null as string "null"
+            try js_runtime.setString(key, "null");
+        },
+    }
+}
+
+fn setArrayFromCsv(
+    allocator: std.mem.Allocator,
+    key: []const u8,
+    csv_str: []const u8,
+    js_runtime: *runtime.JsRuntime,
+) !void {
+    var items = std.ArrayList(std.json.Value){};
+    defer {
+        // Free allocated strings
+        for (items.items) |item| {
+            if (item == .string) {
+                allocator.free(item.string);
+            }
+        }
+        items.deinit(allocator);
+    }
+
+    // Split by commas
+    var it = std.mem.splitScalar(u8, csv_str, ',');
+    while (it.next()) |item_str| {
+        const trimmed = std.mem.trim(u8, item_str, " \t\r\n");
+
+        if (trimmed.len == 0) continue;
+
+        // Try to parse as number
+        if (std.fmt.parseFloat(f64, trimmed)) |num| {
+            try items.append(allocator, .{ .float = num });
+        } else |_| {
+            // It's a string - need to duplicate it
+            const str_copy = try allocator.dupe(u8, trimmed);
+            try items.append(allocator, .{ .string = str_copy });
+        }
+    }
+
+    // Convert to slice and set
+    try js_runtime.setArrayFromJson(key, items.items);
 }
 
 fn compileFile(
@@ -683,6 +824,44 @@ pub fn main() !void {
             std.debug.print("Setting {} command line variables\n", .{options.variables.count()});
         }
         try setVariablesFromMap(options.variables, js_runtime);
+    }
+
+    // Set array variables (--array)
+    if (options.array_variables.count() > 0) {
+        if (options.verbose) {
+            std.debug.print("Setting {} array variables from --array flags\n", .{options.array_variables.count()});
+        }
+        var array_it = options.array_variables.iterator();
+        while (array_it.next()) |entry| {
+            setArrayFromCsv(
+                allocator,
+                entry.key_ptr.*,
+                entry.value_ptr.*,
+                js_runtime,
+            ) catch |err| {
+                std.debug.print("Error setting array '{s}': {}\n", .{ entry.key_ptr.*, err });
+                std.process.exit(1);
+            };
+        }
+    }
+
+    // Set JSON variables (--json)
+    if (options.json_variables.count() > 0) {
+        if (options.verbose) {
+            std.debug.print("Setting {} JSON variables from --json flags\n", .{options.json_variables.count()});
+        }
+        var json_it = options.json_variables.iterator();
+        while (json_it.next()) |entry| {
+            setJsonVariable(
+                allocator,
+                entry.key_ptr.*,
+                entry.value_ptr.*,
+                js_runtime,
+            ) catch |err| {
+                std.debug.print("Error setting JSON '{s}': {}\n", .{ entry.key_ptr.*, err });
+                std.process.exit(1);
+            };
+        }
     }
 
     // Handle stdin input

@@ -124,14 +124,29 @@ zig build -Droot_source_file=src/cli.zig
 ### Variables
 
 ```
---var <key>=<value>     Set template variable (can be used multiple times)
---vars <file.json>      Load variables from JSON file
+--var <key>=<value>            Set simple variable (string/number/boolean)
+--array <key>=<val1>,<val2>    Set array from CSV values
+--json <key>=<json>            Set variable from JSON string
+--vars <file.json>             Load all variables from JSON file
 ```
 
-**Variable Types** (auto-detected):
-- Numbers: `--var count=42`
-- Booleans: `--var active=true`
-- Strings: `--var name=Alice`
+**Variable Types:**
+
+**Simple values** (`--var`, auto-detected):
+- Numbers: `--var count=42` `--var price=19.99`
+- Booleans: `--var active=true` `--var debug=false`
+- Strings: `--var name=Alice` `--var title="My Page"`
+
+**Arrays** (`--array`, CSV format):
+- String arrays: `--array items=apple,banana,orange`
+- Number arrays: `--array scores=95,87,92,88.5`
+- Auto type detection: numbers vs strings
+
+**Complex data** (`--json`, JSON format):
+- JSON objects: `--json user='{"name":"Alice","age":30}'`
+- JSON arrays: `--json items='["apple","banana"]'`
+- Nested structures: `--json data='{"user":{"name":"Alice"}}'`
+- All JSON types: string, number, boolean, null, array, object
 
 ### Examples
 
@@ -150,10 +165,63 @@ zpug -i *.pug -o dist/
 
 #### Using Variables
 
+**Simple variables:**
 ```bash
 # Set variables via command line
-zpug template.pug --var name=Alice --var age=25
+zpug template.pug --var name=Alice --var age=25 --var active=true
+```
 
+**Arrays (CSV format):**
+```bash
+# String arrays
+zpug template.pug --array fruits=apple,banana,orange,mango
+
+# Number arrays (auto-detected)
+zpug template.pug --array scores=95,87,92,88.5
+
+# Multiple arrays
+zpug template.pug \
+  --array tags=production,stable,v2 \
+  --array scores=95,87,92
+```
+
+**JSON objects:**
+```bash
+# Simple object
+zpug template.pug --json user='{"name":"Alice","age":30}'
+
+# Complex nested object
+zpug template.pug --json user='{"name":"Alice","email":"alice@example.com","age":30,"role":"Developer","location":"San Francisco"}'
+
+# Multiple objects
+zpug template.pug \
+  --json user='{"name":"Alice","role":"admin"}' \
+  --json stats='{"views":1500,"likes":89}'
+```
+
+**JSON arrays:**
+```bash
+# Simple JSON array
+zpug template.pug --json items='["apple","banana","orange"]'
+
+# Array of numbers
+zpug template.pug --json scores='[95,87,92,88.5]'
+```
+
+**Mix all types:**
+```bash
+# Combine --var, --array, and --json
+zpug template.pug \
+  --var title="Admin Dashboard" \
+  --var version=2.5 \
+  --array tags=production,stable,v2 \
+  --json user='{"name":"Carlos","role":"Admin"}' \
+  --json stats='{"views":1500}' \
+  --pretty
+```
+
+**Load from JSON file:**
+```bash
 # Load variables from JSON file
 zpug template.pug --vars data.json -o output.html
 ```
@@ -163,7 +231,12 @@ zpug template.pug --vars data.json -o output.html
 {
   "name": "Alice",
   "age": 25,
-  "active": true
+  "active": true,
+  "items": ["apple", "banana", "orange"],
+  "user": {
+    "name": "Bob",
+    "email": "bob@example.com"
+  }
 }
 ```
 
@@ -360,7 +433,126 @@ zpug template.pug \
   -o index.html
 ```
 
-### Using JSON Variables
+### Using Arrays (CSV Format)
+
+**template.pug**:
+```pug
+doctype html
+html
+  head
+    title Fruit List
+  body
+    h1 My Favorite Fruits
+    ul.fruit-list
+      each fruit in fruits
+        li.fruit= fruit
+```
+
+**Compile**:
+```bash
+zpug template.pug --array fruits=apple,banana,orange,mango --pretty
+```
+
+**Output**:
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Fruit List</title>
+  </head>
+  <body>
+    <h1>My Favorite Fruits</h1>
+    <ul class="fruit-list">
+      <li class="fruit">apple</li>
+      <li class="fruit">banana</li>
+      <li class="fruit">orange</li>
+      <li class="fruit">mango</li>
+    </ul>
+  </body>
+</html>
+```
+
+### Using JSON Objects
+
+**template.pug**:
+```pug
+doctype html
+html
+  head
+    title #{user.name} - Profile
+  body
+    div.profile
+      h1= user.name
+      p Email: #{user.email}
+      p Age: #{user.age}
+      p Role: #{user.role}
+```
+
+**Compile**:
+```bash
+zpug template.pug --json user='{"name":"Alice Johnson","email":"alice@example.com","age":30,"role":"Senior Developer"}' --pretty
+```
+
+**Output**:
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Alice Johnson - Profile</title>
+  </head>
+  <body>
+    <div class="profile">
+      <h1>Alice Johnson</h1>
+      <p>Email: alice@example.com</p>
+      <p>Age: 30</p>
+      <p>Role: Senior Developer</p>
+    </div>
+  </body>
+</html>
+```
+
+### Mixed Types Example
+
+**template.pug**:
+```pug
+doctype html
+html
+  head
+    title= pageTitle
+  body
+    h1= pageTitle
+    p Version: #{version}
+
+    section.user
+      h2 Current User
+      p Name: #{user.name}
+      p Role: #{user.role}
+
+    section.tags
+      h2 Active Tags
+      ul
+        each tag in tags
+          li.tag= tag
+
+    section.scores
+      h2 Test Scores
+      ul
+        each score in scores
+          li Score: #{score}
+```
+
+**Compile**:
+```bash
+zpug template.pug \
+  --var pageTitle="Admin Dashboard" \
+  --var version=2.5 \
+  --json user='{"name":"Carlos","role":"Admin"}' \
+  --array tags=production,stable,v2 \
+  --array scores=95,87,92,88.5 \
+  --pretty
+```
+
+### Using JSON Variables File
 
 **template.pug**:
 ```pug
