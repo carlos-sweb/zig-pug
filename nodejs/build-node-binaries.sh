@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Build precompiled .node binaries for multiple platforms
 # This script builds the native addon for each platform and stores them
 

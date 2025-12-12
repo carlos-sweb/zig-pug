@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Build prebuilt Zig static libraries for multiple platforms
 # This script should be run before publishing to npm
 

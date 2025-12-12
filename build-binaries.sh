@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Build script for zig-pug multi-platform binaries
 
 set -e
