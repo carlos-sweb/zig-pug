@@ -3,6 +3,9 @@ const parser = @import("parser.zig");
 const compiler = @import("compiler.zig");
 const runtime = @import("runtime.zig");
 
+const print = std.debug.print;
+const eql = std.mem.eql;
+
 const VERSION = "0.3.0";
 
 const CliOptions = struct {
@@ -53,8 +56,7 @@ const CliOptions = struct {
 };
 
 fn printVersion() void {
-    std.debug.print("zpug v{s}\n", .{VERSION});
-    std.debug.print("Pug template engine powered by Zig and mujs\n", .{});
+    print("zpug v{s}\nPug template engine powered by Zig and mujs\n", .{VERSION});
 }
 
 fn printHelp() void {
@@ -165,120 +167,115 @@ fn printHelp() void {
         \\  https://github.com/carlos-sweb/zig-pug
         \\
     ;
-    std.debug.print("{s}", .{help_text});
+    print("{s}", .{help_text});
 }
 
 fn parseArguments(allocator: std.mem.Allocator) !CliOptions {
     var options = CliOptions.init(allocator);
-
     var args = try std.process.argsWithAllocator(allocator);
     defer args.deinit();
-
     // Skip program name
     _ = args.skip();
 
-    var i: usize = 0;
     while (args.next()) |arg| {
-        i += 1;
-
-        if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
+        if (eql(u8, arg, "-h") or eql(u8, arg, "--help")) {
             printHelp();
             std.process.exit(0);
-        } else if (std.mem.eql(u8, arg, "-v") or std.mem.eql(u8, arg, "--version")) {
+        } else if (eql(u8, arg, "-v") or eql(u8, arg, "--version")) {
             printVersion();
             std.process.exit(0);
-        } else if (std.mem.eql(u8, arg, "-i") or std.mem.eql(u8, arg, "--input")) {
+        } else if (eql(u8, arg, "-i") or eql(u8, arg, "--input")) {
             const input_file = args.next() orelse {
-                std.debug.print("Error: --input requires a file path\n", .{});
+                print("Error: --input requires a file path\n", .{});
                 std.process.exit(3);
             };
             try options.input_files.append(allocator, input_file);
-        } else if (std.mem.eql(u8, arg, "-o") or std.mem.eql(u8, arg, "--output")) {
+        } else if (eql(u8, arg, "-o") or eql(u8, arg, "--output")) {
             options.output_path = args.next() orelse {
-                std.debug.print("Error: --output requires a path\n", .{});
+                print("Error: --output requires a path\n", .{});
                 std.process.exit(3);
             };
-        } else if (std.mem.eql(u8, arg, "--var")) {
+        } else if (eql(u8, arg, "--var")) {
             const var_str = args.next() orelse {
-                std.debug.print("Error: --var requires key=value\n", .{});
+                print("Error: --var requires key=value\n", .{});
                 std.process.exit(3);
             };
 
             var it = std.mem.splitScalar(u8, var_str, '=');
             const key = it.next() orelse {
-                std.debug.print("Error: --var format is key=value\n", .{});
+                print("Error: --var format is key=value\n", .{});
                 std.process.exit(3);
             };
             const value = it.next() orelse {
-                std.debug.print("Error: --var format is key=value\n", .{});
+                print("Error: --var format is key=value\n", .{});
                 std.process.exit(3);
             };
 
             try options.variables.put(key, value);
-        } else if (std.mem.eql(u8, arg, "--vars")) {
+        } else if (eql(u8, arg, "--vars")) {
             options.variables_file = args.next() orelse {
-                std.debug.print("Error: --vars requires a JSON file path\n", .{});
+                print("Error: --vars requires a JSON file path\n", .{});
                 std.process.exit(3);
             };
-        } else if (std.mem.eql(u8, arg, "--array")) {
+        } else if (eql(u8, arg, "--array")) {
             const array_str = args.next() orelse {
-                std.debug.print("Error: --array requires key=val1,val2,...\n", .{});
+                print("Error: --array requires key=val1,val2,...\n", .{});
                 std.process.exit(3);
             };
 
             var it = std.mem.splitScalar(u8, array_str, '=');
             const key = it.next() orelse {
-                std.debug.print("Error: --array format is key=val1,val2,...\n", .{});
+                print("Error: --array format is key=val1,val2,...\n", .{});
                 std.process.exit(3);
             };
             const csv_values = it.rest();
 
             if (csv_values.len == 0) {
-                std.debug.print("Error: --array requires comma-separated values\n", .{});
+                print("Error: --array requires comma-separated values\n", .{});
                 std.process.exit(3);
             }
 
             try options.array_variables.put(key, csv_values);
-        } else if (std.mem.eql(u8, arg, "--json")) {
+        } else if (eql(u8, arg, "--json")) {
             const json_str = args.next() orelse {
-                std.debug.print("Error: --json requires key=json_value\n", .{});
+                print("Error: --json requires key=json_value\n", .{});
                 std.process.exit(3);
             };
 
             var it = std.mem.splitScalar(u8, json_str, '=');
             const key = it.next() orelse {
-                std.debug.print("Error: --json format is key=json_value\n", .{});
+                print("Error: --json format is key=json_value\n", .{});
                 std.process.exit(3);
             };
             const json_value = it.rest();
 
             if (json_value.len == 0) {
-                std.debug.print("Error: --json requires a JSON value\n", .{});
+                print("Error: --json requires a JSON value\n", .{});
                 std.process.exit(3);
             }
 
             try options.json_variables.put(key, json_value);
-        } else if (std.mem.eql(u8, arg, "-w") or std.mem.eql(u8, arg, "--watch")) {
+        } else if (eql(u8, arg, "-w") or eql(u8, arg, "--watch")) {
             options.watch = true;
-        } else if (std.mem.eql(u8, arg, "-p") or std.mem.eql(u8, arg, "--pretty")) {
+        } else if (eql(u8, arg, "-p") or eql(u8, arg, "--pretty")) {
             options.pretty = true;
-        } else if (std.mem.eql(u8, arg, "-F") or std.mem.eql(u8, arg, "--format")) {
+        } else if (eql(u8, arg, "-F") or eql(u8, arg, "--format")) {
             options.format = true;
-        } else if (std.mem.eql(u8, arg, "-m") or std.mem.eql(u8, arg, "--minify")) {
+        } else if (eql(u8, arg, "-m") or eql(u8, arg, "--minify")) {
             options.minify = true;
-        } else if (std.mem.eql(u8, arg, "--stdin")) {
+        } else if (eql(u8, arg, "--stdin")) {
             options.stdin = true;
-        } else if (std.mem.eql(u8, arg, "--stdout")) {
+        } else if (eql(u8, arg, "--stdout")) {
             options.stdout = true;
-        } else if (std.mem.eql(u8, arg, "-s") or std.mem.eql(u8, arg, "--silent")) {
+        } else if (eql(u8, arg, "-s") or eql(u8, arg, "--silent")) {
             options.silent = true;
-        } else if (std.mem.eql(u8, arg, "-V") or std.mem.eql(u8, arg, "--verbose")) {
+        } else if (eql(u8, arg, "-V") or eql(u8, arg, "--verbose")) {
             options.verbose = true;
-        } else if (std.mem.eql(u8, arg, "-f") or std.mem.eql(u8, arg, "--force")) {
+        } else if (eql(u8, arg, "-f") or eql(u8, arg, "--force")) {
             options.force = true;
         } else if (std.mem.startsWith(u8, arg, "-")) {
-            std.debug.print("Error: Unknown option '{s}'\n", .{arg});
-            std.debug.print("Use --help for usage information\n", .{});
+            print("Error: Unknown option '{s}'\n", .{arg});
+            print("Use --help for usage information\n", .{});
             std.process.exit(3);
         } else {
             // Positional argument - input file
@@ -298,14 +295,14 @@ fn loadVariablesFromJson(allocator: std.mem.Allocator, filepath: []const u8, js_
 
     // Parse JSON and set variables
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, content, .{}) catch |err| {
-        std.debug.print("Error parsing JSON file '{s}': {}\n", .{ filepath, err });
+        print("Error parsing JSON file '{s}': {}\n", .{ filepath, err });
         return err;
     };
     defer parsed.deinit();
 
     const root = parsed.value;
     if (root != .object) {
-        std.debug.print("Error: JSON root must be an object\n", .{});
+        print("Error: JSON root must be an object\n", .{});
         return error.InvalidJson;
     }
 
@@ -322,7 +319,7 @@ fn loadVariablesFromJson(allocator: std.mem.Allocator, filepath: []const u8, js_
             .array => |arr| try js_runtime.setArrayFromJson(key, arr.items),
             .object => |obj| try js_runtime.setObjectFromJson(key, obj),
             else => {
-                std.debug.print("Warning: Unsupported type for variable '{s}', skipping\n", .{key});
+                print("Warning: Unsupported type for variable '{s}', skipping\n", .{key});
             },
         }
     }
@@ -341,10 +338,10 @@ fn setVariablesFromMap(variables: std.StringHashMap([]const u8), js_runtime: *ru
         } else |_| {}
 
         // Try to parse as boolean
-        if (std.mem.eql(u8, value, "true")) {
+        if (eql(u8, value, "true")) {
             try js_runtime.setBool(key, true);
             continue;
-        } else if (std.mem.eql(u8, value, "false")) {
+        } else if (eql(u8, value, "false")) {
             try js_runtime.setBool(key, false);
             continue;
         }
@@ -367,8 +364,8 @@ fn setJsonVariable(
         json_str,
         .{},
     ) catch |err| {
-        std.debug.print("Error: Invalid JSON for key '{s}': {}\n", .{ key, err });
-        std.debug.print("JSON string: {s}\n", .{json_str});
+        print("Error: Invalid JSON for key '{s}': {}\n", .{ key, err });
+        print("JSON string: {s}\n", .{json_str});
         return err;
     };
     defer parsed.deinit();
@@ -444,29 +441,29 @@ fn compileFile(
     options: *const CliOptions,
 ) !void {
     if (options.verbose) {
-        std.debug.print("Compiling: {s}\n", .{input_path});
+        print("Compiling: {s}\n", .{input_path});
     }
 
     // Read input file
     const file = std.fs.cwd().openFile(input_path, .{}) catch |err| {
-        std.debug.print("Error: Cannot open file '{s}': {}\n", .{ input_path, err });
+        print("Error: Cannot open file '{s}': {}\n", .{ input_path, err });
         std.process.exit(2);
     };
     defer file.close();
 
     const source = file.readToEndAlloc(allocator, 10 * 1024 * 1024) catch |err| {
-        std.debug.print("Error: Cannot read file '{s}': {}\n", .{ input_path, err });
+        print("Error: Cannot read file '{s}': {}\n", .{ input_path, err });
         std.process.exit(2);
     };
     defer allocator.free(source);
 
     if (options.verbose) {
-        std.debug.print("Parsing template ({} bytes)\n", .{source.len});
+        print("Parsing template ({} bytes)\n", .{source.len});
     }
 
     // Parse
     var pars = parser.Parser.init(allocator, source) catch |err| {
-        std.debug.print("Error: Parser initialization failed: {}\n", .{err});
+        print("Error: Parser initialization failed: {}\n", .{err});
         std.process.exit(1);
     };
     defer pars.deinit();
@@ -474,35 +471,35 @@ fn compileFile(
     const tree = pars.parse() catch |err| {
         if (err == error.InvalidIndentation) {
             const line = pars.tokenizer.line;
-            std.debug.print("Error: Invalid indentation at line {d}\n", .{line});
-            std.debug.print("\n", .{});
-            std.debug.print("Indentation errors can be caused by:\n", .{});
-            std.debug.print("  1. Using TABS instead of SPACES (only spaces are allowed)\n", .{});
-            std.debug.print("  2. Inconsistent dedentation (dedent must match a previous indent level)\n", .{});
-            std.debug.print("\n", .{});
-            std.debug.print("Example of CORRECT indentation:\n", .{});
-            std.debug.print("  div\n", .{});
-            std.debug.print("    p Text      // 2 spaces\n", .{});
-            std.debug.print("      span      // 4 spaces (consistent)\n", .{});
-            std.debug.print("    p More      // back to 2 spaces (matches previous level)\n", .{});
-            std.debug.print("\n", .{});
-            std.debug.print("Example of INCORRECT indentation:\n", .{});
-            std.debug.print("  div\n", .{});
-            std.debug.print("    p Text      // 2 spaces\n", .{});
-            std.debug.print("   span         // 3 spaces (ERROR: doesn't match any level)\n", .{});
+            print("Error: Invalid indentation at line {d}\n", .{line});
+            print("\n", .{});
+            print("Indentation errors can be caused by:\n", .{});
+            print("  1. Using TABS instead of SPACES (only spaces are allowed)\n", .{});
+            print("  2. Inconsistent dedentation (dedent must match a previous indent level)\n", .{});
+            print("\n", .{});
+            print("Example of CORRECT indentation:\n", .{});
+            print("  div\n", .{});
+            print("    p Text      // 2 spaces\n", .{});
+            print("      span      // 4 spaces (consistent)\n", .{});
+            print("    p More      // back to 2 spaces (matches previous level)\n", .{});
+            print("\n", .{});
+            print("Example of INCORRECT indentation:\n", .{});
+            print("  div\n", .{});
+            print("    p Text      // 2 spaces\n", .{});
+            print("   span         // 3 spaces (ERROR: doesn't match any level)\n", .{});
         } else {
-            std.debug.print("Error: Parsing failed: {}\n", .{err});
+            print("Error: Parsing failed: {}\n", .{err});
         }
         std.process.exit(1);
     };
 
     if (options.verbose) {
-        std.debug.print("Compiling to HTML\n", .{});
+        print("Compiling to HTML\n", .{});
     }
 
     // Compile
     var comp = compiler.Compiler.init(allocator, js_runtime) catch |err| {
-        std.debug.print("Error: Compiler initialization failed: {}\n", .{err});
+        print("Error: Compiler initialization failed: {}\n", .{err});
         std.process.exit(1);
     };
     defer comp.deinit();
@@ -512,14 +509,14 @@ fn compileFile(
     comp.include_comments = options.pretty;
 
     const html = comp.compile(tree) catch |err| {
-        std.debug.print("Error: Compilation failed: {}\n", .{err});
+        print("Error: Compilation failed: {}\n", .{err});
         std.process.exit(1);
     };
     defer allocator.free(html);
 
     // Check for compilation errors (strict mode)
     if (comp.has_errors) {
-        std.debug.print("\nCompilation failed due to errors. No output generated.\n", .{});
+        print("\nCompilation failed due to errors. No output generated.\n", .{});
         std.process.exit(1);
     }
 
@@ -534,7 +531,7 @@ fn compileFile(
     defer if (options.minify or options.pretty or options.format) allocator.free(final_html);
 
     if (options.verbose) {
-        std.debug.print("Output size: {} bytes\n", .{final_html.len});
+        print("Output size: {} bytes\n", .{final_html.len});
     }
 
     // Write output
@@ -548,13 +545,13 @@ fn compileFile(
         if (!options.force) {
             if (std.fs.cwd().access(out_path, .{})) {
                 if (!options.silent) {
-                    std.debug.print("Warning: File '{s}' already exists, overwriting\n", .{out_path});
+                    print("Warning: File '{s}' already exists, overwriting\n", .{out_path});
                 }
             } else |_| {}
         }
 
         const out_file = std.fs.cwd().createFile(out_path, .{}) catch |err| {
-            std.debug.print("Error: Cannot create file '{s}': {}\n", .{ out_path, err });
+            print("Error: Cannot create file '{s}': {}\n", .{ out_path, err });
             std.process.exit(2);
         };
         defer out_file.close();
@@ -562,7 +559,7 @@ fn compileFile(
         try out_file.writeAll(final_html);
 
         if (!options.silent) {
-            std.debug.print("✓ Compiled: {s} -> {s}\n", .{ input_path, out_path });
+            print("✓ Compiled: {s} -> {s}\n", .{ input_path, out_path });
         }
     }
 }
@@ -604,7 +601,7 @@ fn isVoidElement(tag_name: []const u8) bool {
         "input", "link", "meta", "param", "source", "track", "wbr",
     };
     for (void_elements) |void_elem| {
-        if (std.mem.eql(u8, tag_name, void_elem)) {
+        if (eql(u8, tag_name, void_elem)) {
             return true;
         }
     }
@@ -772,7 +769,7 @@ fn compileFromStdin(allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime
 
     // Check for compilation errors (strict mode)
     if (comp.has_errors) {
-        std.debug.print("\nCompilation failed due to errors. No output generated.\n", .{});
+        print("\nCompilation failed due to errors. No output generated.\n", .{});
         std.process.exit(1);
     }
 
@@ -801,8 +798,8 @@ pub fn main() !void {
 
     // Check for no input
     if (options.input_files.items.len == 0 and !options.stdin) {
-        std.debug.print("Error: No input files specified\n", .{});
-        std.debug.print("Use --help for usage information\n", .{});
+        print("Error: No input files specified\n", .{});
+        print("Use --help for usage information\n", .{});
         std.process.exit(3);
     }
 
@@ -813,7 +810,7 @@ pub fn main() !void {
     // Load variables from JSON file
     if (options.variables_file) |vars_file| {
         if (options.verbose) {
-            std.debug.print("Loading variables from: {s}\n", .{vars_file});
+            print("Loading variables from: {s}\n", .{vars_file});
         }
         try loadVariablesFromJson(allocator, vars_file, js_runtime);
     }
@@ -821,7 +818,7 @@ pub fn main() !void {
     // Set variables from command line
     if (options.variables.count() > 0) {
         if (options.verbose) {
-            std.debug.print("Setting {} command line variables\n", .{options.variables.count()});
+            print("Setting {} command line variables\n", .{options.variables.count()});
         }
         try setVariablesFromMap(options.variables, js_runtime);
     }
@@ -829,7 +826,7 @@ pub fn main() !void {
     // Set array variables (--array)
     if (options.array_variables.count() > 0) {
         if (options.verbose) {
-            std.debug.print("Setting {} array variables from --array flags\n", .{options.array_variables.count()});
+            print("Setting {} array variables from --array flags\n", .{options.array_variables.count()});
         }
         var array_it = options.array_variables.iterator();
         while (array_it.next()) |entry| {
@@ -839,7 +836,7 @@ pub fn main() !void {
                 entry.value_ptr.*,
                 js_runtime,
             ) catch |err| {
-                std.debug.print("Error setting array '{s}': {}\n", .{ entry.key_ptr.*, err });
+                print("Error setting array '{s}': {}\n", .{ entry.key_ptr.*, err });
                 std.process.exit(1);
             };
         }
@@ -848,7 +845,7 @@ pub fn main() !void {
     // Set JSON variables (--json)
     if (options.json_variables.count() > 0) {
         if (options.verbose) {
-            std.debug.print("Setting {} JSON variables from --json flags\n", .{options.json_variables.count()});
+            print("Setting {} JSON variables from --json flags\n", .{options.json_variables.count()});
         }
         var json_it = options.json_variables.iterator();
         while (json_it.next()) |entry| {
@@ -858,7 +855,7 @@ pub fn main() !void {
                 entry.value_ptr.*,
                 js_runtime,
             ) catch |err| {
-                std.debug.print("Error setting JSON '{s}': {}\n", .{ entry.key_ptr.*, err });
+                print("Error setting JSON '{s}': {}\n", .{ entry.key_ptr.*, err });
                 std.process.exit(1);
             };
         }
@@ -900,9 +897,9 @@ pub fn main() !void {
 
     if (options.watch) {
         if (!options.silent) {
-            std.debug.print("\nWatching for file changes... (Ctrl+C to stop)\n", .{});
+            print("\nWatching for file changes... (Ctrl+C to stop)\n", .{});
         }
         // TODO: Implement file watching
-        std.debug.print("Watch mode not yet implemented\n", .{});
+        print("Watch mode not yet implemented\n", .{});
     }
 }
