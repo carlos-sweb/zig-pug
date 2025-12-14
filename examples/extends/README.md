@@ -104,6 +104,17 @@ Running `zpug page.zpug --pretty` produces:
 </html>
 ```
 
+## Common Errors
+
+See [errors/](errors/) directory for examples of common mistakes:
+
+- **File Not Found** - Extending a non-existent file
+- **Extends Not First** - Placing content before `extends` directive
+- **Undefined Block** - Overriding blocks that don't exist in parent
+- **Duplicate Doctype** - Having doctype in child when parent has one
+
+Each error example includes clear explanation and solution.
+
 ## Notes
 
 - Block names must be valid identifiers

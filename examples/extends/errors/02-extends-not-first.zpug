@@ -1,0 +1,8 @@
+doctype html
+
+extends layout.zpug
+
+block content
+  h1 Extends Not First Error
+  p The 'extends' directive must be the FIRST line in the file
+  p Having doctype or any other content before 'extends' causes errors

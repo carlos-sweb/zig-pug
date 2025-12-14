@@ -1,0 +1,5 @@
+extends nonexistent.zpug
+
+block content
+  h1 File Not Found Error
+  p This template tries to extend 'nonexistent.zpug' which does not exist

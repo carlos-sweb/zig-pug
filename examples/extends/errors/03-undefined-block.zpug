@@ -1,0 +1,5 @@
+extends layout.zpug
+
+block nonexistent
+  h1 Undefined Block Error
+  p This block does not exist in the parent layout

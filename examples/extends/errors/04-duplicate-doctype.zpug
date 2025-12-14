@@ -1,0 +1,8 @@
+doctype html
+
+extends layout.zpug
+
+block content
+  h1 Duplicate Doctype Error
+  p When extends is not first, both the child and parent doctype are included
+  p This creates invalid HTML with two DOCTYPE declarations
