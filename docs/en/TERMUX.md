@@ -174,13 +174,13 @@ The zig-pug CLI works perfectly in Termux:
 zig build
 
 # Use directly
-./zig-out/bin/zig-pug template.pug
+./zig-out/bin/zig-pug template.zpug
 
 # With variables
-./zig-out/bin/zig-pug template.pug --var name=World --var age=25
+./zig-out/bin/zig-pug template.zpug --var name=World --var age=25
 
 # Save to file
-./zig-out/bin/zig-pug -i template.pug -o output.html
+./zig-out/bin/zig-pug -i template.zpug -o output.html
 ```
 
 **Advantages:**
@@ -195,7 +195,7 @@ Use Termux for editing, but compile/run on a Linux VM:
 
 ```bash
 # In Termux: edit code
-vim template.pug
+vim template.zpug
 
 # In Linux/macOS: compile and test addon
 cd nodejs

@@ -29,19 +29,19 @@ make install
 ### Compile to Stdout
 
 ```bash
-zpug template.pug
+zpug template.zpug
 ```
 
 ### Compile with Output File
 
 ```bash
-zpug -i template.pug -o output.html
+zpug -i template.zpug -o output.html
 ```
 
 ### Compile Multiple Files
 
 ```bash
-zpug -i template1.pug -i template2.pug -o dist/
+zpug -i template1.zpug -i template2.zpug -o dist/
 ```
 
 ## CLI Versions
@@ -108,7 +108,7 @@ zig build -Droot_source_file=src/cli.zig
 ```
 -h, --help              Show help message
 -v, --version           Show version information
--i, --input <file>      Input .pug file (can be used multiple times)
+-i, --input <file>      Input .zpug file (can be used multiple times)
 -o, --output <path>     Output file or directory
 -w, --watch             Watch files for changes and recompile
 -p, --pretty            Pretty-print HTML output (with indentation)
@@ -138,23 +138,23 @@ zig build -Droot_source_file=src/cli.zig
 
 ```bash
 # Compile single file to stdout
-zpug template.pug
+zpug template.zpug
 
 # Compile with output file
-zpug -i template.pug -o output.html
+zpug -i template.zpug -o output.html
 
 # Compile multiple files to directory
-zpug -i *.pug -o dist/
+zpug -i *.zpug -o dist/
 ```
 
 #### Using Variables
 
 ```bash
 # Set variables via command line
-zpug template.pug --var name=Alice --var age=25
+zpug template.zpug --var name=Alice --var age=25
 
 # Load variables from JSON file
-zpug template.pug --vars data.json -o output.html
+zpug template.zpug --vars data.json -o output.html
 ```
 
 **data.json**:
@@ -170,7 +170,7 @@ zpug template.pug --vars data.json -o output.html
 
 ```bash
 # Pretty-print with indentation
-zpug -p template.pug -o pretty.html
+zpug -p template.zpug -o pretty.html
 ```
 
 **Output**:
@@ -185,7 +185,7 @@ zpug -p template.pug -o pretty.html
 
 ```bash
 # Minify (remove whitespace)
-zpug -m template.pug -o minified.html
+zpug -m template.zpug -o minified.html
 ```
 
 **Output**:
@@ -197,7 +197,7 @@ zpug -m template.pug -o minified.html
 
 ```bash
 # Read from stdin, write to stdout
-cat template.pug | zpug --stdin --stdout > output.html
+cat template.zpug | zpug --stdin --stdout > output.html
 
 # Use in pipe chain
 echo "p Hello World" | zpug --stdin --stdout
@@ -207,30 +207,30 @@ echo "p Hello World" | zpug --stdin --stdout
 
 ```bash
 # Show compilation details
-zpug -V template.pug -o output.html
+zpug -V template.zpug -o output.html
 ```
 
 **Output**:
 ```
-Compiling: template.pug
+Compiling: template.zpug
 Parsing template (245 bytes)
 Compiling to HTML
 Output size: 512 bytes
-✓ Compiled: template.pug -> output.html
+✓ Compiled: template.zpug -> output.html
 ```
 
 #### Watch Mode (Planned)
 
 ```bash
 # Watch for changes and recompile
-zpug -w -i template.pug -o output.html
+zpug -w -i template.zpug -o output.html
 ```
 
 ## Template Examples
 
 ### Basic Template
 
-**template.pug**:
+**template.zpug**:
 ```pug
 doctype html
 html
@@ -243,7 +243,7 @@ html
 
 **Compile**:
 ```bash
-zpug template.pug \
+zpug template.zpug \
   --var pageTitle="My Page" \
   --var heading="Welcome" \
   --var message="Hello World" \
@@ -252,7 +252,7 @@ zpug template.pug \
 
 ### Using JSON Variables
 
-**template.pug**:
+**template.zpug**:
 ```pug
 div.user-card
   h2 #{user.name}
@@ -276,7 +276,7 @@ div.user-card
 
 **Compile**:
 ```bash
-zpug template.pug --vars variables.json -o user.html
+zpug template.zpug --vars variables.json -o user.html
 ```
 
 ## Exit Codes
@@ -304,19 +304,19 @@ You didn't provide any input files.
 
 **Solution**:
 ```bash
-zpug -i template.pug
+zpug -i template.zpug
 # or
-zpug template.pug
+zpug template.zpug
 ```
 
-### "Error: Cannot open file 'template.pug'"
+### "Error: Cannot open file 'template.zpug'"
 
 The specified file doesn't exist or you don't have permission to read it.
 
 **Solution**:
 - Check the file path
-- Verify file exists: `ls -l template.pug`
-- Check permissions: `chmod +r template.pug`
+- Verify file exists: `ls -l template.zpug`
+- Check permissions: `chmod +r template.zpug`
 
 ### "Error: Parsing failed"
 
@@ -353,12 +353,12 @@ node examples/01-basic.js
 
 **Makefile**:
 ```makefile
-TEMPLATES := $(wildcard templates/*.pug)
-OUTPUTS := $(patsubst templates/%.pug,dist/%.html,$(TEMPLATES))
+TEMPLATES := $(wildcard templates/*.zpug)
+OUTPUTS := $(patsubst templates/%.zpug,dist/%.html,$(TEMPLATES))
 
 all: $(OUTPUTS)
 
-dist/%.html: templates/%.pug
+dist/%.html: templates/%.zpug
 	@mkdir -p dist
 	zpug -i $< -o $@
 
@@ -372,8 +372,8 @@ clean:
 ```json
 {
   "scripts": {
-    "build:templates": "zpug -i templates/*.pug -o dist/",
-    "watch:templates": "zpug -w -i templates/*.pug -o dist/"
+    "build:templates": "zpug -i templates/*.zpug -o dist/",
+    "watch:templates": "zpug -w -i templates/*.zpug -o dist/"
   }
 }
 ```
@@ -385,11 +385,11 @@ const { exec } = require('child_process');
 const gulp = require('gulp');
 
 gulp.task('templates', () => {
-  return exec('zpug -i templates/*.pug -o dist/');
+  return exec('zpug -i templates/*.zpug -o dist/');
 });
 
 gulp.task('watch', () => {
-  gulp.watch('templates/*.pug', gulp.series('templates'));
+  gulp.watch('templates/*.zpug', gulp.series('templates'));
 });
 ```
 
@@ -410,29 +410,29 @@ gulp.task('watch', () => {
 
 ```bash
 # Boolean values
-zpug template.pug --var isDev=true --var isProd=false
+zpug template.zpug --var isDev=true --var isProd=false
 
 # Numbers
-zpug template.pug --var version=2.5 --var count=42
+zpug template.zpug --var version=2.5 --var count=42
 
 # Strings with spaces (quote the whole argument)
-zpug template.pug --var "message=Hello World"
+zpug template.zpug --var "message=Hello World"
 ```
 
 ### Combining Options
 
 ```bash
 # Pretty-print with variables
-zpug -p template.pug \
+zpug -p template.zpug \
   --var title="My Page" \
   --var year=2024 \
   -o output.html
 
 # Minify with JSON variables
-zpug -m template.pug --vars data.json -o min.html
+zpug -m template.zpug --vars data.json -o min.html
 
 # Verbose pretty-print
-zpug -V -p template.pug -o output.html
+zpug -V -p template.zpug -o output.html
 ```
 
 ## Future Features

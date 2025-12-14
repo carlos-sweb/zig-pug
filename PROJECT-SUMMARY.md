@@ -66,7 +66,7 @@ docs/
 
 examples/
 ├── bun/                     # 5 ejemplos Bun.js
-└── *.pug                    # Ejemplos de templates
+└── *.zpug                    # Ejemplos de templates
 
 Archivos README: 15+
 Guías técnicas: 10+
@@ -237,10 +237,10 @@ zig-pug/
 │
 ├── examples/            # Ejemplos
 │   ├── bun/            # 5 ejemplos Bun.js
-│   ├── basic.pug
-│   ├── interpolation.pug
-│   ├── conditionals.pug
-│   └── mixins.pug
+│   ├── basic.zpug
+│   ├── interpolation.zpug
+│   ├── conditionals.zpug
+│   └── mixins.zpug
 │
 ├── docs/               # Documentación
 │   ├── GETTING-STARTED.md
@@ -402,7 +402,7 @@ zigpug_free(ctx);
    git clone https://github.com/carlos-sweb/zig-pug
    cd zig-pug
    zig build
-   ./zig-out/bin/zig-pug examples/basic.pug
+   ./zig-out/bin/zig-pug examples/basic.zpug
    ```
 
 2. **Instalar editor support:**

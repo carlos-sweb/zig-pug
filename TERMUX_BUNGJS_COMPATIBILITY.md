@@ -35,33 +35,33 @@ cd zig-pug
 zig build
 
 # Use the binary
-./zig-out/bin/zpug template.pug
+./zig-out/bin/zpug template.zpug
 ```
 
 #### Usage
 
 ```bash
 # Compile a template
-./zig-out/bin/zpug template.pug
+./zig-out/bin/zpug template.zpug
 
 # Pretty-print mode
-./zig-out/bin/zpug --pretty template.pug
+./zig-out/bin/zpug --pretty template.zpug
 
 # Format mode (indented without comments)
-./zig-out/bin/zpug --format template.pug
+./zig-out/bin/zpug --format template.zpug
 
 # Minify mode
-./zig-out/bin/zpug --minify template.pug
+./zig-out/bin/zpug --minify template.zpug
 
 # Output to file
-./zig-out/bin/zpug template.pug -o output.html
+./zig-out/bin/zpug template.zpug -o output.html
 ```
 
 #### Example
 
 ```bash
 # Create a template
-cat > hello.pug << 'EOF'
+cat > hello.zpug << 'EOF'
 doctype html
 html(lang="es")
   body
@@ -69,7 +69,7 @@ html(lang="es")
 EOF
 
 # Compile
-./zig-out/bin/zpug hello.pug
+./zig-out/bin/zpug hello.zpug
 # Output: <!DOCTYPE html><html lang="es"><body><h1>¡Hola Mundo! 🎉</h1></body></html>
 ```
 

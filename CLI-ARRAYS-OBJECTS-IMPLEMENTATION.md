@@ -23,8 +23,8 @@ Successfully implemented complete support for arrays and objects in the CLI usin
 Parse comma-separated values into arrays:
 
 ```bash
-zpug template.pug --array items=apple,banana,orange
-zpug template.pug --array scores=95,87,92,88.5
+zpug template.zpug --array items=apple,banana,orange
+zpug template.zpug --array scores=95,87,92,88.5
 ```
 
 **Features:**
@@ -39,13 +39,13 @@ Parse JSON strings for complex structures:
 
 ```bash
 # JSON objects
-zpug template.pug --json user='{"name":"Alice","age":30}'
+zpug template.zpug --json user='{"name":"Alice","age":30}'
 
 # JSON arrays
-zpug template.pug --json items='["a","b","c"]'
+zpug template.zpug --json items='["a","b","c"]'
 
 # Nested objects
-zpug template.pug --json company='{"name":"Tech","location":{"city":"SF"}}'
+zpug template.zpug --json company='{"name":"Tech","location":{"city":"SF"}}'
 ```
 
 **Features:**
@@ -59,7 +59,7 @@ zpug template.pug --json company='{"name":"Tech","location":{"city":"SF"}}'
 Combine all variable types:
 
 ```bash
-zpug template.pug \
+zpug template.zpug \
   --var title="Dashboard" \
   --var version=2.5 \
   --array tags=prod,stable \
@@ -88,23 +88,23 @@ zpug template.pug \
 
 ```bash
 # Test 1: CSV array
-zpug /tmp/test-array.pug --array fruits=apple,banana,orange,mango
+zpug /tmp/test-array.zpug --array fruits=apple,banana,orange,mango
 # Output: ✅ Works perfectly
 
 # Test 2: JSON object
-zpug /tmp/test-json-object.pug --json user='{"name":"Alice","email":"alice@example.com","age":30}'
+zpug /tmp/test-json-object.zpug --json user='{"name":"Alice","email":"alice@example.com","age":30}'
 # Output: ✅ Works perfectly
 
 # Test 3: JSON array
-zpug /tmp/test-array.pug --json fruits='["strawberry","pineapple"]'
+zpug /tmp/test-array.zpug --json fruits='["strawberry","pineapple"]'
 # Output: ✅ Works perfectly
 
 # Test 4: Numbers in array
-zpug /tmp/test-array.pug --array fruits=95,87,92,88.5 --pretty
+zpug /tmp/test-array.zpug --array fruits=95,87,92,88.5 --pretty
 # Output: ✅ Works perfectly (auto-detects as numbers)
 
 # Test 5: Mixed types
-zpug /tmp/dashboard.pug \
+zpug /tmp/dashboard.zpug \
   --var title="Dashboard" \
   --json user='{"name":"Carlos"}' \
   --array tags=js,zig,perf \
@@ -127,7 +127,7 @@ Arrays of objects (like `[{"name":"A"},{"name":"B"}]`) work for setting variable
 
 ### Example 1: Simple List
 
-**Template (list.pug):**
+**Template (list.zpug):**
 ```pug
 ul
   each item in items
@@ -136,12 +136,12 @@ ul
 
 **Command:**
 ```bash
-zpug list.pug --array items=apple,banana,orange
+zpug list.zpug --array items=apple,banana,orange
 ```
 
 ### Example 2: User Profile
 
-**Template (profile.pug):**
+**Template (profile.zpug):**
 ```pug
 div.profile
   h1= user.name
@@ -151,12 +151,12 @@ div.profile
 
 **Command:**
 ```bash
-zpug profile.pug --json user='{"name":"Alice","email":"alice@example.com","age":30}'
+zpug profile.zpug --json user='{"name":"Alice","email":"alice@example.com","age":30}'
 ```
 
 ### Example 3: Dashboard
 
-**Template (dashboard.pug):**
+**Template (dashboard.zpug):**
 ```pug
 h1= title
 section
@@ -171,7 +171,7 @@ section
 
 **Command:**
 ```bash
-zpug dashboard.pug \
+zpug dashboard.zpug \
   --var title="Dashboard" \
   --array tags=prod,stable,v2 \
   --array scores=95,87,92
@@ -185,16 +185,16 @@ All error cases are properly handled:
 
 ```bash
 # Missing value
-zpug template.pug --array items=
+zpug template.zpug --array items=
 # Error: --array requires comma-separated values
 
 # Invalid JSON
-zpug template.pug --json user='invalid json'
+zpug template.zpug --json user='invalid json'
 # Error: Invalid JSON for key 'user': error.UnexpectedToken
 # JSON string: invalid json
 
 # Missing key
-zpug template.pug --json =value
+zpug template.zpug --json =value
 # Error: --json format is key=json_value
 ```
 

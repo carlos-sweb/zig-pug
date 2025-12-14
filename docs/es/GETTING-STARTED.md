@@ -45,7 +45,7 @@ Vamos a crear un template simple paso a paso.
 
 ### 2.1: Crear el archivo de template
 
-Crea un archivo `hello.pug`:
+Crea un archivo `hello.zpug`:
 
 ```pug
 div.greeting
@@ -296,7 +296,7 @@ Ahora vamos a crear un ejemplo completo que combine todo lo aprendido.
 
 ### 8.1: Template completo
 
-Crea `profile.pug`:
+Crea `profile.zpug`:
 
 ```pug
 div.user-profile
@@ -339,7 +339,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Leer el template desde archivo (o usar string)
-    const template = @embedFile("profile.pug");
+    const template = @embedFile("profile.zpug");
 
     // Crear runtime
     var js_runtime = try runtime.JsRuntime.init(allocator);

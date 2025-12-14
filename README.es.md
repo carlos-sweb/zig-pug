@@ -350,6 +350,83 @@ mixin card(title, content)
 +card('Hello', 'This is a card')
 ```
 
+### Herencia de Plantillas (Extends/Block)
+
+Crea layouts reutilizables con herencia de plantillas usando `extends` y `block`:
+
+```zpug
+// layout.zpug - Layout base
+doctype html
+html
+  head
+    title
+      block title
+        | Título por Defecto
+  body
+    header
+      h1 Mi Sitio Web
+    main
+      block content
+        p Contenido por defecto
+    footer
+      block footer
+        p © 2024
+
+// page.zpug - Extiende el layout
+extends layout.zpug
+
+block title
+  | Página de Inicio
+
+block content
+  h2 Bienvenido
+  p Este contenido reemplaza el bloque por defecto
+
+// Salida:
+// <!DOCTYPE html>
+// <html>
+//   <head><title>Página de Inicio</title></head>
+//   <body>
+//     <header><h1>Mi Sitio Web</h1></header>
+//     <main>
+//       <h2>Bienvenido</h2>
+//       <p>Este contenido reemplaza el bloque por defecto</p>
+//     </main>
+//     <footer><p>© 2024</p></footer>
+//   </body>
+// </html>
+```
+
+**Modos de Bloque:**
+
+```zpug
+// Replace (por defecto) - Reemplaza completamente el bloque padre
+block content
+  p Nuevo contenido
+
+// Append - Agrega después del bloque padre
+block append content
+  p Agregado después del contenido por defecto
+
+// Prepend - Agrega antes del bloque padre
+block prepend content
+  p Agregado antes del contenido por defecto
+```
+
+**Sintaxis de Rutas:**
+
+```zpug
+// Rutas sin comillas (recomendado)
+extends layout.zpug
+extends ../layouts/base.zpug
+
+// Rutas con comillas
+extends "layout.zpug"
+extends "../layouts/base.zpug"
+```
+
+**Ver [examples/extends/](examples/extends/) para ejemplos completos y funcionales.**
+
 ## 🔧 API de Programación
 
 ### Runtime JavaScript

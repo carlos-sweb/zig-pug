@@ -14,7 +14,7 @@
 
 ## 📄 Source Code
 
-**File:** `examples/05-complete-example.pug`
+**File:** `examples/05-complete-example.zpug`
 
 ```zpug
 // Ejemplo 5: Ejemplo Completo
@@ -225,13 +225,13 @@ div.account-status
 
 ```bash
 # Compile to stdout
-zpug examples/05-complete-example.pug
+zpug examples/05-complete-example.zpug
 
 # Pretty print
-zpug -p examples/05-complete-example.pug
+zpug -p examples/05-complete-example.zpug
 
 # Compile to file
-zpug examples/05-complete-example.pug -o dashboard.html
+zpug examples/05-complete-example.zpug -o dashboard.html
 ```
 
 ## 📤 Expected Output

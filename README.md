@@ -383,6 +383,83 @@ mixin button(text, type)
 // <button class="btn-secondary">Cancel</button>
 ```
 
+### Template Inheritance (Extends/Block)
+
+Build reusable layouts with template inheritance using `extends` and `block`:
+
+```zpug
+// layout.zpug - Base layout
+doctype html
+html
+  head
+    title
+      block title
+        | Default Title
+  body
+    header
+      h1 My Website
+    main
+      block content
+        p Default content
+    footer
+      block footer
+        p © 2024
+
+// page.zpug - Extends layout
+extends layout.zpug
+
+block title
+  | Home Page
+
+block content
+  h2 Welcome
+  p This replaces the default block content
+
+// Output:
+// <!DOCTYPE html>
+// <html>
+//   <head><title>Home Page</title></head>
+//   <body>
+//     <header><h1>My Website</h1></header>
+//     <main>
+//       <h2>Welcome</h2>
+//       <p>This replaces the default block content</p>
+//     </main>
+//     <footer><p>© 2024</p></footer>
+//   </body>
+// </html>
+```
+
+**Block Modes:**
+
+```zpug
+// Replace (default) - Replaces parent block completely
+block content
+  p New content
+
+// Append - Adds after parent block
+block append content
+  p Added after default
+
+// Prepend - Adds before parent block
+block prepend content
+  p Added before default
+```
+
+**Path Syntax:**
+
+```zpug
+// Unquoted paths (recommended)
+extends layout.zpug
+extends ../layouts/base.zpug
+
+// Quoted paths
+extends "layout.zpug"
+extends "../layouts/base.zpug"
+```
+
+**See [examples/extends/](examples/extends/) for complete working examples.**
+
 ### Comments
 
 ```zpug

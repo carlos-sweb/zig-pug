@@ -17,12 +17,12 @@
 //!
 //! // Check if template is cached
 //! const hash = hashSource(source_code);
-//! if (cache.getIfValid("template.pug", hash)) |html| {
+//! if (cache.getIfValid("template.zpug", hash)) |html| {
 //!     // Use cached HTML
 //! } else {
 //!     // Compile template
 //!     const html = try compile(source_code);
-//!     try cache.put("template.pug", html, hash);
+//!     try cache.put("template.zpug", html, hash);
 //! }
 //!
 //! // View cache statistics
@@ -122,7 +122,7 @@ pub const TemplateCache = struct {
     /// Example:
     /// ```zig
     /// const hash = hashSource(source);
-    /// if (cache.getIfValid("template.pug", hash)) |html| {
+    /// if (cache.getIfValid("template.zpug", hash)) |html| {
     ///     return html; // Template unchanged, use cache
     /// } else {
     ///     // Template changed or not cached, recompile
@@ -153,7 +153,7 @@ pub const TemplateCache = struct {
     /// ```zig
     /// const html = try compiler.compile(ast);
     /// const hash = hashSource(source_code);
-    /// try cache.put("template.pug", html, hash);
+    /// try cache.put("template.zpug", html, hash);
     /// ```
     pub fn put(self: *Self, key: []const u8, html: []const u8, source_hash: u64) !void {
         // Check max size

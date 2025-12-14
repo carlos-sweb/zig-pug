@@ -1,0 +1,8 @@
+//- Example demonstrating block prepend mode
+extends layout.zpug
+
+block title
+  | Extended Page
+
+block prepend content
+  p This is prepended to the default content

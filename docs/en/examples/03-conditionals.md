@@ -14,7 +14,7 @@
 
 ## 📄 Source Code
 
-**File:** `examples/03-conditionals.pug`
+**File:** `examples/03-conditionals.zpug`
 
 ```zpug
 // Ejemplo 3: Condicionales
@@ -159,13 +159,13 @@ else
 
 ```bash
 # Compile to stdout
-zpug examples/03-conditionals.pug
+zpug examples/03-conditionals.zpug
 
 # Pretty print
-zpug -p examples/03-conditionals.pug
+zpug -p examples/03-conditionals.zpug
 
 # Compile to file
-zpug examples/03-conditionals.pug -o output.html
+zpug examples/03-conditionals.zpug -o output.html
 ```
 
 **Note:** Pass different variable values to see different conditional branches render.

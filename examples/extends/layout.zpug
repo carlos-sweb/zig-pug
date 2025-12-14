@@ -1,0 +1,23 @@
+doctype html
+//- Base layout template
+//- This demonstrates the extends/block feature in zig-pug
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title
+      block title
+        | Default Title
+
+  body
+    header
+      block header
+        h1 My Website
+
+    main
+      block content
+        p This is default content
+
+    footer
+      block footer
+        p Copyright 2024 My Website

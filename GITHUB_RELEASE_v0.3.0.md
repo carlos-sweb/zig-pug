@@ -57,7 +57,7 @@ New comment type for file metadata that's **completely ignored** by the parser:
 **Example:**
 
 ```pug
-//! Template: homepage.pug
+//! Template: homepage.zpug
 //! Author: John Doe
 //! Version: 1.0
 //! Last updated: 2025-01-01
@@ -180,7 +180,7 @@ Core changes:
 - src/cli.zig            (+17 lines)   DOCTYPE fix
 - README.md              (+50 lines)   UTF-8 docs
 - docs/en/FEATURES.md    (+92 lines)   Complete docs
-- examples/01-basic.pug  (updated)     Use //!
+- examples/01-basic.zpug  (updated)     Use //!
 - nodejs/package.json    (v0.3.0)      Updated metadata
 - nodejs/README.md       (+67 lines)   UTF-8 + //! sections
 ```

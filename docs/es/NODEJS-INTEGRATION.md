@@ -109,7 +109,7 @@ const html = compiler.compile(template);
 ```javascript
 const { compileFile } = require('./nodejs');
 
-const html = compileFile('./views/index.pug', {
+const html = compileFile('./views/index.zpug', {
     user: 'Alice',
     items: ['a', 'b', 'c']
 });
@@ -143,7 +143,7 @@ const html = zigpug.compile('p Hello #{name}', { name: 'Alice' });
 Compile a Pug template from a file.
 
 **Parameters**:
-- `filepath` (string): Path to .pug file (absolute or relative)
+- `filepath` (string): Path to .zpug file (absolute or relative)
 - `variables` (object, optional): Variables for interpolation
 
 **Returns**: `string` - Compiled HTML
@@ -152,7 +152,7 @@ Compile a Pug template from a file.
 
 **Example**:
 ```javascript
-const html = zigpug.compileFile('./template.pug', { title: 'Home' });
+const html = zigpug.compileFile('./template.zpug', { title: 'Home' });
 ```
 
 ---
@@ -526,7 +526,7 @@ compiler
 const html2: string = compiler.compile('p #{title}');
 
 // File API
-const html3: string = compileFile('./template.pug', data);
+const html3: string = compileFile('./template.zpug', data);
 ```
 
 ### Express with TypeScript
@@ -635,8 +635,8 @@ Load templates once, compile many times:
 
 ```javascript
 const templates = {
-    home: fs.readFileSync('./views/home.pug', 'utf8'),
-    about: fs.readFileSync('./views/about.pug', 'utf8')
+    home: fs.readFileSync('./views/home.zpug', 'utf8'),
+    about: fs.readFileSync('./views/about.zpug', 'utf8')
 };
 
 // Compile with different data

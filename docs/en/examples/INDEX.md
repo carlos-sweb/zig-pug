@@ -56,10 +56,10 @@ Build complex templates:
 
 ```bash
 # Try any example
-zpug examples/01-basic.pug
+zpug examples/01-basic.zpug
 
 # With variables
-zpug examples/02-interpolation.pug --var name=Alice --var age=25
+zpug examples/02-interpolation.zpug --var name=Alice --var age=25
 
 # With JSON data
 zpug examples/loops.zpug --vars examples/data.json

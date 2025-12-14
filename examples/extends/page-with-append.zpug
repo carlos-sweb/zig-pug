@@ -1,0 +1,8 @@
+//- Example demonstrating block append mode
+extends layout.zpug
+
+block title
+  | Extended Page
+
+block append content
+  p This is appended to the default content

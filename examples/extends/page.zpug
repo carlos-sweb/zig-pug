@@ -1,0 +1,14 @@
+//- Example page extending the base layout
+//- Demonstrates block replacement
+extends layout.zpug
+
+block title
+  | Home Page
+
+block content
+  h2 Welcome to My Site
+  p This content replaces the default block content
+  ul
+    li Feature 1
+    li Feature 2
+    li Feature 3

@@ -4,7 +4,7 @@ Esta carpeta contiene ejemplos prácticos de templates Pug para zig-pug.
 
 ## 📁 Archivos de Ejemplo
 
-### 1. `01-basic.pug`
+### 1. `01-basic.zpug`
 **Tags y Atributos Básicos**
 
 Muestra la sintaxis básica de Pug:
@@ -17,7 +17,7 @@ Muestra la sintaxis básica de Pug:
 
 ---
 
-### 2. `02-interpolation.pug`
+### 2. `02-interpolation.zpug`
 **Interpolación de JavaScript**
 
 Demuestra cómo usar variables y expresiones JavaScript:
@@ -30,7 +30,7 @@ Demuestra cómo usar variables y expresiones JavaScript:
 
 ---
 
-### 3. `03-conditionals.pug`
+### 3. `03-conditionals.zpug`
 **Condicionales**
 
 Muestra la lógica condicional en templates:
@@ -43,7 +43,7 @@ Muestra la lógica condicional en templates:
 
 ---
 
-### 4. `04-mixins.pug`
+### 4. `04-mixins.zpug`
 **Mixins (Componentes Reutilizables)**
 
 Demuestra cómo crear y usar mixins:
@@ -56,7 +56,7 @@ Demuestra cómo crear y usar mixins:
 
 ---
 
-### 5. `05-complete-example.pug`
+### 5. `05-complete-example.zpug`
 **Ejemplo Completo**
 
 Combina todas las características en un ejemplo real:
@@ -78,7 +78,7 @@ Combina todas las características en un ejemplo real:
 Copia el contenido de cualquier ejemplo a tu código Zig:
 
 ```zig
-const template = @embedFile("examples/01-basic.pug");
+const template = @embedFile("examples/01-basic.zpug");
 
 // ... parsear y compilar ...
 ```
@@ -99,7 +99,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Leer el ejemplo
-    const template = @embedFile("examples/02-interpolation.pug");
+    const template = @embedFile("examples/02-interpolation.zpug");
 
     // Crear runtime
     var js_runtime = try runtime.JsRuntime.init(allocator);
@@ -135,17 +135,17 @@ zig build-exe test_example.zig -I src
 
 ## 📚 Variables Necesarias por Ejemplo
 
-### 01-basic.pug
+### 01-basic.zpug
 No requiere variables (HTML estático).
 
-### 02-interpolation.pug
+### 02-interpolation.zpug
 ```zig
 try js_runtime.setString("name", "Alice");
 try js_runtime.setString("email", "alice@example.com");
 try js_runtime.setNumber("age", 25);
 ```
 
-### 03-conditionals.pug
+### 03-conditionals.zpug
 ```zig
 try js_runtime.setBool("isLoggedIn", true);
 try js_runtime.setNumber("age", 20);
@@ -153,10 +153,10 @@ try js_runtime.setBool("hasPermission", false);
 try js_runtime.setString("role", "admin");
 ```
 
-### 04-mixins.pug
+### 04-mixins.zpug
 No requiere variables externas (los mixins usan parámetros).
 
-### 05-complete-example.pug
+### 05-complete-example.zpug
 ```zig
 // Sitio
 try js_runtime.setString("siteName", "MiApp");
@@ -195,7 +195,7 @@ _ = try js_runtime.eval(
 
 ## 💡 Tips
 
-1. **Comienza simple**: Empieza con `01-basic.pug` y ve avanzando.
+1. **Comienza simple**: Empieza con `01-basic.zpug` y ve avanzando.
 
 2. **Experimenta**: Modifica los ejemplos y ve qué pasa.
 

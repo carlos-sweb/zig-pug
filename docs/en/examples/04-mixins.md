@@ -14,7 +14,7 @@
 
 ## 📄 Source Code
 
-**File:** `examples/04-mixins.pug`
+**File:** `examples/04-mixins.zpug`
 
 ```zpug
 // Ejemplo 4: Mixins (Componentes Reutilizables)
@@ -187,13 +187,13 @@ mixin panel(title)
 
 ```bash
 # Compile to stdout
-zpug examples/04-mixins.pug
+zpug examples/04-mixins.zpug
 
 # Pretty print
-zpug -p examples/04-mixins.pug
+zpug -p examples/04-mixins.zpug
 
 # Compile to file
-zpug examples/04-mixins.pug -o output.html
+zpug examples/04-mixins.zpug -o output.html
 ```
 
 ## 📤 Expected Output

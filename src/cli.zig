@@ -71,7 +71,7 @@ fn printHelp() void {
         \\OPTIONS:
         \\  -h, --help              Show this help message
         \\  -v, --version           Show version information
-        \\  -i, --input <file>      Input .pug file (can be used multiple times)
+        \\  -i, --input <file>      Input .zpug file (can be used multiple times)
         \\  -o, --output <path>     Output file or directory
         \\  -w, --watch             Watch files for changes and recompile
         \\  -p, --pretty            Pretty-print with comments (development mode)
@@ -504,6 +504,9 @@ fn compileFile(
     };
     defer comp.deinit();
 
+    // Set base path for resolving relative includes and extends
+    comp.setBasePath(input_path);
+
     // Include comments only in pretty mode (development)
     // Production (default/minify): strip comments for smaller output
     comp.include_comments = options.pretty;
@@ -881,8 +884,10 @@ pub fn main() !void {
             // Extract filename and change extension to .html
             var basename = std.fs.path.basename(input_file);
 
-            // Remove .pug extension if present
-            if (std.mem.endsWith(u8, basename, ".pug")) {
+            // Remove .zpug or .pug extension if present
+            if (std.mem.endsWith(u8, basename, ".zpug")) {
+                basename = basename[0 .. basename.len - 5];
+            } else if (std.mem.endsWith(u8, basename, ".pug")) {
                 basename = basename[0 .. basename.len - 4];
             }
 

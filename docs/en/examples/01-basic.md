@@ -15,7 +15,7 @@
 
 ## 📄 Source Code
 
-**File:** `examples/01-basic.pug`
+**File:** `examples/01-basic.zpug`
 
 ```zpug
 // Ejemplo 1: Tags y atributos básicos
@@ -140,13 +140,13 @@ div.container
 
 ```bash
 # Compile to stdout
-zpug examples/01-basic.pug
+zpug examples/01-basic.zpug
 
 # Compile to file
-zpug examples/01-basic.pug -o output.html
+zpug examples/01-basic.zpug -o output.html
 
 # Pretty print
-zpug -p examples/01-basic.pug
+zpug -p examples/01-basic.zpug
 ```
 
 ## 📤 Expected Output

@@ -1353,7 +1353,7 @@ pub const Parser = struct {
     ///
     /// Includes another template file.
     ///
-    /// Syntax: include header.pug
+    /// Syntax: include header.zpug
     fn parseInclude(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const start_line = self.current.line;
@@ -1401,20 +1401,30 @@ pub const Parser = struct {
     ///
     /// Declares that this template extends a parent layout.
     ///
-    /// Syntax: extends layout.pug
+    /// Syntax: extends layout.zpug
     fn parseExtends(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
         const start_line = self.current.line;
         try self.advance(); // consume 'extends'
 
         // Parse parent template path
+        // Can be either a quoted string or unquoted identifier with dots
         var path: std.ArrayList(u8) = .{};
-        while (!self.match(&.{ .Newline, .Eof })) {
-            if (path.items.len > 0) {
-                try path.append(arena_allocator, ' ');
-            }
+
+        // Handle quoted string
+        if (self.match(&.{.String})) {
             try path.appendSlice(arena_allocator, self.current.value);
             try self.advance();
+        } else {
+            // Handle unquoted path (e.g., layout.zpug becomes Ident("layout") + Class("zpug"))
+            while (!self.match(&.{ .Newline, .Eof })) {
+                // If we encounter a Class token, add a dot before it
+                if (self.current.type == .Class) {
+                    try path.append(arena_allocator, '.');
+                }
+                try path.appendSlice(arena_allocator, self.current.value);
+                try self.advance();
+            }
         }
 
         return try ast.AstNode.create(
@@ -1850,7 +1860,7 @@ test "parser - mixin call with block" {
 }
 
 test "parser - include" {
-    const source = "include header.pug";
+    const source = "include header.zpug";
     var parser = try Parser.init(std.testing.allocator, source);
     defer parser.deinit();
 
@@ -1858,7 +1868,7 @@ test "parser - include" {
     const include = tree.data.Document.children.items[0];
 
     try std.testing.expectEqual(ast.NodeType.Include, include.type);
-    try std.testing.expectEqualStrings("header.pug", include.data.Include.path);
+    try std.testing.expectEqualStrings("header.zpug", include.data.Include.path);
     try std.testing.expect(include.data.Include.filter == null);
 }
 
@@ -1877,7 +1887,7 @@ test "parser - include with filter" {
 }
 
 test "parser - extends" {
-    const source = "extends layout.pug";
+    const source = "extends layout.zpug";
     var parser = try Parser.init(std.testing.allocator, source);
     defer parser.deinit();
 
@@ -1885,7 +1895,7 @@ test "parser - extends" {
     const extends = tree.data.Document.children.items[0];
 
     try std.testing.expectEqual(ast.NodeType.Extends, extends.type);
-    try std.testing.expectEqualStrings("layout.pug", extends.data.Extends.path);
+    try std.testing.expectEqualStrings("layout.zpug", extends.data.Extends.path);
 }
 
 test "parser - block" {

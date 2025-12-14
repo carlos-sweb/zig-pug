@@ -45,7 +45,7 @@ Let's create a simple template step by step.
 
 ### 2.1: Create the Template File
 
-Create a file `hello.pug`:
+Create a file `hello.zpug`:
 
 ```pug
 div.greeting
@@ -296,7 +296,7 @@ Now let's create a complete example that combines everything we've learned.
 
 ### 8.1: Complete Template
 
-Create `profile.pug`:
+Create `profile.zpug`:
 
 ```pug
 div.user-profile
@@ -339,7 +339,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Read the template from file (or use string)
-    const template = @embedFile("profile.pug");
+    const template = @embedFile("profile.zpug");
 
     // Create runtime
     var js_runtime = try runtime.JsRuntime.init(allocator);

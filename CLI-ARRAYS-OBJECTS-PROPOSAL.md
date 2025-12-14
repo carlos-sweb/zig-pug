@@ -6,10 +6,10 @@ Actualmente el CLI de `zpug` soporta:
 
 ```bash
 # ✅ Valores simples
-zpug template.pug --var name=Alice --var age=30 --var active=true
+zpug template.zpug --var name=Alice --var age=30 --var active=true
 
 # ✅ Todo desde archivo JSON
-zpug template.pug --vars data.json
+zpug template.zpug --vars data.json
 ```
 
 **Limitación:** No se pueden pasar arrays u objetos individuales sin crear un archivo JSON completo.
@@ -19,19 +19,19 @@ zpug template.pug --vars data.json
 ### Caso 1: Lista rápida de items
 ```bash
 # Quiero renderizar una lista sin crear archivo JSON
-zpug list.pug --array items=apple,banana,orange
+zpug list.zpug --array items=apple,banana,orange
 ```
 
 ### Caso 2: Configuración con objeto simple
 ```bash
 # Pasar configuración de usuario
-zpug profile.pug --object user='{"name":"Alice","age":30,"role":"admin"}'
+zpug profile.zpug --object user='{"name":"Alice","age":30,"role":"admin"}'
 ```
 
 ### Caso 3: Mix de tipos
 ```bash
 # Combinar valores simples con arrays
-zpug template.pug \
+zpug template.zpug \
   --var title="Mi Página" \
   --var count=5 \
   --array tags=javascript,zig,performance \
@@ -41,7 +41,7 @@ zpug template.pug \
 ### Caso 4: Arrays de objetos (JSON inline)
 ```bash
 # Lista de productos
-zpug products.pug --json products='[
+zpug products.zpug --json products='[
   {"name":"Laptop","price":999},
   {"name":"Mouse","price":25}
 ]'
@@ -50,7 +50,7 @@ zpug products.pug --json products='[
 ### Caso 5: Nested objects
 ```bash
 # Objeto con propiedades anidadas
-zpug company.pug --json company='{
+zpug company.zpug --json company='{
   "name":"Tech Corp",
   "location":{"city":"SF","country":"USA"},
   "founded":2010
@@ -78,19 +78,19 @@ zpug company.pug --json company='{
 **Ejemplos:**
 ```bash
 # Array simple
-zpug template.pug --array items=apple,banana,orange
+zpug template.zpug --array items=apple,banana,orange
 
 # Array de números
-zpug template.pug --array scores=95,87,92,88
+zpug template.zpug --array scores=95,87,92,88
 
 # JSON para estructuras complejas
-zpug template.pug --json user='{"name":"Alice","age":30}'
+zpug template.zpug --json user='{"name":"Alice","age":30}'
 
 # Array de objetos
-zpug template.pug --json products='[{"id":1,"name":"Laptop"},{"id":2,"name":"Mouse"}]'
+zpug template.zpug --json products='[{"id":1,"name":"Laptop"},{"id":2,"name":"Mouse"}]'
 
 # Mix completo
-zpug template.pug \
+zpug template.zpug \
   --var title="Dashboard" \
   --var version=2.0 \
   --array tags=prod,stable,v2 \
@@ -116,7 +116,7 @@ zpug template.pug \
 
 **Ejemplos:**
 ```bash
-zpug template.pug \
+zpug template.zpug \
   --var title="Dashboard" \
   --var items='["a","b","c"]' \
   --var user='{"name":"Alice"}'
@@ -141,13 +141,13 @@ zpug template.pug \
 **Ejemplos:**
 ```bash
 # Simple y rápido
-zpug template.pug --array items=a,b,c
+zpug template.zpug --array items=a,b,c
 
 # Explícito para estructuras complejas
-zpug template.pug --json user='{"name":"Alice","age":30}'
+zpug template.zpug --json user='{"name":"Alice","age":30}'
 
 # Auto-detección (backward compatible)
-zpug template.pug --var tags='["javascript","zig"]'
+zpug template.zpug --var tags='["javascript","zig"]'
 ```
 
 ## Implementación Técnica
@@ -347,26 +347,26 @@ const help_text =
     \\
     \\EXAMPLES:
     \\  # Simple variables
-    \\  zpug template.pug --var name=Alice --var age=30
+    \\  zpug template.zpug --var name=Alice --var age=30
     \\
     \\  # Arrays (CSV format)
-    \\  zpug template.pug --array items=apple,banana,orange
-    \\  zpug template.pug --array scores=95,87,92
+    \\  zpug template.zpug --array items=apple,banana,orange
+    \\  zpug template.zpug --array scores=95,87,92
     \\
     \\  # JSON objects
-    \\  zpug template.pug --json user='{"name":"Alice","age":30}'
+    \\  zpug template.zpug --json user='{"name":"Alice","age":30}'
     \\
     \\  # JSON arrays
-    \\  zpug template.pug --json items='["apple","banana","orange"]'
+    \\  zpug template.zpug --json items='["apple","banana","orange"]'
     \\
     \\  # Mixed types
-    \\  zpug template.pug \
+    \\  zpug template.zpug \
     \\    --var title="My Page" \
     \\    --array tags=prod,stable \
     \\    --json user='{"name":"Alice","role":"admin"}'
     \\
     \\  # Complex structures
-    \\  zpug template.pug --json products='[
+    \\  zpug template.zpug --json products='[
     \\    {"id":1,"name":"Laptop","price":999},
     \\    {"id":2,"name":"Mouse","price":25}
     \\  ]'
@@ -378,7 +378,7 @@ const help_text =
 
 ### Ejemplo 1: Blog post con tags
 
-**Template (blog-post.pug):**
+**Template (blog-post.zpug):**
 ```pug
 doctype html
 html
@@ -398,7 +398,7 @@ html
 
 **Comando:**
 ```bash
-zpug blog-post.pug \
+zpug blog-post.zpug \
   --var title="Introduction to Zig" \
   --var author="Carlos" \
   --array tags=programming,zig,performance,systems \
@@ -408,7 +408,7 @@ zpug blog-post.pug \
 
 ### Ejemplo 2: Lista de productos
 
-**Template (products.pug):**
+**Template (products.zpug):**
 ```pug
 doctype html
 html
@@ -427,7 +427,7 @@ html
 
 **Comando:**
 ```bash
-zpug products.pug --json products='[
+zpug products.zpug --json products='[
   {"name":"Laptop","price":999,"stock":5,"discount":10},
   {"name":"Mouse","price":25,"stock":50},
   {"name":"Keyboard","price":75,"stock":20,"discount":5}
@@ -436,7 +436,7 @@ zpug products.pug --json products='[
 
 ### Ejemplo 3: Página de equipo
 
-**Template (team.pug):**
+**Template (team.zpug):**
 ```pug
 doctype html
 html
@@ -454,7 +454,7 @@ html
 
 **Comando:**
 ```bash
-zpug team.pug \
+zpug team.zpug \
   --json company='{"name":"Tech Corp","location":"San Francisco"}' \
   --json members='[
     {"name":"Alice","role":"CEO","email":"alice@tech.com"},
@@ -466,7 +466,7 @@ zpug team.pug \
 
 ### Ejemplo 4: Dashboard con estadísticas
 
-**Template (dashboard.pug):**
+**Template (dashboard.zpug):**
 ```pug
 doctype html
 html
@@ -492,7 +492,7 @@ html
 
 **Comando:**
 ```bash
-zpug dashboard.pug \
+zpug dashboard.zpug \
   --json stats='{"users":1250,"revenue":45000,"growth":23.5}' \
   --array recentActivity="New user registered","Product purchased","Support ticket resolved" \
   -o dashboard.html
@@ -500,7 +500,7 @@ zpug dashboard.pug \
 
 ### Ejemplo 5: Configuración multi-idioma
 
-**Template (i18n.pug):**
+**Template (i18n.zpug):**
 ```pug
 doctype html
 html(lang=lang)
@@ -517,7 +517,7 @@ html(lang=lang)
 
 **Comando (Español):**
 ```bash
-zpug i18n.pug \
+zpug i18n.zpug \
   --var lang=es \
   --json translations='{
     "title":"Mi Aplicación",
@@ -530,7 +530,7 @@ zpug i18n.pug \
 
 **Comando (English):**
 ```bash
-zpug i18n.pug \
+zpug i18n.zpug \
   --var lang=en \
   --json translations='{
     "title":"My Application",
@@ -546,7 +546,7 @@ zpug i18n.pug \
 Si se especifica la misma variable con diferentes flags:
 
 ```bash
-zpug template.pug \
+zpug template.zpug \
   --var name=John \
   --json name='"Alice"' \
   --vars data.json
@@ -562,29 +562,29 @@ zpug template.pug \
 
 ### JSON inválido
 ```bash
-zpug template.pug --json user='not valid json'
+zpug template.zpug --json user='not valid json'
 # Error: Invalid JSON for key 'user': error.UnexpectedToken
 # JSON: not valid json
 ```
 
 ### Array vacío
 ```bash
-zpug template.pug --array items=
+zpug template.zpug --array items=
 # Error: --array requires comma-separated values
 ```
 
 ### Comillas mal escapadas
 ```bash
 # Problema: comillas dentro del JSON
-zpug template.pug --json user='{"name":"O'Brien"}'
+zpug template.zpug --json user='{"name":"O'Brien"}'
 #                                        ^ error
 
 # Solución 1: Escapar comillas
-zpug template.pug --json user='{"name":"O'\''Brien"}'
+zpug template.zpug --json user='{"name":"O'\''Brien"}'
 
 # Solución 2: Usar archivo
 echo '{"name":"O'\''Brien"}' > user.json
-zpug template.pug --vars user.json
+zpug template.zpug --vars user.json
 ```
 
 ## Ventajas de esta Propuesta
@@ -616,13 +616,13 @@ mustache data.json template.mustache
 **Pug (oficial):**
 ```bash
 # No tiene variables desde CLI, requiere JS
-pug --obj '{"name":"Alice"}' template.pug
+pug --obj '{"name":"Alice"}' template.zpug
 ```
 
 **zig-pug (propuesto):**
 ```bash
 # Múltiples opciones flexibles
-zpug template.pug \
+zpug template.zpug \
   --var name=Alice \
   --array items=a,b,c \
   --json user='{"name":"Alice"}' \

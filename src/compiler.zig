@@ -70,6 +70,15 @@ pub const CompilerError = error{
     ExtendsParseError,
 };
 
+/// Child block information for template inheritance
+///
+/// Stores the mode and body of a block from a child template.
+/// Used when processing extends/block directives.
+const ChildBlockInfo = struct {
+    mode: ast.BlockMode,
+    body: std.ArrayListUnmanaged(*ast.AstNode),
+};
+
 /// Compiler - Generates HTML from AST
 ///
 /// Stateful code generator that walks AST and outputs HTML.
@@ -106,7 +115,7 @@ pub const Compiler = struct {
     mixins: std.StringHashMap(*ast.AstNode), // Store mixin definitions
     base_path: ?[]const u8, // Base path for resolving includes
     template_cache: ?*cache.TemplateCache, // Optional template cache
-    child_blocks: std.StringHashMap(std.ArrayListUnmanaged(*ast.AstNode)), // Blocks from child template
+    child_blocks: std.StringHashMap(ChildBlockInfo), // Blocks from child template
     include_comments: bool, // Include HTML comments in output (true for --pretty, false for production)
     has_errors: bool, // Track if any compilation errors occurred (for strict mode)
 
@@ -141,14 +150,14 @@ pub const Compiler = struct {
             .mixins = std.StringHashMap(*ast.AstNode).init(allocator),
             .base_path = null,
             .template_cache = null,
-            .child_blocks = std.StringHashMap(std.ArrayListUnmanaged(*ast.AstNode)).init(allocator),
+            .child_blocks = std.StringHashMap(ChildBlockInfo).init(allocator),
         };
         return compiler;
     }
 
     /// Set base directory path for resolving relative includes
     ///
-    /// When template uses 'include header.pug', this path is used
+    /// When template uses 'include header.zpug', this path is used
     /// to locate the included file.
     ///
     /// Parameters:
@@ -254,7 +263,10 @@ pub const Compiler = struct {
             } else if (child.type == .Block) {
                 // Collect blocks from child template
                 const block_data = &child.data.Block;
-                try self.child_blocks.put(block_data.name, block_data.body);
+                try self.child_blocks.put(block_data.name, .{
+                    .mode = block_data.mode,
+                    .body = block_data.body,
+                });
             }
         }
 
@@ -320,15 +332,38 @@ pub const Compiler = struct {
     /// Compile block directive
     ///
     /// If child template overrode this block (in child_blocks map),
-    /// use child content. Otherwise use default content.
+    /// use child content based on the block mode (Replace, Append, or Prepend).
+    /// Otherwise use default content.
     fn compileBlock(self: *Self, node: *ast.AstNode) !void {
         const block = &node.data.Block;
 
         // Check if child template has overridden this block
-        if (self.child_blocks.get(block.name)) |child_body| {
-            // Render child block content
-            for (child_body.items) |child| {
-                try self.compileNode(child);
+        if (self.child_blocks.get(block.name)) |child_block_info| {
+            switch (child_block_info.mode) {
+                .Replace => {
+                    // Replace default content with child content
+                    for (child_block_info.body.items) |child| {
+                        try self.compileNode(child);
+                    }
+                },
+                .Prepend => {
+                    // Render child content first, then default content
+                    for (child_block_info.body.items) |child| {
+                        try self.compileNode(child);
+                    }
+                    for (block.body.items) |child| {
+                        try self.compileNode(child);
+                    }
+                },
+                .Append => {
+                    // Render default content first, then child content
+                    for (block.body.items) |child| {
+                        try self.compileNode(child);
+                    }
+                    for (child_block_info.body.items) |child| {
+                        try self.compileNode(child);
+                    }
+                },
             }
         } else {
             // Render default block content

@@ -181,7 +181,7 @@ None. This is a pure feature addition.
 
 **Before:**
 ```bash
-zpug template.pug --vars data.json -o output.html
+zpug template.zpug --vars data.json -o output.html
 ```
 
 **After:**
@@ -189,7 +189,7 @@ zpug template.pug --vars data.json -o output.html
 const fs = require('fs');
 const zigpug = require('zig-pug');
 
-const template = fs.readFileSync('template.pug', 'utf-8');
+const template = fs.readFileSync('template.zpug', 'utf-8');
 const data = JSON.parse(fs.readFileSync('data.json', 'utf-8'));
 const html = zigpug.compile(template, data);
 fs.writeFileSync('output.html', html);

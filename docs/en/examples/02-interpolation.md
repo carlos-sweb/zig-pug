@@ -14,7 +14,7 @@
 
 ## 📄 Source Code
 
-**File:** `examples/02-interpolation.pug`
+**File:** `examples/02-interpolation.zpug`
 
 ```zpug
 // Ejemplo 2: Interpolación de JavaScript
@@ -127,13 +127,13 @@ p Longitud del nombre: #{name.length}
 
 ```bash
 # Compile with sample data
-zpug examples/02-interpolation.pug
+zpug examples/02-interpolation.zpug
 
 # Pretty print
-zpug -p examples/02-interpolation.pug
+zpug -p examples/02-interpolation.zpug
 
 # Compile to file
-zpug examples/02-interpolation.pug -o output.html
+zpug examples/02-interpolation.zpug -o output.html
 ```
 
 **Note:** Variables like `name`, `email`, and `age` would normally be passed from your application code.
