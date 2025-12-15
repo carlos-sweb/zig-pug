@@ -150,7 +150,7 @@ zpug template.zpug \
 
 **[See complete CLI documentation](docs/en/CLI.md)**
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Example: Complete Page
 
