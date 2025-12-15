@@ -36,14 +36,14 @@ html(lang="en")
 - ✅ **Bun.js compatible** - 2-5x faster than Node.js
 - ✅ **Editor support** - VS Code, Sublime Text, CodeMirror
 - ✅ **No dependencies** - Only Zig 0.15.2 and embedded mujs
-- **Fast** - Native compilation in Zig with optimizations
+- ⚡ **Fast** - Native compilation in Zig with optimizations
 - **Secure** - HTML escaping and XSS prevention
 - **Works on Termux/Android** (CLI binary)
 - **87 unit tests** - Comprehensive test coverage
 
 > **Note for Termux**: The CLI binary works perfectly. The Node.js addon compiles but cannot be loaded due to Android restrictions. See [docs/en/TERMUX.md](docs/en/TERMUX.md) for details.
 
-## Installation
+## 📦 Installation
 
 ### Requirements
 
