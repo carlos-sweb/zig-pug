@@ -18,24 +18,24 @@ html(lang="en")
       li= item
 ```
 
-## Features
+## 🎯 Features
 
-- **Complete Pug syntax** - Tags, attributes, classes, IDs, doctype
-- **Full UTF-8 support** - Accented characters (á, é, ñ, ü), emoji 🎉, all Unicode
-- **JavaScript ES5.1** - Interpolations with methods, operators and expressions
-- **Real JavaScript engine** - Powered by [mujs](https://mujs.com/)
-- **Conditionals** - if/else/unless
-- **Loops** - each/while with array support
-- **Mixins** - Reusable components with arguments
-- **Template inheritance** - extends/block
-- **JSON variables** - Full support for strings, numbers, bools, arrays, and objects
-- **Attribute expressions** - Dynamic attribute values (`class=myVar`)
+- ✅ **Complete Pug syntax** - Tags, attributes, classes, IDs, doctype
+- ✅ **Full UTF-8 support** - Accented characters (á, é, ñ, ü), emoji 🎉, all Unicode
+- ✅ **JavaScript ES5.1** - Interpolations with methods, operators and expressions
+- ✅ **Real JavaScript engine** - Powered by [mujs](https://mujs.com/)
+- ✅ **Conditionals** - if/else/unless
+- ✅ **Loops** - each/while with array support
+- ✅ **Mixins** - Reusable components with arguments
+- ✅ **Template inheritance** - extends/block
+- ✅ **JSON variables** - Full support for strings, numbers, bools, arrays, and objects
+- ✅ **Attribute expressions** - Dynamic attribute values (`class=myVar`)
 - **Buffered/unbuffered code** - `=`, `!=`, and `-` operators
-- **Documentation comments** - `//!` for file metadata (ignored by parser)
+- ✅ **Documentation comments** - `//!` for file metadata (ignored by parser)
 - **Node.js addon** - Native integration via N-API
-- **Bun.js compatible** - 2-5x faster than Node.js
-- **Editor support** - VS Code, Sublime Text, CodeMirror
-- **No dependencies** - Only Zig 0.15.2 and embedded mujs
+- ✅ **Bun.js compatible** - 2-5x faster than Node.js
+- ✅ **Editor support** - VS Code, Sublime Text, CodeMirror
+- ✅ **No dependencies** - Only Zig 0.15.2 and embedded mujs
 - **Fast** - Native compilation in Zig with optimizations
 - **Secure** - HTML escaping and XSS prevention
 - **Works on Termux/Android** (CLI binary)
