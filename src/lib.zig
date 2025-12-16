@@ -3,7 +3,7 @@
 
 const std = @import("std");
 const tokenizer = @import("tokenizer.zig");
-const parser = @import("parser.zig");
+const parser = @import("parser/mod.zig");
 const compiler = @import("compiler.zig");
 const runtime = @import("runtime.zig");
 const ast = @import("ast.zig");

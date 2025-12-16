@@ -1,7 +1,7 @@
 const std = @import("std");
 const tokenizer = @import("tokenizer.zig");
 const ast = @import("ast.zig");
-const parser = @import("parser.zig");
+const parser = @import("parser/mod.zig");
 
 pub fn main() !void {
     var stdout_buffer: [4096]u8 = undefined;

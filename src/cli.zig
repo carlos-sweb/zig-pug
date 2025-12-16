@@ -1,5 +1,5 @@
 const std = @import("std");
-const parser = @import("parser.zig");
+const parser = @import("parser/mod.zig");
 const compiler = @import("compiler.zig");
 const runtime = @import("runtime.zig");
 

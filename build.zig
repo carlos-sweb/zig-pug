@@ -61,7 +61,15 @@ pub fn build(b: *std.Build) void {
                 .optimize = optimize,
             }),
         });
+
+        // Compile mujs from source (same as executable)
+        lib_shared.addIncludePath(b.path("vendor/mujs"));
+        lib_shared.addCSourceFile(.{
+            .file = b.path("vendor/mujs/one.c"),
+            .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
+        });
         lib_shared.linkLibC();
+
         const install_lib_shared = b.addInstallArtifact(lib_shared, .{});
         lib_shared_step.dependOn(&install_lib_shared.step);
     }

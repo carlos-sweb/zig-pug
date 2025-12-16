@@ -45,7 +45,7 @@ const std = @import("std");
 const ast = @import("ast.zig");
 const runtime = @import("runtime.zig");
 const cache = @import("cache.zig");
-const Parser = @import("parser.zig").Parser;
+const Parser = @import("parser/mod.zig").Parser;
 
 /// Errors that can occur during compilation
 ///

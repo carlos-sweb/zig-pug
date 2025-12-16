@@ -1,11 +1,10 @@
-// Ejemplo 4: Mixins (Componentes Reutilizables)
-// Los mixins permiten crear componentes que puedes reusar
-
-// Definir un mixin simple
+//! Ejemplo 4: Mixins (Componentes Reutilizables)
+//! Los mixins permiten crear componentes que puedes reusar
+//! Definir un mixin simple
 mixin button(text)
   button.btn= text
 
-// Mixin con múltiples parámetros
+//! Mixin con múltiples parámetros
 mixin card(title, description)
   div.card
     h3.card-title= title
@@ -13,7 +12,7 @@ mixin card(title, description)
 
 // Mixin para alertas
 mixin alert(type, message)
-  div(class="alert alert-" + type)
+  div(class="alert alert-"+type)
     p= message
 
 // Usar los mixins

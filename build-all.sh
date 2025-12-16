@@ -133,12 +133,12 @@ if [ "$BUILD_CLI" = true ]; then
 fi
 
 # ============================================================================
-# PARTE 2: CONSTRUIR LIBRERÍAS ESTÁTICAS NODE.JS
+# PARTE 2: CONSTRUIR LIBRERÍAS NODE.JS (ESTÁTICAS Y DINÁMICAS)
 # ============================================================================
 
 if [ "$BUILD_NODEJS" = true ]; then
     echo -e "${BLUE}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║  PASO 2/3: Construyendo librerías Node.js (.a/.lib)      ║${NC}"
+    echo -e "${BLUE}║  PASO 2/3: Construyendo librerías (.a/.lib/.so/.dll)     ║${NC}"
     echo -e "${BLUE}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
 
@@ -180,7 +180,60 @@ if [ "$BUILD_NODEJS" = true ]; then
         echo ""
     done
 
-    echo -e "${GREEN}✅ Librerías Node.js completadas${NC}"
+    echo -e "${GREEN}✅ Librerías estáticas Node.js completadas${NC}"
+    echo ""
+
+    # Construir librerías dinámicas (.so / .dll / .dylib)
+    echo -e "${BLUE}Construyendo librerías dinámicas...${NC}"
+    echo ""
+
+    # Directorio para librerías dinámicas (usa zig-out como base)
+    DYNAMIC_LIBS_DIR="$PROJECT_ROOT/zig-out/nodejs/dynamic-libs"
+    rm -rf "$DYNAMIC_LIBS_DIR"
+    mkdir -p "$DYNAMIC_LIBS_DIR"
+
+    # Mapeo de plataforma a extensión de librería dinámica
+    # Formato: "zig-target:output-folder:shared-lib-name"
+    DYNAMIC_TARGETS=(
+        "x86_64-linux:linux-x64:libzig-pug.so"
+        "aarch64-linux:linux-arm64:libzig-pug.so"
+        "x86_64-macos:darwin-x64:libzig-pug.dylib"
+        "aarch64-macos:darwin-arm64:libzig-pug.dylib"
+        "x86_64-windows:win32-x64:zig-pug.dll"
+    )
+
+    for target in "${DYNAMIC_TARGETS[@]}"; do
+        IFS=: read -r zig_target output_dir lib_name <<< "$target"
+
+        echo -e "${BLUE}Construyendo librería dinámica para ${output_dir}...${NC}"
+
+        # Construir librería dinámica
+        zig build lib-shared \
+            -Dtarget="$zig_target" \
+            -Doptimize=ReleaseFast \
+            --prefix-lib-dir "$DYNAMIC_LIBS_DIR/$output_dir"
+
+        # Para Windows, el .dll va a zig-out/bin/ y el .lib a lib-dir
+        # Necesitamos mover el .dll al lugar correcto
+        if [ "$zig_target" = "x86_64-windows" ]; then
+            # Copiar DLL desde zig-out/bin/
+            if [ -f "zig-out/bin/zig-pug.dll" ]; then
+                mv "zig-out/bin/zig-pug.dll" "$DYNAMIC_LIBS_DIR/$output_dir/"
+            fi
+        fi
+
+        # Verificar que se creó
+        if [ -f "$DYNAMIC_LIBS_DIR/$output_dir/$lib_name" ]; then
+            size=$(du -h "$DYNAMIC_LIBS_DIR/$output_dir/$lib_name" | cut -f1)
+            echo -e "${GREEN}✓ ${output_dir}/${lib_name} (${size})${NC}"
+        else
+            echo -e "${RED}✗ Error construyendo librería dinámica para ${output_dir}${NC}"
+            exit 1
+        fi
+        echo ""
+    done
+
+    echo -e "${GREEN}✅ Librerías dinámicas completadas${NC}"
     echo ""
 fi
 
@@ -335,8 +388,11 @@ if [ "$BUILD_CLI" = true ]; then
 fi
 
 if [ "$BUILD_NODEJS" = true ]; then
-    echo -e "${BLUE}📦 Librerías Node.js disponibles en:${NC}"
+    echo -e "${BLUE}📦 Librerías estáticas disponibles en:${NC}"
     ls -1 "$PREBUILTS_DIR"/*/*.a "$PREBUILTS_DIR"/*/*.lib 2>/dev/null | sed 's|.*/prebuilts/|   nodejs/prebuilts/|' || true
+    echo ""
+    echo -e "${BLUE}📦 Librerías dinámicas disponibles en:${NC}"
+    ls -1 "$DYNAMIC_LIBS_DIR"/*/*.{so,dll,dylib} 2>/dev/null | sed 's|.*/dynamic-libs/|   nodejs/dynamic-libs/|' || true
     echo ""
 fi
 
@@ -358,8 +414,10 @@ if [ "$BUILD_CLI" = true ]; then
     du -h zig-out/bin/*/zpug* 2>/dev/null | sed 's/^/    /' || true
 fi
 if [ "$BUILD_NODEJS" = true ]; then
-    echo -e "${YELLOW}  Librerías:${NC}"
+    echo -e "${YELLOW}  Librerías estáticas:${NC}"
     du -h "$PREBUILTS_DIR"/*/*.{a,lib} 2>/dev/null | sed 's/^/    /' || true
+    echo -e "${YELLOW}  Librerías dinámicas:${NC}"
+    du -h "$DYNAMIC_LIBS_DIR"/*/*.{so,dll,dylib} 2>/dev/null | sed 's/^/    /' || true
 fi
 if [ "$BUILD_ADDON" = true ]; then
     echo -e "${YELLOW}  Addon:${NC}"
