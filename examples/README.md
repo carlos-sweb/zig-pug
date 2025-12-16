@@ -1,91 +1,93 @@
-# Ejemplos de zig-pug
+[Español](README.es.md) | English
 
-Esta carpeta contiene ejemplos prácticos de templates Pug para zig-pug.
+# zig-pug Examples
 
-## 📁 Archivos de Ejemplo
+This folder contains practical examples of Pug templates for zig-pug.
+
+## 📁 Example Files
 
 ### 1. `01-basic.zpug`
-**Tags y Atributos Básicos**
+**Basic Tags and Attributes**
 
-Muestra la sintaxis básica de Pug:
-- Tags simples (`div`, `p`, `h1`)
-- Clases (`.clase`)
+Demonstrates basic Pug syntax:
+- Simple tags (`div`, `p`, `h1`)
+- Classes (`.class`)
 - IDs (`#id`)
-- Atributos `(attr="value")`
+- Attributes `(attr="value")`
 
-**Conceptos**: Tags, anidación, atributos
+**Concepts**: Tags, nesting, attributes
 
 ---
 
 ### 2. `02-interpolation.zpug`
-**Interpolación de JavaScript**
+**JavaScript Interpolation**
 
-Demuestra cómo usar variables y expresiones JavaScript:
-- Variables simples: `#{name}`
-- Métodos: `#{name.toUpperCase()}`
-- Aritmética: `#{age + 1}`
-- Expresiones complejas: `#{age >= 18 ? 'Yes' : 'No'}`
+Shows how to use variables and JavaScript expressions:
+- Simple variables: `#{name}`
+- Methods: `#{name.toUpperCase()}`
+- Arithmetic: `#{age + 1}`
+- Complex expressions: `#{age >= 18 ? 'Yes' : 'No'}`
 
-**Conceptos**: Interpolación, métodos de JavaScript, operadores
+**Concepts**: Interpolation, JavaScript methods, operators
 
 ---
 
 ### 3. `03-conditionals.zpug`
-**Condicionales**
+**Conditionals**
 
-Muestra la lógica condicional en templates:
+Demonstrates conditional logic in templates:
 - `if`/`else`
-- `else if` (múltiples condiciones)
-- `unless` (negación)
-- Expresiones en condiciones
+- `else if` (multiple conditions)
+- `unless` (negation)
+- Expressions in conditions
 
-**Conceptos**: Control de flujo, lógica condicional
+**Concepts**: Control flow, conditional logic
 
 ---
 
 ### 4. `04-mixins.zpug`
-**Mixins (Componentes Reutilizables)**
+**Mixins (Reusable Components)**
 
-Demuestra cómo crear y usar mixins:
-- Definir mixins: `mixin nombre(params)`
-- Llamar mixins: `+nombre(args)`
-- Mixins con parámetros
-- Reutilización de componentes
+Shows how to create and use mixins:
+- Define mixins: `mixin name(params)`
+- Call mixins: `+name(args)`
+- Mixins with parameters
+- Component reusability
 
-**Conceptos**: Componentes, reutilización, DRY
+**Concepts**: Components, reusability, DRY
 
 ---
 
 ### 5. `05-complete-example.zpug`
-**Ejemplo Completo**
+**Complete Example**
 
-Combina todas las características en un ejemplo real:
-- Estructura HTML completa
-- Navegación dinámica
-- Dashboard con estadísticas
-- Roles de usuario
-- Mixins complejos
-- Todo integrado
+Combines all features in a real-world example:
+- Complete HTML structure
+- Dynamic navigation
+- Dashboard with statistics
+- User roles
+- Complex mixins
+- Everything integrated
 
-**Conceptos**: Aplicación real, best practices
+**Concepts**: Real application, best practices
 
 ---
 
-## 🚀 Cómo Usar los Ejemplos
+## 🚀 How to Use the Examples
 
-### Opción 1: Copiar y Pegar
+### Option 1: Copy and Paste
 
-Copia el contenido de cualquier ejemplo a tu código Zig:
+Copy the content from any example into your Zig code:
 
 ```zig
 const template = @embedFile("examples/01-basic.zpug");
 
-// ... parsear y compilar ...
+// ... parse and compile ...
 ```
 
-### Opción 2: Crear un Programa de Prueba
+### Option 2: Create a Test Program
 
-Crea `test_example.zig`:
+Create `test_example.zig`:
 
 ```zig
 const std = @import("std");
@@ -98,45 +100,45 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // Leer el ejemplo
+    // Read the example
     const template = @embedFile("examples/02-interpolation.zpug");
 
-    // Crear runtime
+    // Create runtime
     var js_runtime = try runtime.JsRuntime.init(allocator);
     defer js_runtime.deinit();
 
-    // Establecer variables necesarias
+    // Set required variables
     try js_runtime.setString("name", "Alice");
     try js_runtime.setString("email", "ALICE@EXAMPLE.COM");
     try js_runtime.setNumber("age", 25);
 
-    // Parsear
+    // Parse
     var pars = try parser.Parser.init(allocator, template);
     defer pars.deinit();
     const ast = try pars.parse();
 
-    // Compilar
+    // Compile
     var comp = try compiler.Compiler.init(allocator, js_runtime);
     defer comp.deinit();
     const html = try comp.compile(ast);
     defer allocator.free(html);
 
-    // Mostrar resultado
+    // Display result
     std.debug.print("{s}\n", .{html});
 }
 ```
 
-Compilar y ejecutar:
+Compile and run:
 
 ```bash
 zig build-exe test_example.zig -I src
 ./test_example
 ```
 
-## 📚 Variables Necesarias por Ejemplo
+## 📚 Required Variables per Example
 
 ### 01-basic.zpug
-No requiere variables (HTML estático).
+No variables required (static HTML).
 
 ### 02-interpolation.zpug
 ```zig
@@ -154,15 +156,15 @@ try js_runtime.setString("role", "admin");
 ```
 
 ### 04-mixins.zpug
-No requiere variables externas (los mixins usan parámetros).
+No external variables required (mixins use parameters).
 
 ### 05-complete-example.zpug
 ```zig
-// Sitio
+// Site
 try js_runtime.setString("siteName", "MiApp");
 try js_runtime.setNumber("currentYear", 2024);
 
-// Usuario actual
+// Current user
 _ = try js_runtime.eval(
     \\var currentUser = {
     \\  name: 'John Doe',
@@ -175,7 +177,7 @@ try js_runtime.setString("lastLogin", "2024-11-18");
 try js_runtime.setString("premiumUntil", "2025-12-31");
 try js_runtime.setBool("isAdmin", true);
 
-// Estadísticas
+// Statistics
 _ = try js_runtime.eval(
     \\var stats = {
     \\  posts: 42,
@@ -184,7 +186,7 @@ _ = try js_runtime.eval(
     \\};
 );
 
-// Datos de admin
+// Admin data
 _ = try js_runtime.eval(
     \\var adminData = {
     \\  totalUsers: 1250,
@@ -195,20 +197,20 @@ _ = try js_runtime.eval(
 
 ## 💡 Tips
 
-1. **Comienza simple**: Empieza con `01-basic.zpug` y ve avanzando.
+1. **Start simple**: Begin with `01-basic.zpug` and progress from there.
 
-2. **Experimenta**: Modifica los ejemplos y ve qué pasa.
+2. **Experiment**: Modify the examples and see what happens.
 
-3. **Combina características**: Toma ideas de varios ejemplos y combínalas.
+3. **Combine features**: Take ideas from multiple examples and combine them.
 
-4. **Revisa el output**: Siempre ve el HTML generado para entender cómo funciona.
+4. **Review the output**: Always check the generated HTML to understand how it works.
 
-## 🔗 Recursos Relacionados
+## 🔗 Related Resources
 
-- [README.md](../README.md) - Vista general del proyecto
-- [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md) - Guía paso a paso
-- [docs/PUG-SYNTAX.md](../docs/PUG-SYNTAX.md) - Referencia completa de sintaxis
+- [README.md](../README.md) - Project overview
+- [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md) - Step-by-step guide
+- [docs/PUG-SYNTAX.md](../docs/PUG-SYNTAX.md) - Complete syntax reference
 
 ---
 
-¿Encontraste un bug o tienes una sugerencia? [Abre un issue](https://github.com/carlos-sweb/zig-pug/issues)
+Found a bug or have a suggestion? [Open an issue](https://github.com/carlos-sweb/zig-pug/issues)
