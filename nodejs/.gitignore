@@ -5,6 +5,10 @@ node_modules/
 build/
 *.node
 
+# EXCEPT: Allow prebuilt binaries in prebuilt-binaries/
+!prebuilt-binaries/
+!prebuilt-binaries/**/*.node
+
 # npm/yarn logs
 npm-debug.log*
 yarn-debug.log*
