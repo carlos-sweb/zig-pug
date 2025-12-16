@@ -46,16 +46,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: 0.15.2
-
-      # Build static library first (required for addon)
-      - name: Build static library
-        run: |
-          zig build lib-static -Doptimize=ReleaseFast
-        shell: bash
+      # Static libraries are already in nodejs/prebuilts/
+      # No need to rebuild them - node-gyp will use them directly
 
       - name: Install dependencies
         working-directory: nodejs
