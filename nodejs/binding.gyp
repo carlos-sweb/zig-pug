@@ -14,6 +14,15 @@
             "<(module_root_dir)/prebuilts/win32-<(target_arch)/zig-pug.lib"
           ]
         }],
+        ["OS=='mac'", {
+          "libraries": [
+            "-lm",
+            "<(module_root_dir)/prebuilts/darwin-<(target_arch)/libzig-pug.a"
+          ],
+          "cflags": [
+            "-std=c99"
+          ]
+        }],
         ["OS=='android'", {
           "libraries": [
             "-lm",
@@ -23,10 +32,10 @@
             "-std=c99"
           ]
         }],
-        ["OS!='win' and OS!='android'", {
+        ["OS=='linux'", {
           "libraries": [
             "-lm",
-            "<(module_root_dir)/prebuilts/<(OS)-<(target_arch)/libzig-pug.a"
+            "<(module_root_dir)/prebuilts/linux-<(target_arch)/libzig-pug.a"
           ],
           "cflags": [
             "-std=c99"
