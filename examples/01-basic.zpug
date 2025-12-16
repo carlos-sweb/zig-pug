@@ -1,15 +1,15 @@
-//! Ejemplo 1: Tags y atributos básicos
-//! Este ejemplo muestra la sintaxis básica de Pug
+//! Example 1: Basic tags and attributes
+//! This example shows Pug's basic syntax
 
 doctype html
-html(lang="es")
+html(lang="en")
   head
     meta(charset="UTF-8")
-    title Mi Primera Página
+    title My First Page
   body
-    h1 Bienvenido a zig-pug
-    p Este es un párrafo simple
-    p.destacado Este párrafo tiene una clase
-    p#importante Este párrafo tiene un ID
+    h1 Welcome to zig-pug
+    p This is a simple paragraph
+    p.destacado This paragraph has a class
+    p#importante This paragraph has an ID
     div.container
-      p Contenido dentro de un div
+      p Content inside a div

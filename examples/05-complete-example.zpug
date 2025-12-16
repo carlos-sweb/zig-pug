@@ -1,7 +1,7 @@
-// Ejemplo 5: Ejemplo Completo
-// Combina todas las características: tags, interpolación, condicionales, mixins
+// Example 5: Complete Example
+// Combines all features: tags, interpolation, conditionals, mixins
 
-// Mixins reutilizables
+// Reusable mixins
 mixin nav-item(text, url)
   li.nav-item
     a(href=url)= text
@@ -10,15 +10,15 @@ mixin user-card(user)
   div.user-card
     h3 #{user.name.toUpperCase()}
     p Email: #{user.email.toLowerCase()}
-    p Miembro desde: #{user.year}
+    p Member since: #{user.year}
     if user.isPremium
       span.badge Premium
     else
       span.badge Free
 
-// Estructura de la página
+// Page structure
 doctype html
-html(lang="es")
+html(lang="en")
   head
     meta(charset="UTF-8")
     meta(name="viewport" content="width=device-width, initial-scale=1.0")
@@ -26,62 +26,62 @@ html(lang="es")
     link(rel="stylesheet" href="/styles.css")
 
   body
-    // Navegación
+    // Navigation
     nav.navbar
       div.container
         h1.logo= siteName
         ul.nav-menu
-          +nav-item('Inicio', '/')
-          +nav-item('Perfil', '/profile')
-          +nav-item('Configuración', '/settings')
+          +nav-item('Home', '/')
+          +nav-item('Profile', '/profile')
+          +nav-item('Settings', '/settings')
           if isAdmin
             +nav-item('Admin', '/admin')
 
-    // Contenido principal
+    // Main content
     main.main-content
       div.container
-        // Cabecera
+        // Header
         header.page-header
-          h1 Bienvenido, #{currentUser.name}!
-          p Último acceso: #{lastLogin}
+          h1 Welcome, #{currentUser.name}!
+          p Last login: #{lastLogin}
 
-        // Sección de estadísticas
+        // Statistics section
         div.stats-grid
           div.stat-card
             h3 Posts
             p.stat-value #{stats.posts}
 
           div.stat-card
-            h3 Seguidores
+            h3 Followers
             p.stat-value #{stats.followers}
 
           div.stat-card
-            h3 Siguiendo
+            h3 Following
             p.stat-value #{stats.following}
 
-        // Condicional: mostrar según rol
+        // Conditional: show by role
         if currentUser.role === 'admin'
           div.admin-panel
-            h2 Panel de Administración
-            p Total de usuarios: #{adminData.totalUsers}
-            p Nuevos hoy: #{adminData.newToday}
+            h2 Admin Panel
+            p Total users: #{adminData.totalUsers}
+            p New today: #{adminData.newToday}
 
-        // Estado de cuenta
+        // Account status
         div.account-status
           if currentUser.isPremium
             div.premium-info
-              h2 ⭐ Cuenta Premium
-              p Gracias por tu apoyo
-              p Válido hasta: #{premiumUntil}
+              h2 ⭐ Premium Account
+              p Thank you for your support
+              p Valid until: #{premiumUntil}
           else
             div.upgrade-prompt
-              h2 Actualiza a Premium
-              p Desbloquea características exclusivas
-              button.btn-primary Mejorar Ahora
+              h2 Upgrade to Premium
+              p Unlock exclusive features
+              button.btn-primary Upgrade Now
 
-        // Lista de usuarios (simulado)
+        // User list (simulated)
         div.users-section
-          h2 Usuarios Activos
+          h2 Active Users
           div.users-grid
             +user-card({name: 'Alice', email: 'alice@example.com', year: 2020, isPremium: true})
             +user-card({name: 'Bob', email: 'bob@example.com', year: 2021, isPremium: false})
@@ -90,5 +90,5 @@ html(lang="es")
     // Footer
     footer.footer
       div.container
-        p © #{currentYear} #{siteName}. Todos los derechos reservados.
+        p © #{currentYear} #{siteName}. All rights reserved.
         p Powered by zig-pug

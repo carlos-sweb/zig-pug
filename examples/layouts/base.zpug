@@ -1,6 +1,6 @@
 // Base layout for template inheritance
 doctype html
-html(lang="es")
+html(lang="en")
   head
     title #{pageTitle}
     block head
