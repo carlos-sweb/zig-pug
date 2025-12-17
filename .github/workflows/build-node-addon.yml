@@ -46,46 +46,56 @@ jobs:
         with:
           node-version: '20'
 
-      # For non-Windows: Standard node-gyp build works fine
+      # For Windows: Rebuild prebuilt library with MSVC compatibility
+      - name: Setup Zig (Windows only)
+        if: matrix.os == 'windows-latest'
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Rebuild Windows library with MSVC
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          echo "Rebuilding zig-pug library for MSVC..."
+          cd nodejs
+
+          # Remove MinGW library
+          rm -f prebuilts/win32-x64/zig-pug.lib
+
+          # Build with zig directly targeting MSVC
+          zig build-lib -target x86_64-windows-msvc -O ReleaseFast -lc \
+            ../src/lib.zig ../vendor/mujs/one.c -I ../vendor/mujs \
+            --name zig-pug
+
+          # Move to prebuilts
+          mkdir -p prebuilts/win32-x64
+          mv zig-pug.lib prebuilts/win32-x64/
+
+          echo "✓ Library rebuilt for MSVC"
+          ls -lh prebuilts/win32-x64/
+
+      # Install and build for all platforms
       - name: Install dependencies
-        if: matrix.os != 'windows-latest'
         working-directory: nodejs
         run: npm install
 
-      - name: Build addon (Linux/macOS)
-        if: matrix.os != 'windows-latest'
+      - name: Build addon
         working-directory: nodejs
         run: npm run rebuild
 
-      # For Windows: Skip for now - MinGW prebuilt incompatible with MSVC
-      # Users on Windows will compile locally or use WSL
-      - name: Skip Windows build (MinGW/MSVC incompatibility)
-        if: matrix.os == 'windows-latest'
-        run: |
-          echo "⚠️  Skipping Windows addon build in CI"
-          echo "Reason: Pre-compiled library uses MinGW, GitHub Actions uses MSVC"
-          echo "Solution: Windows users can:"
-          echo "  1. Build locally with MinGW/MSYS2"
-          echo "  2. Use WSL (Linux)"
-          echo "  3. Wait for pure Zig addon (no node-gyp dependency)"
-          mkdir -p nodejs/build/Release
-          echo "Placeholder" > nodejs/build/Release/zigpug.node
-
       - name: Test addon
-        if: matrix.os != 'windows-latest'
         working-directory: nodejs
         run: npm test
 
-      # Copy to prebuilt-binaries directory (only for successful builds)
+      # Copy to prebuilt-binaries directory
       - name: Organize addon
-        if: matrix.os != 'windows-latest'
         shell: bash
         run: |
           mkdir -p nodejs/prebuilt-binaries/${{ matrix.platform }}
           cp nodejs/build/Release/zigpug.node nodejs/prebuilt-binaries/${{ matrix.platform }}/
 
       - name: Upload artifact
-        if: matrix.os != 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: addon-${{ matrix.platform }}
@@ -113,8 +123,8 @@ jobs:
         run: |
           mkdir -p nodejs/prebuilt-binaries
 
-          # Copy each platform's addon (excluding win32-x64 for now)
-          for platform in linux-x64 darwin-x64 darwin-arm64; do
+          # Copy each platform's addon
+          for platform in linux-x64 darwin-x64 darwin-arm64 win32-x64; do
             if [ -d "artifacts/addon-$platform" ]; then
               mkdir -p nodejs/prebuilt-binaries/$platform
               cp artifacts/addon-$platform/zigpug.node nodejs/prebuilt-binaries/$platform/
@@ -123,11 +133,6 @@ jobs:
               echo "⚠️  Missing $platform artifact"
             fi
           done
-
-          echo ""
-          echo "Note: win32-x64 not built in CI (MinGW/MSVC incompatibility)"
-          echo "Windows users should build locally or use WSL"
-          echo ""
 
           # List what we have
           find nodejs/prebuilt-binaries -name "*.node" -ls

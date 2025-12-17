@@ -11,7 +11,7 @@
       "conditions": [
         ["OS=='win'", {
           "libraries": [
-            "../prebuilts/win32-<(target_arch)/zig-pug.lib"
+            "<(module_root_dir)/prebuilts/win32-<(target_arch)/zig-pug.lib"
           ]
         }],
         ["OS=='mac'", {
