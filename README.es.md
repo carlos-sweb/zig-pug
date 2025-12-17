@@ -699,6 +699,8 @@ Ver [docs/tests/](docs/tests/) para documentación detallada de tests.
 
 ## Arquitectura
 
+zig-pug usa una **arquitectura de dos fases** para procesar templates:
+
 ```
 Source (*.zpug)
       ↓
@@ -712,6 +714,37 @@ Source (*.zpug)
       ↓
     HTML (salida)
 ```
+
+### Evaluación de Expresiones Condicionales
+
+zig-pug usa un enfoque de **separación de responsabilidades**:
+
+**Fase 1: Parser (Zig)**
+- Reconoce operadores como tokens (`>=`, `&&`, `||`, etc.)
+- Reconstruye expresiones JavaScript como strings
+- NO evalúa las expresiones
+
+**Fase 2: mujs (C)**
+- Evalúa las expresiones JavaScript
+- Maneja todos los operadores, acceso a propiedades, métodos
+- Retorna resultados al compiler
+
+**Ejemplo:**
+```pug
+if age >= 18 && hasLicense
+  p Puede conducir
+```
+
+**Parser produce:** `"age>=18&&hasLicense"` (string)
+**mujs evalúa:** `25 >= 18 && true` → `true` (resultado)
+
+Esta arquitectura proporciona:
+- ✅ Soporte completo de JavaScript ES5.1 automáticamente
+- ✅ Código simple del parser (solo concatenación de strings)
+- ✅ Evaluación confiable (mujs está probado en batalla)
+- ✅ Mismo enfoque que Pug.js (delega al motor JavaScript)
+
+**Para detalles:** Ver [docs/es/ARCHITECTURE.md](docs/es/ARCHITECTURE.md)
 
 ## Optimizaciones de Rendimiento
 
