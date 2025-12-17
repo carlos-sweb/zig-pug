@@ -12,11 +12,7 @@
         ["OS=='win'", {
           "libraries": [
             "../prebuilts/win32-<(target_arch)/zig-pug.lib"
-          ],
-          "copies": [{
-            "destination": "<(module_root_dir)/build/Release",
-            "files": ["<(module_root_dir)/prebuilts/win32-<(target_arch)/zig-pug.dll"]
-          }]
+          ]
         }],
         ["OS=='mac'", {
           "libraries": [

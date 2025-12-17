@@ -54,29 +54,26 @@ jobs:
         with:
           version: 0.15.2
 
-      - name: Build Windows shared library with MSVC
+      - name: Build Windows static library with MSVC
         if: matrix.os == 'windows-latest'
         run: |
           echo "Removing MinGW prebuilt library..."
-          rm -f nodejs/prebuilts/win32-x64/zig-pug.lib nodejs/prebuilts/win32-x64/zig-pug.dll
+          rm -f nodejs/prebuilts/win32-x64/zig-pug.lib
 
-          echo "Building zig-pug.dll with MSVC target..."
-          zig build lib-shared -Dtarget=x86_64-windows-msvc -Doptimize=ReleaseFast
+          echo "Building zig-pug.lib with MSVC target and compiler-rt..."
+          zig build-lib -target x86_64-windows-msvc -O ReleaseFast -lc src/lib.zig vendor/mujs/one.c -I vendor/mujs
 
-          echo "Checking zig-out directory structure:"
-          find zig-out -type f -name "*.dll" -o -name "*.lib" | head -20
+          echo "Checking output..."
+          ls -lh zig-pug.lib
 
-          echo "Copying MSVC DLL and import library to prebuilts..."
+          echo "Copying MSVC static library to prebuilts..."
           mkdir -p nodejs/prebuilts/win32-x64
+          cp zig-pug.lib nodejs/prebuilts/win32-x64/
 
-          # Windows DLLs go to bin/, import libraries go to lib/
-          cp zig-out/bin/zig-pug.dll nodejs/prebuilts/win32-x64/
-          cp zig-out/lib/zig-pug.lib nodejs/prebuilts/win32-x64/
+          echo "Verifying file was created:"
+          ls -lh nodejs/prebuilts/win32-x64/zig-pug.lib
 
-          echo "Verifying files were created:"
-          ls -lh nodejs/prebuilts/win32-x64/
-
-          echo "✓ zig-pug.dll built successfully with MSVC"
+          echo "✓ zig-pug.lib built successfully with MSVC (includes compiler-rt)"
         shell: bash
 
       # Static libraries are already in nodejs/prebuilts/ for other platforms
