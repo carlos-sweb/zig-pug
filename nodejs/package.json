@@ -1,6 +1,6 @@
 {
   "name": "zig-pug",
-  "version": "0.3.6",
+  "version": "0.3.8",
   "description": "High-performance Pug template engine powered by Zig and mujs. Native N-API addon with ES5.1 JavaScript support, full UTF-8 (emoji, accents), documentation comments (//!), and fast compilation. Compatible with Node.js and Bun.",
   "type": "commonjs",
   "main": "index.js",
