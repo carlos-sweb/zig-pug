@@ -1,0 +1,195 @@
+//! Example: Advanced Conditionals in zig-pug
+//! Demonstrates all if statement capabilities
+
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title Advanced Conditionals Demo
+  body
+    h1 Advanced Conditionals Demo
+
+    // Property Access
+    section
+      h2 1. Property Access
+
+      h3 Object Properties
+      if user.isActive
+        p User account is active
+      else
+        p User account is inactive
+
+      if user.isPremium
+        p Premium member since #{user.memberSince}
+      else
+        p Regular member
+
+      h3 Array Length
+      if notifications.length
+        p You have #{notifications.length} notifications
+      else
+        p No new notifications
+
+    // Comparison Operators
+    section
+      h2 2. Comparison Operators
+
+      h3 Age Verification
+      if age>=18
+        p Adult content available (age: #{age})
+      else
+        p Parental supervision required
+
+      h3 Score Evaluation
+      if score>90
+        p Excellent! Grade: A
+      else if score>75
+        p Good job! Grade: B
+      else if score>60
+        p Passing. Grade: C
+      else
+        p Failed. Grade: F
+
+      h3 Inventory Check
+      if stock<10
+        p Low stock: #{stock} items remaining
+      else
+        p Stock: #{stock} items
+
+      h3 Exact Match
+      if status=="approved"
+        p Request approved
+      else if status=="pending"
+        p Request pending review
+      else if status=="rejected"
+        p Request rejected
+      else
+        p Status: #{status}
+
+    // Logical Operators
+    section
+      h2 3. Logical Operators
+
+      h3 AND Operator
+      if age>=18&&hasLicense
+        p Eligible to drive
+      else
+        p Not eligible to drive
+
+      if user.isActive&&user.isPremium
+        p Premium features unlocked!
+      else
+        p Standard features available
+
+      h3 OR Operator
+      if isAdmin||isModerator
+        p Administrative access granted
+      else
+        p Regular user access
+
+      if score>90||bonusPoints>50
+        p Special achievement unlocked!
+
+    // Combined Expressions
+    section
+      h2 4. Combined Complex Expressions
+
+      h3 Eligibility Check
+      if age>=18&&score>75&&user.isActive
+        p Fully qualified for program
+      else
+        p Does not meet all requirements
+
+      h3 Access Control
+      if (isAdmin||isModerator)&&user.isActive
+        p Full system access
+      else if user.isActive
+        p Read-only access
+      else
+        p Access denied
+
+      h3 Promotional Eligibility
+      if age>=18&&purchases>5||user.isPremium
+        p Eligible for special promotion!
+      else
+        p Not eligible for promotion
+
+    // Array Operations
+    section
+      h2 5. Array Operations
+
+      h3 Empty Array Check
+      if items.length>0
+        p Cart has #{items.length} items
+        ul
+          each item in items
+            li #{item}
+      else
+        p Your cart is empty
+
+      h3 Array Length Comparison
+      if notifications.length>5
+        p You have many unread notifications
+      else if notifications.length>0
+        p You have #{notifications.length} notifications
+      else
+        p No notifications
+
+      h3 List Processing
+      if products.length>=3
+        p Bulk discount applied! (#{products.length} products)
+      else if products.length>0
+        p #{products.length} product(s) in selection
+      else
+        p No products selected
+
+    // Real-World Patterns
+    section
+      h2 6. Real-World Usage Patterns
+
+      h3 User Dashboard
+      if user.isActive
+        if user.isPremium
+          div
+            h4 Premium Dashboard
+            p Welcome back, #{user.name}!
+            p Member since: #{user.memberSince}
+            p Points: #{bonusPoints}
+        else
+          div
+            h4 Dashboard
+            p Welcome, #{user.name}!
+            if bonusPoints>100
+              p You are close to premium! (#{bonusPoints} points)
+      else
+        div
+          p Account inactive. Please contact support.
+
+      h3 Content Access
+      if age>=18
+        if user.isPremium||score>80
+          p Premium content unlocked
+        else
+          p Standard content available
+      else
+        p Kids content only
+
+      h3 Status Badge
+      if user.isActive
+        if purchases>20
+          span VIP Customer
+        else if purchases>10
+          span Gold Member
+        else if purchases>5
+          span Silver Member
+        else
+          span Bronze Member
+      else
+        span Inactive
+
+    // Footer
+    footer
+      p
+        em All conditionals evaluated successfully!
+      p
+        small Generated with zig-pug v0.3.x

@@ -1,0 +1,20 @@
+{
+  "user": {
+    "name": "Alice Johnson",
+    "isActive": true,
+    "isPremium": true,
+    "memberSince": "2023-01-15"
+  },
+  "age": 25,
+  "score": 85,
+  "stock": 7,
+  "status": "approved",
+  "hasLicense": true,
+  "isAdmin": false,
+  "isModerator": true,
+  "bonusPoints": 120,
+  "purchases": 15,
+  "notifications": ["New message", "Update available", "System alert"],
+  "items": ["Laptop", "Mouse", "Keyboard"],
+  "products": ["Product A", "Product B", "Product C", "Product D"]
+}

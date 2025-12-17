@@ -96,6 +96,36 @@ Demuestra iteración de arrays y renderizado condicional:
 
 ---
 
+### 7. `06-conditionals-advanced.zpug`
+**Condicionales Avanzados**
+
+Demostración completa de todas las capacidades del statement `if`:
+- Acceso a propiedades: `user.isActive`, `array.length`
+- Operadores de comparación: `>=`, `>`, `<`, `<=`, `==`
+- Operadores lógicos: `&&` (AND), `||` (OR)
+- Verificación de igualdad de strings
+- Expresiones complejas combinadas
+- Operaciones con arrays y verificación de longitud
+- Patrones de uso en aplicaciones reales (dashboards, control de acceso, badges)
+
+**Conceptos**: Condicionales avanzados, acceso a propiedades, expresiones lógicas, patrones del mundo real
+
+**Características Demostradas**:
+- ✅ Verificación de propiedades de objetos: `if user.isPremium`
+- ✅ Verificación de edad: `if age >= 18`
+- ✅ Rangos de puntuación: `if score > 90` ... `else if score > 75`
+- ✅ Alertas de inventario: `if stock < 10`
+- ✅ Coincidencia de estado: `if status == "approved"`
+- ✅ Múltiples condiciones: `if age >= 18 && hasLicense`
+- ✅ Condiciones alternativas: `if isAdmin || isModerator`
+- ✅ Expresiones complejas: `if (isAdmin || isModerator) && user.isActive`
+- ✅ Manejo de arrays vacíos: `if items.length > 0`
+- ✅ Condicionales anidados para gestión de estado de UI
+
+Este ejemplo sirve como referencia completa para lógica condicional en templates zig-pug.
+
+---
+
 ## 🚀 Cómo Usar los Ejemplos
 
 ### Opción 1: Copiar y Pegar
@@ -192,6 +222,45 @@ _ = try js_runtime.eval(
 );
 _ = try js_runtime.eval(
     \\var products = []; // Array vacío para demostrar renderizado condicional
+);
+```
+
+### 06-conditionals-advanced.zpug
+```zig
+// Objeto user
+_ = try js_runtime.eval(
+    \\var user = {
+    \\  name: 'Alice Johnson',
+    \\  isActive: true,
+    \\  isPremium: true,
+    \\  memberSince: '2023-01-15'
+    \\};
+);
+
+// Valores numéricos
+try js_runtime.setNumber("age", 25);
+try js_runtime.setNumber("score", 85);
+try js_runtime.setNumber("stock", 7);
+try js_runtime.setNumber("bonusPoints", 120);
+try js_runtime.setNumber("purchases", 15);
+
+// Valores string
+try js_runtime.setString("status", "approved");
+
+// Valores boolean
+try js_runtime.setBool("hasLicense", true);
+try js_runtime.setBool("isAdmin", false);
+try js_runtime.setBool("isModerator", true);
+
+// Arrays
+_ = try js_runtime.eval(
+    \\var notifications = ['New message', 'Update available', 'System alert'];
+);
+_ = try js_runtime.eval(
+    \\var items = ['Laptop', 'Mouse', 'Keyboard'];
+);
+_ = try js_runtime.eval(
+    \\var products = ['Product A', 'Product B', 'Product C', 'Product D'];
 );
 ```
 

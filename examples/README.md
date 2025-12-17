@@ -96,6 +96,36 @@ Demonstrates array iteration and conditional rendering:
 
 ---
 
+### 7. `06-conditionals-advanced.zpug`
+**Advanced Conditionals**
+
+Comprehensive demonstration of all `if` statement capabilities:
+- Property access: `user.isActive`, `array.length`
+- Comparison operators: `>=`, `>`, `<`, `<=`, `==`
+- Logical operators: `&&` (AND), `||` (OR)
+- String equality checks
+- Combined complex expressions
+- Array operations and length checks
+- Real-world usage patterns (dashboards, access control, badges)
+
+**Concepts**: Advanced conditionals, property access, logical expressions, real-world patterns
+
+**Features Demonstrated**:
+- ✅ Object property checks: `if user.isPremium`
+- ✅ Age verification: `if age >= 18`
+- ✅ Score ranges: `if score > 90` ... `else if score > 75`
+- ✅ Stock alerts: `if stock < 10`
+- ✅ Status matching: `if status == "approved"`
+- ✅ Multiple conditions: `if age >= 18 && hasLicense`
+- ✅ Alternative conditions: `if isAdmin || isModerator`
+- ✅ Complex expressions: `if (isAdmin || isModerator) && user.isActive`
+- ✅ Empty array handling: `if items.length > 0`
+- ✅ Nested conditionals for UI state management
+
+This example serves as a complete reference for conditional logic in zig-pug templates.
+
+---
+
 ## 🚀 How to Use the Examples
 
 ### Option 1: Copy and Paste
@@ -192,6 +222,45 @@ _ = try js_runtime.eval(
 );
 _ = try js_runtime.eval(
     \\var products = []; // Empty array to demonstrate conditional rendering
+);
+```
+
+### 06-conditionals-advanced.zpug
+```zig
+// User object
+_ = try js_runtime.eval(
+    \\var user = {
+    \\  name: 'Alice Johnson',
+    \\  isActive: true,
+    \\  isPremium: true,
+    \\  memberSince: '2023-01-15'
+    \\};
+);
+
+// Numeric values
+try js_runtime.setNumber("age", 25);
+try js_runtime.setNumber("score", 85);
+try js_runtime.setNumber("stock", 7);
+try js_runtime.setNumber("bonusPoints", 120);
+try js_runtime.setNumber("purchases", 15);
+
+// String values
+try js_runtime.setString("status", "approved");
+
+// Boolean values
+try js_runtime.setBool("hasLicense", true);
+try js_runtime.setBool("isAdmin", false);
+try js_runtime.setBool("isModerator", true);
+
+// Arrays
+_ = try js_runtime.eval(
+    \\var notifications = ['New message', 'Update available', 'System alert'];
+);
+_ = try js_runtime.eval(
+    \\var items = ['Laptop', 'Mouse', 'Keyboard'];
+);
+_ = try js_runtime.eval(
+    \\var products = ['Product A', 'Product B', 'Product C', 'Product D'];
 );
 ```
 
