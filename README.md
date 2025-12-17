@@ -24,7 +24,7 @@ html(lang="en")
 - ✅ **Full UTF-8 support** - Accented characters (á, é, ñ, ü), emoji 🎉, all Unicode
 - ✅ **JavaScript ES5.1** - Interpolations with methods, operators and expressions
 - ✅ **Real JavaScript engine** - Powered by [mujs](https://mujs.com/)
-- ✅ **Conditionals** - if/else/unless
+- ✅ **Conditionals** - if/else/else if/unless with full JavaScript expressions (>, <, >=, <=, ==, &&, ||)
 - ✅ **Loops** - each/while with array support
 - ✅ **Mixins** - Reusable components with arguments
 - ✅ **Template inheritance** - extends/block
@@ -317,29 +317,87 @@ p !{trustedHtml}
 
 ### Conditionals
 
+Full support for `if`, `else`, `else if`, and `unless` with complete JavaScript expressions:
+
 ```zpug
-// if/else
+// Basic if/else
 if isLoggedIn
   p Welcome back!
 else
   p Please log in
 
+// Multiple else if (unlimited chaining)
+if score > 90
+  p Grade A
+else if score > 80
+  p Grade B
+else if score > 70
+  p Grade C
+else
+  p Grade F
+
 // unless (negation)
 unless isAdmin
   p Access denied
 
-// Expressions
-if age >= 18
-  p You can vote
-else if age >= 16
-  p Almost there
+// Property access
+if user.isPremium
+  p Premium features enabled
 else
-  p Too young
+  p Upgrade to premium
 
-// With variables
-if user.role == "admin"
-  p Admin panel
+// Comparison operators (>, <, >=, <=, ==)
+if age >= 18
+  p Adult content
+else if age >= 13
+  p Teen content
+else
+  p Kids content
+
+// Logical operators (&&, ||)
+if age >= 18 && hasLicense
+  p Can drive
+else
+  p Cannot drive
+
+// String equality
+if status == "active"
+  p Account active
+else if status == "pending"
+  p Pending approval
+else
+  p Account inactive
+
+// Complex expressions
+if (isAdmin || isModerator) && user.isActive
+  p Administrative access
+else
+  p Regular access
+
+// Array length checks
+if items.length > 0
+  p Cart has #{items.length} items
+else
+  p Cart is empty
+
+// Nested conditions
+if user.isActive
+  if user.isPremium
+    p Premium active user
+  else
+    p Regular active user
+else
+  p Inactive account
 ```
+
+**Supported features:**
+- ✅ Property access: `user.isPremium`, `array.length`
+- ✅ Comparison operators: `>`, `<`, `>=`, `<=`, `==`
+- ✅ Logical operators: `&&` (AND), `||` (OR)
+- ✅ String equality: `status == "active"`
+- ✅ Unlimited `else if` chaining
+- ✅ Nested conditionals
+- ✅ Complex combined expressions
 
 ### Loops
 

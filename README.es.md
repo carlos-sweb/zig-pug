@@ -24,7 +24,7 @@ html(lang="en")
 - ✅ **Soporte UTF-8 completo** - Caracteres acentuados (á, é, ñ, ü), emoji 🎉, todo Unicode
 - ✅ **JavaScript ES5.1** - Interpolaciones con métodos, operadores y expresiones
 - ✅ **Motor JavaScript real** - Powered by [mujs](https://mujs.com/)
-- ✅ **Condicionales** - if/else/unless
+- ✅ **Condicionales** - if/else/else if/unless con expresiones JavaScript completas (>, <, >=, <=, ==, &&, ||)
 - ✅ **Loops** - each/while con soporte de arrays
 - ✅ **Mixins** - Componentes reutilizables con argumentos
 - ✅ **Herencia de plantillas** - extends/block
@@ -317,29 +317,87 @@ p !{trustedHtml}
 
 ### Condicionales
 
+Soporte completo para `if`, `else`, `else if` y `unless` con expresiones JavaScript completas:
+
 ```zpug
-// if/else
+// if/else básico
 if isLoggedIn
-  p Welcome back!
+  p Bienvenido de nuevo!
 else
-  p Please log in
+  p Por favor inicia sesión
+
+// Múltiples else if (encadenamiento ilimitado)
+if score > 90
+  p Calificación A
+else if score > 80
+  p Calificación B
+else if score > 70
+  p Calificación C
+else
+  p Calificación F
 
 // unless (negación)
 unless isAdmin
-  p Access denied
+  p Acceso denegado
 
-// Expresiones
-if age >= 18
-  p You can vote
-else if age >= 16
-  p Almost there
+// Acceso a propiedades
+if user.isPremium
+  p Funciones premium habilitadas
 else
-  p Too young
+  p Mejora a premium
 
-// Con variables
-if user.role == "admin"
-  p Admin panel
+// Operadores de comparación (>, <, >=, <=, ==)
+if age >= 18
+  p Contenido para adultos
+else if age >= 13
+  p Contenido adolescente
+else
+  p Contenido infantil
+
+// Operadores lógicos (&&, ||)
+if age >= 18 && hasLicense
+  p Puede conducir
+else
+  p No puede conducir
+
+// Igualdad de strings
+if status == "active"
+  p Cuenta activa
+else if status == "pending"
+  p Aprobación pendiente
+else
+  p Cuenta inactiva
+
+// Expresiones complejas
+if (isAdmin || isModerator) && user.isActive
+  p Acceso administrativo
+else
+  p Acceso regular
+
+// Verificación de longitud de arrays
+if items.length > 0
+  p Carrito tiene #{items.length} artículos
+else
+  p Carrito vacío
+
+// Condiciones anidadas
+if user.isActive
+  if user.isPremium
+    p Usuario premium activo
+  else
+    p Usuario regular activo
+else
+  p Cuenta inactiva
 ```
+
+**Características soportadas:**
+- ✅ Acceso a propiedades: `user.isPremium`, `array.length`
+- ✅ Operadores de comparación: `>`, `<`, `>=`, `<=`, `==`
+- ✅ Operadores lógicos: `&&` (AND), `||` (OR)
+- ✅ Igualdad de strings: `status == "active"`
+- ✅ Encadenamiento ilimitado de `else if`
+- ✅ Condicionales anidados
+- ✅ Expresiones combinadas complejas
 
 ### Loops
 
