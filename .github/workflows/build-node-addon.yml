@@ -23,7 +23,7 @@ jobs:
             artifact: zigpug.node
 
           # macOS Intel
-          - os: macos-13
+          - os: macos-15-intel
             platform: darwin-x64
             artifact: zigpug.node
 
