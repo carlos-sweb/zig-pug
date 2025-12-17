@@ -28,10 +28,23 @@ pub fn parseConditional(self: *Parser) anyerror!*ast.AstNode {
     try helpers.advance(self); // consume 'if' or 'unless'
 
     // Parse condition expression (everything until newline)
+    // Concatenate tokens WITHOUT spaces to preserve property access (array.length)
+    // and operators (>=, <=, etc). JavaScript expressions don't require spaces.
     var condition: std.ArrayList(u8) = .{};
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
-        if (condition.items.len > 0) {
-            try condition.append(arena_allocator, ' ');
+        // Special handling for .Class and .Id tokens - prepend the dot
+        // because tokenizer removes it from the value
+        if (self.current.type == .Class or self.current.type == .Id) {
+            try condition.append(arena_allocator, '.');
+        }
+        // Special handling for .String tokens - wrap with quotes
+        // because tokenizer removes them from the value
+        else if (self.current.type == .String) {
+            try condition.append(arena_allocator, '"');
+            try condition.appendSlice(arena_allocator, self.current.value);
+            try condition.append(arena_allocator, '"');
+            try helpers.advance(self);
+            continue;
         }
         try condition.appendSlice(arena_allocator, self.current.value);
         try helpers.advance(self);

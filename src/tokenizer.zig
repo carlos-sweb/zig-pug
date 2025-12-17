@@ -80,6 +80,13 @@ pub const TokenType = enum {
     NotEqual, // !=
     Plus, // +
     Minus, // -
+    Greater, // >
+    Less, // <
+    GreaterEqual, // >=
+    LessEqual, // <=
+    Equal, // ==
+    And, // &&
+    Or, // ||
 
     // Keywords
     If,
@@ -774,6 +781,33 @@ pub const Tokenizer = struct {
             return Token.init(.UnescapedCode, value, start_line, start_col);
         }
 
+        // Check for comparison and logical operators
+        if (ch == '>' and self.peekChar() == '=') {
+            _ = self.advance();
+            const value = self.source[self.pos - 2 .. self.pos];
+            return Token.init(.GreaterEqual, value, start_line, start_col);
+        }
+        if (ch == '<' and self.peekChar() == '=') {
+            _ = self.advance();
+            const value = self.source[self.pos - 2 .. self.pos];
+            return Token.init(.LessEqual, value, start_line, start_col);
+        }
+        if (ch == '=' and self.peekChar() == '=') {
+            _ = self.advance();
+            const value = self.source[self.pos - 2 .. self.pos];
+            return Token.init(.Equal, value, start_line, start_col);
+        }
+        if (ch == '&' and self.peekChar() == '&') {
+            _ = self.advance();
+            const value = self.source[self.pos - 2 .. self.pos];
+            return Token.init(.And, value, start_line, start_col);
+        }
+        if (ch == '|' and self.peekChar() == '|') {
+            _ = self.advance();
+            const value = self.source[self.pos - 2 .. self.pos];
+            return Token.init(.Or, value, start_line, start_col);
+        }
+
         const token_type: TokenType = switch (ch) {
             '(' => .LParen,
             ')' => .RParen,
@@ -787,6 +821,9 @@ pub const Tokenizer = struct {
             '=' => .BufferedCode,
             '+' => .Plus,
             '-' => .UnbufferedCode,
+            '>' => .Greater,
+            '<' => .Less,
+            '&' => .Ident, // Standalone & treated as text (unlikely to appear alone)
             '!' => .Ident, // Treat standalone ! as unexpected (will be handled as text)
             else => {
                 // For any other character, treat as unexpected

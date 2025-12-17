@@ -15,3 +15,12 @@ html(lang="en")
     ul.fruits
       each fruit in fruits
         li.fruit #{fruit}
+
+    // Handling empty arrays with improved if statement
+    h2 Products
+    if products.length>0
+      ul.products
+        each product in products
+          li.product #{product}
+    else
+      p.no-items No products available

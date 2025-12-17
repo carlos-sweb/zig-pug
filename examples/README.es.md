@@ -74,20 +74,25 @@ Combina todas las características en un ejemplo real:
 ---
 
 ### 6. `loops.zpug`
-**Loops (Bucles)**
+**Loops y Condicionales**
 
-Demuestra iteración básica de arrays en templates:
+Demuestra iteración de arrays y renderizado condicional:
 - Loops básicos con `each`: `each item in array`
 - Múltiples loops en el mismo template
+- Manejo de arrays vacíos con `if array.length > 0`
 
-**Conceptos**: Iteración, bucles
+**Conceptos**: Iteración, bucles, renderizado condicional
+
+**Soportado en v0.3.x**:
+- ✅ Acceso a propiedades: `if array.length`
+- ✅ Comparaciones: `if age >= 18`, `if score > 50`
+- ✅ Operadores lógicos: `if a && b`, `if x || y`
+- ✅ Igualdad de strings: `if status == "active"`
+- ✅ Expresiones combinadas: `if age >= 18 && hasPermission`
 
 **Limitaciones Actuales en v0.3.x**:
 - ❌ Loop con índice (`each item, i in array`) - **NO soportado**
-- ❌ Sintaxis `each...else` para arrays vacíos - **NO soportado**
-- ❌ Acceso a propiedades en condicionales `if` (`if array.length > 0`) - **NO soportado**
-
-Estas limitaciones dificultan el manejo elegante de arrays vacíos. Ver `/tmp/IF-STATEMENT-ANALYSIS.md` para detalles técnicos y soluciones propuestas.
+- ❌ Sintaxis `each...else` - **NO soportado** (usar `if array.length > 0` en su lugar)
 
 ---
 
@@ -184,6 +189,9 @@ _ = try js_runtime.eval(
 );
 _ = try js_runtime.eval(
     \\var fruits = ['Apple', 'Banana', 'Orange'];
+);
+_ = try js_runtime.eval(
+    \\var products = []; // Array vacío para demostrar renderizado condicional
 );
 ```
 

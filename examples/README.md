@@ -74,20 +74,25 @@ Combines all features in a real-world example:
 ---
 
 ### 6. `loops.zpug`
-**Loops**
+**Loops and Conditionals**
 
-Demonstrates basic array iteration in templates:
+Demonstrates array iteration and conditional rendering:
 - Basic `each` loops: `each item in array`
 - Multiple loops in the same template
+- Handling empty arrays with `if array.length > 0`
 
-**Concepts**: Iteration, loops
+**Concepts**: Iteration, loops, conditional rendering
+
+**Supported in v0.3.x**:
+- ✅ Property access: `if array.length`
+- ✅ Comparisons: `if age >= 18`, `if score > 50`
+- ✅ Logical operators: `if a && b`, `if x || y`
+- ✅ String equality: `if status == "active"`
+- ✅ Combined expressions: `if age >= 18 && hasPermission`
 
 **Current Limitations in v0.3.x**:
 - ❌ Loop with index (`each item, i in array`) - **NOT supported**
-- ❌ `each...else` syntax for empty arrays - **NOT supported**
-- ❌ Property access in `if` conditionals (`if array.length > 0`) - **NOT supported**
-
-These limitations make it difficult to handle empty arrays elegantly. See `/tmp/IF-STATEMENT-ANALYSIS.md` for technical details and proposed solutions.
+- ❌ `each...else` syntax - **NOT supported** (use `if array.length > 0` instead)
 
 ---
 
@@ -184,6 +189,9 @@ _ = try js_runtime.eval(
 );
 _ = try js_runtime.eval(
     \\var fruits = ['Apple', 'Banana', 'Orange'];
+);
+_ = try js_runtime.eval(
+    \\var products = []; // Empty array to demonstrate conditional rendering
 );
 ```
 
