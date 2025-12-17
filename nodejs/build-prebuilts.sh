@@ -20,12 +20,16 @@ cd "$PROJECT_ROOT"
 
 # Define target platforms
 # Format: "zig-target:output-folder"
+#
+# NOTE: Windows uses 'gnu' (MinGW) here for cross-compilation from Linux.
+# In GitHub Actions CI, Windows builds recompile with 'msvc' target natively
+# to ensure compatibility with Node.js MSVC toolchain.
 TARGETS=(
     "x86_64-linux:linux-x64"
     "aarch64-linux:linux-arm64"
     "x86_64-macos:darwin-x64"
     "aarch64-macos:darwin-arm64"
-    "x86_64-windows:win32-x64"
+    "x86_64-windows-gnu:win32-x64"
 )
 
 for target in "${TARGETS[@]}"; do

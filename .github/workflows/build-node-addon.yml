@@ -46,8 +46,22 @@ jobs:
         with:
           node-version: '20'
 
-      # Static libraries are already in nodejs/prebuilts/
-      # No need to rebuild them - node-gyp will use them directly
+      # For Windows: Build static library with MSVC on the fly
+      # Pre-built libraries from Linux use MinGW which is incompatible with MSVC
+      - name: Setup Zig (Windows only)
+        if: matrix.os == 'windows-latest'
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Build Windows static library with MSVC
+        if: matrix.os == 'windows-latest'
+        run: |
+          zig build lib-static -Dtarget=x86_64-windows-msvc -Doptimize=ReleaseFast --prefix-lib-dir nodejs/prebuilts/win32-x64
+        shell: bash
+
+      # Static libraries are already in nodejs/prebuilts/ for other platforms
+      # For Windows, we just built it above with MSVC
 
       - name: Install dependencies
         working-directory: nodejs

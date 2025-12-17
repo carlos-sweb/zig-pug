@@ -11,7 +11,8 @@
       "conditions": [
         ["OS=='win'", {
           "libraries": [
-            "../prebuilts/win32-<(target_arch)/zig-pug.lib"
+            "../prebuilts/win32-<(target_arch)/zig-pug.lib",
+            "ntdll.lib"
           ]
         }],
         ["OS=='mac'", {
