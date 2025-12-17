@@ -63,9 +63,14 @@ jobs:
           echo "Building zig-pug.dll with MSVC target..."
           zig build lib-shared -Dtarget=x86_64-windows-msvc -Doptimize=ReleaseFast
 
+          echo "Checking zig-out directory structure:"
+          find zig-out -type f -name "*.dll" -o -name "*.lib" | head -20
+
           echo "Copying MSVC DLL and import library to prebuilts..."
           mkdir -p nodejs/prebuilts/win32-x64
-          cp zig-out/lib/zig-pug.dll nodejs/prebuilts/win32-x64/
+
+          # Windows DLLs go to bin/, import libraries go to lib/
+          cp zig-out/bin/zig-pug.dll nodejs/prebuilts/win32-x64/
           cp zig-out/lib/zig-pug.lib nodejs/prebuilts/win32-x64/
 
           echo "Verifying files were created:"
