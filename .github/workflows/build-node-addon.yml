@@ -61,10 +61,30 @@ jobs:
           rm -f nodejs/prebuilts/win32-x64/zig-pug.lib
 
           echo "Building zig-pug.lib with MSVC target and compiler-rt..."
-          zig build-lib -target x86_64-windows-msvc -O ReleaseFast -lc src/lib.zig vendor/mujs/one.c -I vendor/mujs
+          echo "Running: zig build-lib -target x86_64-windows-msvc -O ReleaseFast -lc src/lib.zig vendor/mujs/one.c -I vendor/mujs"
 
-          echo "Checking output..."
-          ls -lh zig-pug.lib
+          zig build-lib -target x86_64-windows-msvc -O ReleaseFast -lc src/lib.zig vendor/mujs/one.c -I vendor/mujs 2>&1 || {
+            echo "ERROR: zig build-lib failed with exit code $?"
+            echo "Listing current directory:"
+            ls -la
+            exit 1
+          }
+
+          echo "Checking output files in current directory:"
+          ls -lah | grep -E "\.(lib|obj|o)$" || echo "No .lib or .obj files found"
+
+          echo "Searching for any lib files:"
+          find . -maxdepth 2 -name "*.lib" -o -name "lib*.a" | head -10
+
+          # The output might be lib.lib or zig-pug.lib depending on how Zig names it
+          if [ -f "lib.lib" ]; then
+            echo "Found lib.lib, renaming to zig-pug.lib"
+            mv lib.lib zig-pug.lib
+          elif [ ! -f "zig-pug.lib" ]; then
+            echo "ERROR: Could not find zig-pug.lib or lib.lib after compilation"
+            ls -la
+            exit 1
+          fi
 
           echo "Copying MSVC static library to prebuilts..."
           mkdir -p nodejs/prebuilts/win32-x64
