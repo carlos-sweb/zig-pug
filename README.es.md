@@ -41,7 +41,12 @@ html(lang="en")
 - **Funciona en Termux/Android** (binario CLI)
 - **87 tests unitarios** - Cobertura de tests completa
 
-> **Nota para Termux**: El binario CLI funciona perfectamente. El addon de Node.js compila pero no se puede cargar debido a restricciones de Android. Ver [docs/en/TERMUX.md](docs/en/TERMUX.md) para detalles.
+> **Notas de Plataforma:**
+> - **Termux/Android**: El binario CLI funciona perfectamente. El addon de Node.js compila pero no se puede cargar debido a restricciones de Android. Ver [docs/en/TERMUX.md](docs/en/TERMUX.md).
+> - **Windows**: Binarios pre-compilados temporalmente no disponibles debido a incompatibilidad de toolchains MinGW/MSVC. Los usuarios de Windows pueden:
+>   - Compilar localmente con [MinGW-w64/MSYS2](https://www.msys2.org/)
+>   - Usar [WSL (Windows Subsystem for Linux)](https://learn.microsoft.com/windows/wsl/install)
+>   - Estamos trabajando activamente en una solución. Seguir progreso en [GitHub Issues](https://github.com/carlos-sweb/zig-pug/issues).
 
 ## 📦 Instalación
 

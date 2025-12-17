@@ -32,10 +32,11 @@ jobs:
             platform: darwin-arm64
             artifact: zigpug.node
 
-          # Windows
-          - os: windows-latest
-            platform: win32-x64
-            artifact: zigpug.node
+          # Windows: Temporarily disabled - MinGW/MSVC incompatibility
+          # Users can build locally with MinGW or use WSL
+          # - os: windows-latest
+          #   platform: win32-x64
+          #   artifact: zigpug.node
 
     steps:
       - name: Checkout code
@@ -46,36 +47,7 @@ jobs:
         with:
           node-version: '20'
 
-      # For Windows: Rebuild prebuilt library with MSVC compatibility
-      - name: Setup Zig (Windows only)
-        if: matrix.os == 'windows-latest'
-        uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: 0.15.2
-
-      - name: Rebuild Windows library with MSVC
-        if: matrix.os == 'windows-latest'
-        shell: bash
-        run: |
-          echo "Rebuilding zig-pug library for MSVC..."
-          cd nodejs
-
-          # Remove MinGW library
-          rm -f prebuilts/win32-x64/zig-pug.lib
-
-          # Build with zig directly targeting MSVC
-          zig build-lib -target x86_64-windows-msvc -O ReleaseFast -lc \
-            ../src/lib.zig ../vendor/mujs/one.c -I ../vendor/mujs \
-            --name zig-pug
-
-          # Move to prebuilts
-          mkdir -p prebuilts/win32-x64
-          mv zig-pug.lib prebuilts/win32-x64/
-
-          echo "✓ Library rebuilt for MSVC"
-          ls -lh prebuilts/win32-x64/
-
-      # Install and build for all platforms
+      # Install and build
       - name: Install dependencies
         working-directory: nodejs
         run: npm install
@@ -123,8 +95,8 @@ jobs:
         run: |
           mkdir -p nodejs/prebuilt-binaries
 
-          # Copy each platform's addon
-          for platform in linux-x64 darwin-x64 darwin-arm64 win32-x64; do
+          # Copy each platform's addon (Windows temporarily excluded)
+          for platform in linux-x64 darwin-x64 darwin-arm64; do
             if [ -d "artifacts/addon-$platform" ]; then
               mkdir -p nodejs/prebuilt-binaries/$platform
               cp artifacts/addon-$platform/zigpug.node nodejs/prebuilt-binaries/$platform/
