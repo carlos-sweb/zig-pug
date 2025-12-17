@@ -1,7 +1,7 @@
 doctype html
 // Test 08: Complete template with ALL features
 // This is the most complex test combining all zpug features
-// Run with: zpug 08-complete.zpug --var title="My App" --var user="Alice" --var isLoggedIn=true --var isAdmin=false --var year=2024
+// Run with: zpug 08-complete.zpug --var title="My App" --var user="Alice" --var age=25 --var score=85 --var isLoggedIn=true --var isAdmin=false --var year=2024 --json userObj='{"isPremium":true,"memberSince":"2023-01-15"}'
 
 html(lang="en")
   head
@@ -42,6 +42,40 @@ html(lang="en")
           div.login-prompt
             p Please log in to continue
             a.btn.btn-primary(href="/login") Login
+
+      // Advanced conditionals with operators
+      section.advanced-conditionals
+        h2 Advanced Features
+
+        // Comparison operators
+        if age>=18
+          p Age verification: Adult content available
+        else
+          p Age verification: Parental supervision required
+
+        // Multiple else if with scores
+        div.score-grade
+          if score>90
+            p.grade.grade-a Excellent! Grade A
+          else if score>80
+            p.grade.grade-b Great! Grade B
+          else if score>70
+            p.grade.grade-c Good! Grade C
+          else
+            p.grade.grade-f Needs improvement
+
+        // Logical operators
+        if age>=21&&isLoggedIn
+          p Premium content unlocked (age + login required)
+
+        // Property access
+        if userObj.isPremium
+          div.premium-badge
+            p Premium Member since #{userObj.memberSince}
+
+        // Complex expressions
+        if (isAdmin||score>85)&&isLoggedIn
+          p You have special access privileges!
 
       // Mixin definitions
       mixin card(cardTitle, cardContent)

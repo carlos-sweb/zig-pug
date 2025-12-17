@@ -1,0 +1,98 @@
+doctype html
+// Test 09: Advanced Operators and Expressions
+// Expected: Complex conditional expressions with all operators
+// Run with: zpug 09-operators-advanced.zpug --var age=25 --var score=85 --var hasPermission=true --var status="approved" --json user='{"isPremium":true,"role":"admin"}' --json items='["a","b","c"]'
+html
+  head
+    title Advanced Operators Test
+  body
+    h1 Advanced Operator Tests
+
+    // Comparison operators
+    section.comparisons
+      h2 Comparison Operators
+
+      if age>20
+        p age is greater than 20
+
+      if age<30
+        p age is less than 30
+
+      if age>=25
+        p age is greater than or equal to 25
+
+      if age<=25
+        p age is less than or equal to 25
+
+      if score==85
+        p score equals exactly 85
+
+    // Logical operators
+    section.logical
+      h2 Logical Operators (AND, OR)
+
+      if age>=18&&hasPermission
+        p Has age AND permission (both required)
+
+      if score>90||hasPermission
+        p Has high score OR permission (either works)
+
+      if age>=21&&score>=80&&hasPermission
+        p All three conditions met (AND chain)
+
+    // Property access
+    section.properties
+      h2 Property Access
+
+      if user.isPremium
+        p User has premium status
+
+      if user.role=="admin"
+        p User is an administrator
+
+      if items.length>2
+        p Array has more than 2 items (#{items.length} items)
+
+    // Complex expressions
+    section.complex
+      h2 Complex Combined Expressions
+
+      if (age>=18&&hasPermission)||user.role=="admin"
+        p Qualified by age+permission OR admin role
+
+      if age>=21&&(score>80||user.isPremium)
+        p Age 21+ AND (high score OR premium)
+
+      if status=="approved"&&user.isPremium&&items.length>0
+        p All conditions: approved, premium, has items
+
+    // Nested conditions
+    section.nested
+      h2 Nested Conditionals
+
+      if age>=18
+        if user.isPremium
+          if score>=80
+            p Triple nested: Adult + Premium + High Score
+          else
+            p Adult + Premium (but lower score)
+        else
+          p Adult (but not premium)
+      else
+        p Under 18
+
+    // String equality variations
+    section.strings
+      h2 String Equality
+
+      if status=="approved"
+        p Status is approved
+      else if status=="pending"
+        p Status is pending
+      else if status=="rejected"
+        p Status is rejected
+      else
+        p Unknown status
+
+    footer
+      p All operator tests completed successfully!

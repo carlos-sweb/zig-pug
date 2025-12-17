@@ -1,8 +1,9 @@
 // Test 05: Conditionals
-// Expected: Conditional rendering based on variables
-// Run with: zpug 05-conditionals.zpug --var isLoggedIn=true --var isAdmin=false
+// Expected: Conditional rendering with full JavaScript expressions
+// Run with: zpug 05-conditionals.zpug --var age=25 --var score=85 --var status="active" --var hasLicense=true --var isLoggedIn=true --var isAdmin=false
 
 div.status
+  // Basic if/else
   if isLoggedIn
     p Welcome back!
     if isAdmin
@@ -12,5 +13,45 @@ div.status
   else
     p Please log in
 
-unless isAdmin
-  p You are not an admin
+  // unless (negation)
+  unless isAdmin
+    p You are not an admin
+
+  // Comparison operators
+  h3 Age Verification
+  if age>=18
+    p Adult content available
+  else
+    p Parental supervision required
+
+  // Multiple else if with comparisons
+  h3 Score Grade
+  if score>90
+    p Grade: A
+  else if score>80
+    p Grade: B
+  else if score>70
+    p Grade: C
+  else
+    p Grade: F
+
+  // String equality
+  h3 Account Status
+  if status=="active"
+    p Your account is active
+  else if status=="pending"
+    p Account pending approval
+  else
+    p Account inactive
+
+  // Logical operators (AND)
+  h3 Driving Eligibility
+  if age>=18&&hasLicense
+    p You can drive
+  else
+    p Cannot drive
+
+  // Logical operators (OR) with parentheses
+  h3 Special Access
+  if isAdmin||score>90
+    p You have special access!
