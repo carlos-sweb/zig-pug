@@ -73,6 +73,24 @@ Combines all features in a real-world example:
 
 ---
 
+### 6. `loops.zpug`
+**Loops**
+
+Demonstrates basic array iteration in templates:
+- Basic `each` loops: `each item in array`
+- Multiple loops in the same template
+
+**Concepts**: Iteration, loops
+
+**Current Limitations in v0.3.x**:
+- ❌ Loop with index (`each item, i in array`) - **NOT supported**
+- ❌ `each...else` syntax for empty arrays - **NOT supported**
+- ❌ Property access in `if` conditionals (`if array.length > 0`) - **NOT supported**
+
+These limitations make it difficult to handle empty arrays elegantly. See `/tmp/IF-STATEMENT-ANALYSIS.md` for technical details and proposed solutions.
+
+---
+
 ## 🚀 How to Use the Examples
 
 ### Option 1: Copy and Paste
@@ -157,6 +175,17 @@ try js_runtime.setString("role", "admin");
 
 ### 04-mixins.zpug
 No external variables required (mixins use parameters).
+
+### loops.zpug
+```zig
+// Arrays for loops
+_ = try js_runtime.eval(
+    \\var users = ['Alice', 'Bob', 'Charlie'];
+);
+_ = try js_runtime.eval(
+    \\var fruits = ['Apple', 'Banana', 'Orange'];
+);
+```
 
 ### 05-complete-example.zpug
 ```zig

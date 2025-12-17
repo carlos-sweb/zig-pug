@@ -73,6 +73,24 @@ Combina todas las características en un ejemplo real:
 
 ---
 
+### 6. `loops.zpug`
+**Loops (Bucles)**
+
+Demuestra iteración básica de arrays en templates:
+- Loops básicos con `each`: `each item in array`
+- Múltiples loops en el mismo template
+
+**Conceptos**: Iteración, bucles
+
+**Limitaciones Actuales en v0.3.x**:
+- ❌ Loop con índice (`each item, i in array`) - **NO soportado**
+- ❌ Sintaxis `each...else` para arrays vacíos - **NO soportado**
+- ❌ Acceso a propiedades en condicionales `if` (`if array.length > 0`) - **NO soportado**
+
+Estas limitaciones dificultan el manejo elegante de arrays vacíos. Ver `/tmp/IF-STATEMENT-ANALYSIS.md` para detalles técnicos y soluciones propuestas.
+
+---
+
 ## 🚀 Cómo Usar los Ejemplos
 
 ### Opción 1: Copiar y Pegar
@@ -157,6 +175,17 @@ try js_runtime.setString("role", "admin");
 
 ### 04-mixins.zpug
 No requiere variables externas (los mixins usan parámetros).
+
+### loops.zpug
+```zig
+// Arrays para los loops
+_ = try js_runtime.eval(
+    \\var users = ['Alice', 'Bob', 'Charlie'];
+);
+_ = try js_runtime.eval(
+    \\var fruits = ['Apple', 'Banana', 'Orange'];
+);
+```
 
 ### 05-complete-example.zpug
 ```zig

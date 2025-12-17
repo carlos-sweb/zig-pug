@@ -11,15 +11,7 @@ html(lang="en")
       each user in users
         li.user #{user}
 
-    // Loop with index
-    h2 Numbered Fruits
-    ol
-      each fruit, i in fruits
-        li #{i}: #{fruit}
-
-    // Empty array with else
-    h2 Empty Items
-    each item in emptyArray
-      p #{item}
-    else
-      p.no-items No items available
+    h2 Fruits
+    ul.fruits
+      each fruit in fruits
+        li.fruit #{fruit}
