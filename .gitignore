@@ -5,10 +5,8 @@ zig-out/
 
 # Object files
 *.o
-*.so
-*.dylib
-*.dll
-*.exe
+# Note: *.so, *.dylib, *.dll are now distributed in libs/
+# *.exe binaries are now distributed in bin/
 
 # Editor directories
 .vscode/

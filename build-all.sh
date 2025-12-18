@@ -100,7 +100,8 @@ if [ "$BUILD_CLI" = true ]; then
 
     # Limpiar builds anteriores
     echo "🧹 Limpiando builds anteriores de CLI..."
-    rm -rf zig-out/bin/*
+    rm -rf bin/*
+    mkdir -p bin
     echo ""
 
     # Definir plataformas CLI
@@ -118,8 +119,11 @@ if [ "$BUILD_CLI" = true ]; then
         echo -e "${BLUE}Construyendo CLI para ${platform}...${NC}"
         zig build cross-${platform}
 
+        # Copiar desde zig-out/bin/ a bin/ (distributable)
         if [ -f "zig-out/bin/${platform}/${binary}" ]; then
-            size=$(du -h "zig-out/bin/${platform}/${binary}" | cut -f1)
+            mkdir -p "bin/${platform}"
+            cp "zig-out/bin/${platform}/${binary}" "bin/${platform}/"
+            size=$(du -h "bin/${platform}/${binary}" | cut -f1)
             echo -e "${GREEN}✓ ${platform}/${binary} (${size})${NC}"
         else
             echo -e "${RED}✗ Error construyendo ${platform}${NC}"
@@ -187,8 +191,8 @@ if [ "$BUILD_NODEJS" = true ]; then
     echo -e "${BLUE}Construyendo librerías dinámicas...${NC}"
     echo ""
 
-    # Directorio para librerías dinámicas (usa zig-out como base)
-    DYNAMIC_LIBS_DIR="$PROJECT_ROOT/zig-out/nodejs/dynamic-libs"
+    # Directorio para librerías dinámicas (distributable)
+    DYNAMIC_LIBS_DIR="$PROJECT_ROOT/libs"
     rm -rf "$DYNAMIC_LIBS_DIR"
     mkdir -p "$DYNAMIC_LIBS_DIR"
 
@@ -336,8 +340,8 @@ if [ "$BUILD_PACKAGE" = true ] && [ "$BUILD_CLI" = true ]; then
 
         mkdir -p "$RELEASE_DIR/$archive_name"
 
-        # Copiar binario
-        cp "zig-out/bin/${platform}/${binary_name}" "$RELEASE_DIR/$archive_name/"
+        # Copiar binario desde bin/ (distributable)
+        cp "bin/${platform}/${binary_name}" "$RELEASE_DIR/$archive_name/"
 
         # Copiar documentación
         cp README.md "$RELEASE_DIR/$archive_name/"
@@ -379,11 +383,11 @@ echo ""
 
 if [ "$BUILD_CLI" = true ]; then
     echo -e "${BLUE}📦 Binarios CLI disponibles en:${NC}"
-    echo "   zig-out/bin/linux-x86_64/zpug"
-    echo "   zig-out/bin/linux-aarch64/zpug"
-    echo "   zig-out/bin/windows-x86_64/zpug.exe"
-    echo "   zig-out/bin/macos-x86_64/zpug"
-    echo "   zig-out/bin/macos-aarch64/zpug"
+    echo "   bin/linux-x86_64/zpug"
+    echo "   bin/linux-aarch64/zpug"
+    echo "   bin/windows-x86_64/zpug.exe"
+    echo "   bin/macos-x86_64/zpug"
+    echo "   bin/macos-aarch64/zpug"
     echo ""
 fi
 
@@ -392,7 +396,7 @@ if [ "$BUILD_NODEJS" = true ]; then
     ls -1 "$PREBUILTS_DIR"/*/*.a "$PREBUILTS_DIR"/*/*.lib 2>/dev/null | sed 's|.*/prebuilts/|   nodejs/prebuilts/|' || true
     echo ""
     echo -e "${BLUE}📦 Librerías dinámicas disponibles en:${NC}"
-    ls -1 "$DYNAMIC_LIBS_DIR"/*/*.{so,dll,dylib} 2>/dev/null | sed 's|.*/dynamic-libs/|   nodejs/dynamic-libs/|' || true
+    ls -1 "$DYNAMIC_LIBS_DIR"/*/*.{so,dll,dylib} 2>/dev/null | sed 's|.*/libs/|   libs/|' || true
     echo ""
 fi
 
@@ -411,7 +415,7 @@ fi
 echo -e "${BLUE}📊 Tamaños:${NC}"
 if [ "$BUILD_CLI" = true ]; then
     echo -e "${YELLOW}  CLI:${NC}"
-    du -h zig-out/bin/*/zpug* 2>/dev/null | sed 's/^/    /' || true
+    du -h bin/*/zpug* 2>/dev/null | sed 's/^/    /' || true
 fi
 if [ "$BUILD_NODEJS" = true ]; then
     echo -e "${YELLOW}  Librerías estáticas:${NC}"
