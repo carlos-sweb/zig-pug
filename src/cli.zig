@@ -553,7 +553,7 @@ fn compileFile(
 
     // Check for compilation errors (strict mode)
     if (comp.has_errors) {
-        print("\nCompilation failed due to errors. No output generated.\n", .{});
+        printError("\nCompilation failed due to errors. No output generated.\n", .{});
         std.process.exit(1);
     }
 
@@ -806,7 +806,7 @@ fn compileFromStdin(allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime
 
     // Check for compilation errors (strict mode)
     if (comp.has_errors) {
-        print("\nCompilation failed due to errors. No output generated.\n", .{});
+        printError("\nCompilation failed due to errors. No output generated.\n", .{});
         std.process.exit(1);
     }
 
