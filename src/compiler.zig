@@ -48,13 +48,37 @@ const cache = @import("cache.zig");
 const Parser = @import("parser/mod.zig").Parser;
 const c_print = @import("c_print.zig");
 
-// Helper function for colored error output
+// Helper functions for colored error output with hierarchy
 fn printError(comptime fmt: []const u8, args: anytype) void {
     const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
     defer std.heap.c_allocator.free(msg);
     const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
     defer std.heap.c_allocator.free(c_msg);
-    c_print.c.c_print_color(c_msg.ptr, 31); // COLOR_RED
+    c_print.c.c_print_color(c_msg.ptr, 91); // COLOR_BRIGHT_RED - Principal
+}
+
+fn printDetail(comptime fmt: []const u8, args: anytype) void {
+    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
+    defer std.heap.c_allocator.free(msg);
+    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    defer std.heap.c_allocator.free(c_msg);
+    c_print.c.c_print_color(c_msg.ptr, 36); // COLOR_CYAN - Detalles clave
+}
+
+fn printHint(comptime fmt: []const u8, args: anytype) void {
+    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
+    defer std.heap.c_allocator.free(msg);
+    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    defer std.heap.c_allocator.free(c_msg);
+    c_print.c.c_print_color(c_msg.ptr, 33); // COLOR_YELLOW - Sugerencias
+}
+
+fn printTechnical(comptime fmt: []const u8, args: anytype) void {
+    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
+    defer std.heap.c_allocator.free(msg);
+    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    defer std.heap.c_allocator.free(c_msg);
+    c_print.c.c_print_color(c_msg.ptr, 90); // COLOR_BRIGHT_BLACK (gris) - Info técnica
 }
 
 /// Errors that can occur during compilation
@@ -447,8 +471,8 @@ pub const Compiler = struct {
                         self.has_errors = true;
                         printError("Error: Failed to evaluate attribute expression\n", .{});
                         std.debug.print("  Attribute: {s}={s}\n", .{ attr.name, value });
-                        printError("  Error: {}\n", .{err});
-                        printError("  Hint: Make sure the variable '{s}' is defined\n", .{value});
+                        printTechnical("  Error: {}\n", .{err});
+                        printHint("  Hint: Make sure the variable '{s}' is defined\n", .{value});
                         // Skip attribute on error (strict mode)
                         try self.output.appendSlice(self.allocator, "\"");
                         continue;
@@ -508,8 +532,8 @@ pub const Compiler = struct {
             self.has_errors = true;
             printError("Error: Failed to evaluate interpolation at line {d}\n", .{node.line});
             std.debug.print("  Expression: #{{{s}}}\n", .{interp.expression});
-            printError("  Error: {}\n", .{err});
-            printError("  Hint: Check that all variables used in the expression are defined\n", .{});
+            printTechnical("  Error: {}\n", .{err});
+            printHint("  Hint: Check that all variables used in the expression are defined\n", .{});
             // Don't generate output on error (strict mode)
             return;
         };
@@ -539,7 +563,7 @@ pub const Compiler = struct {
             self.has_errors = true;
             printError("Error: Failed to execute code at line {d}\n", .{node.line});
             std.debug.print("  Code: {s}\n", .{code.code});
-            printError("  Error: {}\n", .{err});
+            printTechnical("  Error: {}\n", .{err});
             return;
         };
         defer self.allocator.free(result);
@@ -682,8 +706,8 @@ pub const Compiler = struct {
         const result = self.runtime.eval(cond.condition) catch |err| {
             self.has_errors = true;
             printError("Error: Failed to evaluate conditional at line {d}\n", .{node.line});
-            printError("  Condition: {s}\n", .{cond.condition});
-            printError("  Error: {}\n", .{err});
+            printDetail("  Condition: {s}\n", .{cond.condition});
+            printTechnical("  Error: {}\n", .{err});
             return;
         };
         defer self.allocator.free(result);
@@ -721,9 +745,9 @@ pub const Compiler = struct {
         const iterable_result = self.runtime.eval(loop.iterable) catch |err| {
             self.has_errors = true;
             printError("Error: Failed to evaluate loop iterable at line {d}\n", .{node.line});
-            printError("  Iterable: {s}\n", .{loop.iterable});
-            printError("  Error: {}\n", .{err});
-            printError("  Hint: Make sure the array variable is defined\n", .{});
+            printDetail("  Iterable: {s}\n", .{loop.iterable});
+            printTechnical("  Error: {}\n", .{err});
+            printHint("  Hint: Make sure the array variable is defined\n", .{});
             return;
         };
         defer self.allocator.free(iterable_result);
