@@ -2,11 +2,45 @@ const std = @import("std");
 const parser = @import("parser/mod.zig");
 const compiler = @import("compiler.zig");
 const runtime = @import("runtime.zig");
+const c_print = @import("c_print.zig");
 
 const print = std.debug.print;
 const eql = std.mem.eql;
 
 const VERSION = "0.3.0";
+
+// Helper functions for colored output
+fn printError(comptime fmt: []const u8, args: anytype) void {
+    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
+    defer std.heap.c_allocator.free(msg);
+    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    defer std.heap.c_allocator.free(c_msg);
+    c_print.c.c_print_color(c_msg.ptr, 31); // COLOR_RED
+}
+
+fn printWarning(comptime fmt: []const u8, args: anytype) void {
+    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
+    defer std.heap.c_allocator.free(msg);
+    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    defer std.heap.c_allocator.free(c_msg);
+    c_print.c.c_print_color(c_msg.ptr, 33); // COLOR_YELLOW
+}
+
+fn printSuccess(comptime fmt: []const u8, args: anytype) void {
+    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
+    defer std.heap.c_allocator.free(msg);
+    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    defer std.heap.c_allocator.free(c_msg);
+    c_print.c.c_print_color(c_msg.ptr, 32); // COLOR_GREEN
+}
+
+fn printInfo(comptime fmt: []const u8, args: anytype) void {
+    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
+    defer std.heap.c_allocator.free(msg);
+    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    defer std.heap.c_allocator.free(c_msg);
+    c_print.c.c_print_color(c_msg.ptr, 36); // COLOR_CYAN
+}
 
 const CliOptions = struct {
     input_files: std.ArrayList([]const u8),
@@ -186,71 +220,71 @@ fn parseArguments(allocator: std.mem.Allocator) !CliOptions {
             std.process.exit(0);
         } else if (eql(u8, arg, "-i") or eql(u8, arg, "--input")) {
             const input_file = args.next() orelse {
-                print("Error: --input requires a file path\n", .{});
+                printError("Error: --input requires a file path\n", .{});
                 std.process.exit(3);
             };
             try options.input_files.append(allocator, input_file);
         } else if (eql(u8, arg, "-o") or eql(u8, arg, "--output")) {
             options.output_path = args.next() orelse {
-                print("Error: --output requires a path\n", .{});
+                printError("Error: --output requires a path\n", .{});
                 std.process.exit(3);
             };
         } else if (eql(u8, arg, "--var")) {
             const var_str = args.next() orelse {
-                print("Error: --var requires key=value\n", .{});
+                printError("Error: --var requires key=value\n", .{});
                 std.process.exit(3);
             };
 
             var it = std.mem.splitScalar(u8, var_str, '=');
             const key = it.next() orelse {
-                print("Error: --var format is key=value\n", .{});
+                printError("Error: --var format is key=value\n", .{});
                 std.process.exit(3);
             };
             const value = it.next() orelse {
-                print("Error: --var format is key=value\n", .{});
+                printError("Error: --var format is key=value\n", .{});
                 std.process.exit(3);
             };
 
             try options.variables.put(key, value);
         } else if (eql(u8, arg, "--vars")) {
             options.variables_file = args.next() orelse {
-                print("Error: --vars requires a JSON file path\n", .{});
+                printError("Error: --vars requires a JSON file path\n", .{});
                 std.process.exit(3);
             };
         } else if (eql(u8, arg, "--array")) {
             const array_str = args.next() orelse {
-                print("Error: --array requires key=val1,val2,...\n", .{});
+                printError("Error: --array requires key=val1,val2,...\n", .{});
                 std.process.exit(3);
             };
 
             var it = std.mem.splitScalar(u8, array_str, '=');
             const key = it.next() orelse {
-                print("Error: --array format is key=val1,val2,...\n", .{});
+                printError("Error: --array format is key=val1,val2,...\n", .{});
                 std.process.exit(3);
             };
             const csv_values = it.rest();
 
             if (csv_values.len == 0) {
-                print("Error: --array requires comma-separated values\n", .{});
+                printError("Error: --array requires comma-separated values\n", .{});
                 std.process.exit(3);
             }
 
             try options.array_variables.put(key, csv_values);
         } else if (eql(u8, arg, "--json")) {
             const json_str = args.next() orelse {
-                print("Error: --json requires key=json_value\n", .{});
+                printError("Error: --json requires key=json_value\n", .{});
                 std.process.exit(3);
             };
 
             var it = std.mem.splitScalar(u8, json_str, '=');
             const key = it.next() orelse {
-                print("Error: --json format is key=json_value\n", .{});
+                printError("Error: --json format is key=json_value\n", .{});
                 std.process.exit(3);
             };
             const json_value = it.rest();
 
             if (json_value.len == 0) {
-                print("Error: --json requires a JSON value\n", .{});
+                printError("Error: --json requires a JSON value\n", .{});
                 std.process.exit(3);
             }
 
@@ -274,7 +308,7 @@ fn parseArguments(allocator: std.mem.Allocator) !CliOptions {
         } else if (eql(u8, arg, "-f") or eql(u8, arg, "--force")) {
             options.force = true;
         } else if (std.mem.startsWith(u8, arg, "-")) {
-            print("Error: Unknown option '{s}'\n", .{arg});
+            printError("Error: Unknown option '{s}'\n", .{arg});
             print("Use --help for usage information\n", .{});
             std.process.exit(3);
         } else {
@@ -302,7 +336,7 @@ fn loadVariablesFromJson(allocator: std.mem.Allocator, filepath: []const u8, js_
 
     const root = parsed.value;
     if (root != .object) {
-        print("Error: JSON root must be an object\n", .{});
+        printError("Error: JSON root must be an object\n", .{});
         return error.InvalidJson;
     }
 
@@ -319,7 +353,7 @@ fn loadVariablesFromJson(allocator: std.mem.Allocator, filepath: []const u8, js_
             .array => |arr| try js_runtime.setArrayFromJson(key, arr.items),
             .object => |obj| try js_runtime.setObjectFromJson(key, obj),
             else => {
-                print("Warning: Unsupported type for variable '{s}', skipping\n", .{key});
+                printWarning("Warning: Unsupported type for variable '{s}', skipping\n", .{key});
             },
         }
     }
@@ -364,7 +398,7 @@ fn setJsonVariable(
         json_str,
         .{},
     ) catch |err| {
-        print("Error: Invalid JSON for key '{s}': {}\n", .{ key, err });
+        printError("Error: Invalid JSON for key '{s}': {}\n", .{ key, err });
         print("JSON string: {s}\n", .{json_str});
         return err;
     };
@@ -441,29 +475,29 @@ fn compileFile(
     options: *const CliOptions,
 ) !void {
     if (options.verbose) {
-        print("Compiling: {s}\n", .{input_path});
+        printInfo("Compiling: {s}\n", .{input_path});
     }
 
     // Read input file
     const file = std.fs.cwd().openFile(input_path, .{}) catch |err| {
-        print("Error: Cannot open file '{s}': {}\n", .{ input_path, err });
+        printError("Error: Cannot open file '{s}': {}\n", .{ input_path, err });
         std.process.exit(2);
     };
     defer file.close();
 
     const source = file.readToEndAlloc(allocator, 10 * 1024 * 1024) catch |err| {
-        print("Error: Cannot read file '{s}': {}\n", .{ input_path, err });
+        printError("Error: Cannot read file '{s}': {}\n", .{ input_path, err });
         std.process.exit(2);
     };
     defer allocator.free(source);
 
     if (options.verbose) {
-        print("Parsing template ({} bytes)\n", .{source.len});
+        printInfo("Parsing template ({} bytes)\n", .{source.len});
     }
 
     // Parse
     var pars = parser.Parser.init(allocator, source) catch |err| {
-        print("Error: Parser initialization failed: {}\n", .{err});
+        printError("Error: Parser initialization failed: {}\n", .{err});
         std.process.exit(1);
     };
     defer pars.deinit();
@@ -471,7 +505,7 @@ fn compileFile(
     const tree = pars.parse() catch |err| {
         if (err == error.InvalidIndentation) {
             const line = pars.tokenizer.line;
-            print("Error: Invalid indentation at line {d}\n", .{line});
+            printError("Error: Invalid indentation at line {d}\n", .{line});
             print("\n", .{});
             print("Indentation errors can be caused by:\n", .{});
             print("  1. Using TABS instead of SPACES (only spaces are allowed)\n", .{});
@@ -488,7 +522,7 @@ fn compileFile(
             print("    p Text      // 2 spaces\n", .{});
             print("   span         // 3 spaces (ERROR: doesn't match any level)\n", .{});
         } else {
-            print("Error: Parsing failed: {}\n", .{err});
+            printError("Error: Parsing failed: {}\n", .{err});
         }
         std.process.exit(1);
     };
@@ -499,7 +533,7 @@ fn compileFile(
 
     // Compile
     var comp = compiler.Compiler.init(allocator, js_runtime) catch |err| {
-        print("Error: Compiler initialization failed: {}\n", .{err});
+        printError("Error: Compiler initialization failed: {}\n", .{err});
         std.process.exit(1);
     };
     defer comp.deinit();
@@ -512,7 +546,7 @@ fn compileFile(
     comp.include_comments = options.pretty;
 
     const html = comp.compile(tree) catch |err| {
-        print("Error: Compilation failed: {}\n", .{err});
+        printError("Error: Compilation failed: {}\n", .{err});
         std.process.exit(1);
     };
     defer allocator.free(html);
@@ -548,13 +582,13 @@ fn compileFile(
         if (!options.force) {
             if (std.fs.cwd().access(out_path, .{})) {
                 if (!options.silent) {
-                    print("Warning: File '{s}' already exists, overwriting\n", .{out_path});
+                    printWarning("Warning: File '{s}' already exists, overwriting\n", .{out_path});
                 }
             } else |_| {}
         }
 
         const out_file = std.fs.cwd().createFile(out_path, .{}) catch |err| {
-            print("Error: Cannot create file '{s}': {}\n", .{ out_path, err });
+            printError("Error: Cannot create file '{s}': {}\n", .{ out_path, err });
             std.process.exit(2);
         };
         defer out_file.close();
@@ -562,7 +596,7 @@ fn compileFile(
         try out_file.writeAll(final_html);
 
         if (!options.silent) {
-            print("✓ Compiled: {s} -> {s}\n", .{ input_path, out_path });
+            printSuccess("✓ Compiled: {s} -> {s}\n", .{ input_path, out_path });
         }
     }
 }
@@ -801,7 +835,7 @@ pub fn main() !void {
 
     // Check for no input
     if (options.input_files.items.len == 0 and !options.stdin) {
-        print("Error: No input files specified\n", .{});
+        printError("Error: No input files specified\n", .{});
         print("Use --help for usage information\n", .{});
         std.process.exit(3);
     }

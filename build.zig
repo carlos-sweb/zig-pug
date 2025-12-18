@@ -111,6 +111,18 @@ pub fn build(b: *std.Build) void {
         .file = b.path("vendor/mujs/one.c"),
         .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
+
+    // Add c_print library for colored terminal output
+    exe.addIncludePath(b.path("lib/c_print/include"));
+    const c_print_flags = &[_][]const u8{ "-std=c99", "-O2", "-D_POSIX_C_SOURCE=200809L" };
+    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/c_print.c"), .flags = c_print_flags });
+    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/ansi_codes.c"), .flags = c_print_flags });
+    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/color_parser.c"), .flags = c_print_flags });
+    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/pattern_parser.c"), .flags = c_print_flags });
+    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/number_formatter.c"), .flags = c_print_flags });
+    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/string_utils.c"), .flags = c_print_flags });
+    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/text_alignment.c"), .flags = c_print_flags });
+
     exe.linkLibC();
 
     b.installArtifact(exe);
@@ -171,6 +183,18 @@ pub fn build(b: *std.Build) void {
             .file = b.path("vendor/mujs/one.c"),
             .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
         });
+
+        // Add c_print library for colored terminal output
+        cross_exe.addIncludePath(b.path("lib/c_print/include"));
+        const cross_c_print_flags = &[_][]const u8{ "-std=c99", "-O2", "-D_POSIX_C_SOURCE=200809L" };
+        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/c_print.c"), .flags = cross_c_print_flags });
+        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/ansi_codes.c"), .flags = cross_c_print_flags });
+        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/color_parser.c"), .flags = cross_c_print_flags });
+        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/pattern_parser.c"), .flags = cross_c_print_flags });
+        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/number_formatter.c"), .flags = cross_c_print_flags });
+        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/string_utils.c"), .flags = cross_c_print_flags });
+        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/text_alignment.c"), .flags = cross_c_print_flags });
+
         cross_exe.linkLibC();
 
         const install_artifact = b.addInstallArtifact(cross_exe, .{
