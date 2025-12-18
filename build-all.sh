@@ -1,6 +1,22 @@
 #!/usr/bin/env bash
+# ============================================================================
 # Script maestro de construcción para zig-pug
-# Construye binarios CLI, librerías Node.js y addon para todas las plataformas
+# ============================================================================
+#
+# ⚠️ IMPORTANTE - ESTRUCTURA DE DISTRIBUCIÓN:
+#
+# bin/              ← BINARIOS CLI DISTRIBUIBLES (git tracked)
+# libs/             ← LIBRERÍAS .so/.dll/.dylib DISTRIBUIBLES (git tracked)
+# nodejs/prebuilts/ ← LIBRERÍAS ESTÁTICAS para npm (git tracked)
+# zig-out/          ← ARTEFACTOS TEMPORALES (gitignored, NO distribuir)
+#
+# Este script:
+# 1. Compila a zig-out/ (temporal)
+# 2. COPIA a bin/ y libs/ (distribuibles)
+# 3. Los archivos finales están en bin/ y libs/, NO en zig-out/
+#
+# Ver DISTRIBUTION.md para más detalles.
+# ============================================================================
 
 set -e
 
@@ -430,4 +446,13 @@ fi
 
 echo ""
 echo -e "${GREEN}✨ Todo listo para usar o publicar!${NC}"
+echo ""
+echo -e "${YELLOW}⚠️  IMPORTANTE:${NC}"
+echo -e "${YELLOW}   Los archivos DISTRIBUIBLES están en:${NC}"
+echo -e "${GREEN}   • bin/         ${NC}← Binarios CLI (git tracked)"
+echo -e "${GREEN}   • libs/        ${NC}← Librerías dinámicas (git tracked)"
+echo -e "${GREEN}   • nodejs/      ${NC}← Archivos para npm (git tracked)"
+echo ""
+echo -e "${BLUE}   zig-out/ contiene solo artefactos temporales (gitignored)${NC}"
+echo -e "${BLUE}   Puedes eliminarlo con: rm -rf zig-out/${NC}"
 echo ""
