@@ -546,7 +546,28 @@ fn compileFile(
     comp.include_comments = options.pretty;
 
     const html = comp.compile(tree) catch |err| {
-        printError("Error: Compilation failed: {}\n", .{err});
+        if (err == error.CompilationFailed) {
+            // Display all accumulated errors with colors
+            printError("\nCompilation failed with {} error(s):\n\n", .{comp.errors.items.len});
+            for (comp.errors.items) |compilation_err| {
+                // Error message in red
+                printError("Line {d}: {s}\n", .{ compilation_err.line, compilation_err.message });
+
+                // Detail in cyan if present
+                if (compilation_err.detail) |detail| {
+                    printInfo("  {s}\n", .{detail});
+                }
+
+                // Hint in yellow if present
+                if (compilation_err.hint) |hint| {
+                    printWarning("  Hint: {s}\n", .{hint});
+                }
+
+                printError("\n", .{});
+            }
+        } else {
+            printError("Error: Compilation failed: {}\n", .{err});
+        }
         std.process.exit(1);
     };
     defer allocator.free(html);
@@ -801,7 +822,31 @@ fn compileFromStdin(allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime
     // Include comments only in pretty mode (development)
     comp.include_comments = options.pretty;
 
-    const html = try comp.compile(tree);
+    const html = comp.compile(tree) catch |err| {
+        if (err == error.CompilationFailed) {
+            // Display all accumulated errors with colors
+            printError("\nCompilation failed with {} error(s):\n\n", .{comp.errors.items.len});
+            for (comp.errors.items) |compilation_err| {
+                // Error message in red
+                printError("Line {d}: {s}\n", .{ compilation_err.line, compilation_err.message });
+
+                // Detail in cyan if present
+                if (compilation_err.detail) |detail| {
+                    printInfo("  {s}\n", .{detail});
+                }
+
+                // Hint in yellow if present
+                if (compilation_err.hint) |hint| {
+                    printWarning("  Hint: {s}\n", .{hint});
+                }
+
+                printError("\n", .{});
+            }
+        } else {
+            printError("Error: Compilation failed: {}\n", .{err});
+        }
+        std.process.exit(1);
+    };
     defer allocator.free(html);
 
     // Check for compilation errors (strict mode)

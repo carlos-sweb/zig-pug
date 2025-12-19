@@ -46,44 +46,41 @@ const ast = @import("ast.zig");
 const runtime = @import("runtime.zig");
 const cache = @import("cache.zig");
 const Parser = @import("parser/mod.zig").Parser;
-const c_print = @import("c_print.zig");
 
-// Helper functions for colored error output with hierarchy
-fn printError(comptime fmt: []const u8, args: anytype) void {
-    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
-    defer std.heap.c_allocator.free(msg);
-    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
-    defer std.heap.c_allocator.free(c_msg);
-    c_print.c.c_print_color(c_msg.ptr, 91); // COLOR_BRIGHT_RED - Principal
-}
+/// Error type classification for structured error reporting
+pub const ErrorType = enum {
+    LoopIterableEvalFailed,
+    ConditionalEvalFailed,
+    InterpolationEvalFailed,
+    AttributeEvalFailed,
+    CodeExecutionFailed,
+    CaseEvalFailed,
+    MixinNotFound,
+    IncludeFileNotFound,
+    IncludeParseError,
+    ExtendsFileNotFound,
+    ExtendsParseError,
+};
 
-fn printDetail(comptime fmt: []const u8, args: anytype) void {
-    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
-    defer std.heap.c_allocator.free(msg);
-    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
-    defer std.heap.c_allocator.free(c_msg);
-    c_print.c.c_print_color(c_msg.ptr, 36); // COLOR_CYAN - Detalles clave
-}
+/// Structured compilation error with details for consumer presentation
+pub const CompilationError = struct {
+    type: ErrorType,
+    line: usize,
+    message: [:0]const u8,  // Null-terminated for C API compatibility
+    detail: ?[:0]const u8,  // e.g., "Iterable: users" or "Condition: x > 0"
+    hint: ?[:0]const u8,    // e.g., "Make sure the variable is defined"
 
-fn printHint(comptime fmt: []const u8, args: anytype) void {
-    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
-    defer std.heap.c_allocator.free(msg);
-    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
-    defer std.heap.c_allocator.free(c_msg);
-    c_print.c.c_print_color(c_msg.ptr, 33); // COLOR_YELLOW - Sugerencias
-}
-
-fn printTechnical(comptime fmt: []const u8, args: anytype) void {
-    const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
-    defer std.heap.c_allocator.free(msg);
-    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
-    defer std.heap.c_allocator.free(c_msg);
-    c_print.c.c_print_color(c_msg.ptr, 90); // COLOR_BRIGHT_BLACK (gris) - Info técnica
-}
+    pub fn deinit(self: *CompilationError, allocator: std.mem.Allocator) void {
+        allocator.free(self.message);
+        if (self.detail) |d| allocator.free(d);
+        if (self.hint) |h| allocator.free(h);
+    }
+};
 
 /// Errors that can occur during compilation
 ///
 /// - OutOfMemory: Allocation failed
+/// - CompilationFailed: Compilation errors occurred (check errors list)
 /// - RuntimeError: JavaScript evaluation error
 /// - InvalidNode: Malformed AST node
 /// - MixinNotFound: Called undefined mixin
@@ -94,6 +91,7 @@ fn printTechnical(comptime fmt: []const u8, args: anytype) void {
 /// - ExtendsParseError: Parent template has syntax errors
 pub const CompilerError = error{
     OutOfMemory,
+    CompilationFailed,
     RuntimeError,
     InvalidNode,
     MixinNotFound,
@@ -152,8 +150,29 @@ pub const Compiler = struct {
     child_blocks: std.StringHashMap(ChildBlockInfo), // Blocks from child template
     include_comments: bool, // Include HTML comments in output (true for --pretty, false for production)
     has_errors: bool, // Track if any compilation errors occurred (for strict mode)
+    errors: std.ArrayList(CompilationError), // Accumulated compilation errors
 
     const Self = @This();
+
+    /// Add a compilation error to the errors list
+    fn addError(
+        self: *Self,
+        error_type: ErrorType,
+        line: usize,
+        message: []const u8,
+        detail: ?[]const u8,
+        hint: ?[]const u8,
+    ) void {
+        const err = CompilationError{
+            .type = error_type,
+            .line = line,
+            .message = self.allocator.dupeZ(u8, message) catch return,
+            .detail = if (detail) |d| self.allocator.dupeZ(u8, d) catch null else null,
+            .hint = if (hint) |h| self.allocator.dupeZ(u8, h) catch null else null,
+        };
+        self.errors.append(self.allocator, err) catch return;
+        self.has_errors = true;
+    }
 
     /// Initialize compiler with JavaScript runtime
     ///
@@ -185,6 +204,7 @@ pub const Compiler = struct {
             .base_path = null,
             .template_cache = null,
             .child_blocks = std.StringHashMap(ChildBlockInfo).init(allocator),
+            .errors = .{},
         };
         return compiler;
     }
@@ -213,11 +233,16 @@ pub const Compiler = struct {
 
     /// Free compiler resources
     ///
-    /// Cleans up output buffer, mixin map, and block map.
+    /// Cleans up output buffer, mixin map, block map, and accumulated errors.
     pub fn deinit(self: *Self) void {
         self.output.deinit(self.allocator);
         self.mixins.deinit();
         self.child_blocks.deinit();
+        // Free accumulated errors
+        for (self.errors.items) |*err| {
+            err.deinit(self.allocator);
+        }
+        self.errors.deinit(self.allocator);
         self.allocator.destroy(self);
     }
 
@@ -237,7 +262,20 @@ pub const Compiler = struct {
     /// defer allocator.free(html);
     /// ```
     pub fn compile(self: *Self, node: *ast.AstNode) ![]const u8 {
+        // Clear previous errors
+        for (self.errors.items) |*err| {
+            err.deinit(self.allocator);
+        }
+        self.errors.clearRetainingCapacity();
+        self.has_errors = false;
+
         try self.compileNode(node);
+
+        // If errors accumulated, return CompilationFailed
+        if (self.errors.items.len > 0) {
+            return error.CompilationFailed;
+        }
+
         return try self.output.toOwnedSlice(self.allocator);
     }
 
@@ -289,11 +327,13 @@ pub const Compiler = struct {
 
         // First pass: register all mixins and check for extends
         var extends_path: ?[]const u8 = null;
+        var extends_line: usize = 0;
         for (doc.children.items) |child| {
             if (child.type == .MixinDef) {
                 try self.registerMixin(child);
             } else if (child.type == .Extends) {
                 extends_path = child.data.Extends.path;
+                extends_line = child.line;
             } else if (child.type == .Block) {
                 // Collect blocks from child template
                 const block_data = &child.data.Block;
@@ -306,7 +346,7 @@ pub const Compiler = struct {
 
         // If extends, load and compile parent template
         if (extends_path) |parent_path| {
-            try self.compileExtends(parent_path);
+            try self.compileExtends(parent_path, extends_line);
             return;
         }
 
@@ -326,7 +366,7 @@ pub const Compiler = struct {
     ///
     /// Resolves parent template path, loads and parses it,
     /// then compiles with child blocks available for override.
-    fn compileExtends(self: *Self, parent_path: []const u8) !void {
+    fn compileExtends(self: *Self, parent_path: []const u8, line: usize) !void {
         // Resolve path relative to base_path
         const full_path = if (self.base_path) |base| blk: {
             const dir = std.fs.path.dirname(base) orelse ".";
@@ -341,21 +381,48 @@ pub const Compiler = struct {
             self.allocator,
             full_path,
             1024 * 1024, // 1MB max
-        ) catch |err| {
-            std.debug.print("Error reading extends file '{s}': {}\n", .{ full_path, err });
+        ) catch {
+            const detail = std.fmt.allocPrint(self.allocator, "File: {s}", .{full_path}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .ExtendsFileNotFound,
+                line,
+                "Failed to read extends file",
+                detail,
+                "Make sure the file exists and is readable",
+            );
             return error.ExtendsFileNotFound;
         };
         defer self.allocator.free(file_content);
 
         // Parse parent template
-        var parser = Parser.init(self.allocator, file_content) catch |err| {
-            std.debug.print("Error parsing extends file '{s}': {}\n", .{ full_path, err });
+        var parser = Parser.init(self.allocator, file_content) catch {
+            const detail = std.fmt.allocPrint(self.allocator, "File: {s}", .{full_path}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .ExtendsParseError,
+                line,
+                "Failed to initialize parser for extends file",
+                detail,
+                "Check the file for syntax errors",
+            );
             return error.ExtendsParseError;
         };
         defer parser.deinit();
 
-        const parent_ast = parser.parse() catch |err| {
-            std.debug.print("Error parsing extends file '{s}': {}\n", .{ full_path, err });
+        const parent_ast = parser.parse() catch {
+            const detail = std.fmt.allocPrint(self.allocator, "File: {s}", .{full_path}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .ExtendsParseError,
+                line,
+                "Failed to parse extends file",
+                detail,
+                "Check the file for syntax errors",
+            );
             return error.ExtendsParseError;
         };
 
@@ -434,7 +501,7 @@ pub const Compiler = struct {
 
         // Attributes
         if (tag.attributes.items.len > 0) {
-            try self.compileAttributes(&tag.attributes);
+            try self.compileAttributes(&tag.attributes, node.line);
         }
 
         // Self-closing tags
@@ -457,7 +524,7 @@ pub const Compiler = struct {
         try self.output.appendSlice(self.allocator, ">");
     }
 
-    fn compileAttributes(self: *Self, attributes: *const std.ArrayListUnmanaged(ast.Attribute)) !void {
+    fn compileAttributes(self: *Self, attributes: *const std.ArrayListUnmanaged(ast.Attribute), line: usize) !void {
         for (attributes.items) |attr| {
             try self.output.appendSlice(self.allocator, " ");
             try self.output.appendSlice(self.allocator, attr.name);
@@ -467,12 +534,20 @@ pub const Compiler = struct {
 
                 // Evaluate expression if needed
                 if (attr.is_expression) {
-                    const result = self.runtime.eval(value) catch |err| {
-                        self.has_errors = true;
-                        printError("Error: Failed to evaluate attribute expression\n", .{});
-                        std.debug.print("  Attribute: {s}={s}\n", .{ attr.name, value });
-                        printTechnical("  Error: {}\n", .{err});
-                        printHint("  Hint: Make sure the variable '{s}' is defined\n", .{value});
+                    const result = self.runtime.eval(value) catch {
+                        // Build detail and hint strings
+                        const detail = std.fmt.allocPrint(self.allocator, "Attribute: {s}={s}", .{ attr.name, value }) catch null;
+                        defer if (detail) |d| self.allocator.free(d);
+                        const hint = std.fmt.allocPrint(self.allocator, "Make sure the variable '{s}' is defined", .{value}) catch null;
+                        defer if (hint) |h| self.allocator.free(h);
+
+                        self.addError(
+                            .AttributeEvalFailed,
+                            line,
+                            "Failed to evaluate attribute expression",
+                            detail,
+                            hint,
+                        );
                         // Skip attribute on error (strict mode)
                         try self.output.appendSlice(self.allocator, "\"");
                         continue;
@@ -528,12 +603,17 @@ pub const Compiler = struct {
         const interp = &node.data.Interpolation;
 
         // Evaluate the JavaScript expression using runtime
-        const result = self.runtime.eval(interp.expression) catch |err| {
-            self.has_errors = true;
-            printError("Error: Failed to evaluate interpolation at line {d}\n", .{node.line});
-            std.debug.print("  Expression: #{{{s}}}\n", .{interp.expression});
-            printTechnical("  Error: {}\n", .{err});
-            printHint("  Hint: Check that all variables used in the expression are defined\n", .{});
+        const result = self.runtime.eval(interp.expression) catch {
+            const detail = std.fmt.allocPrint(self.allocator, "Expression: #{{{s}}}", .{interp.expression}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .InterpolationEvalFailed,
+                node.line,
+                "Failed to evaluate interpolation",
+                detail,
+                "Check that all variables used in the expression are defined",
+            );
             // Don't generate output on error (strict mode)
             return;
         };
@@ -559,11 +639,17 @@ pub const Compiler = struct {
         const code = &node.data.Code;
 
         // Evaluate the code
-        const result = self.runtime.eval(code.code) catch |err| {
-            self.has_errors = true;
-            printError("Error: Failed to execute code at line {d}\n", .{node.line});
-            std.debug.print("  Code: {s}\n", .{code.code});
-            printTechnical("  Error: {}\n", .{err});
+        const result = self.runtime.eval(code.code) catch {
+            const detail = std.fmt.allocPrint(self.allocator, "Code: {s}", .{code.code}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .CodeExecutionFailed,
+                node.line,
+                "Failed to execute code",
+                detail,
+                null,
+            );
             return;
         };
         defer self.allocator.free(result);
@@ -703,11 +789,17 @@ pub const Compiler = struct {
         const cond = &node.data.Conditional;
 
         // Evaluate condition using runtime
-        const result = self.runtime.eval(cond.condition) catch |err| {
-            self.has_errors = true;
-            printError("Error: Failed to evaluate conditional at line {d}\n", .{node.line});
-            printDetail("  Condition: {s}\n", .{cond.condition});
-            printTechnical("  Error: {}\n", .{err});
+        const result = self.runtime.eval(cond.condition) catch {
+            const detail = std.fmt.allocPrint(self.allocator, "Condition: {s}", .{cond.condition}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .ConditionalEvalFailed,
+                node.line,
+                "Failed to evaluate conditional",
+                detail,
+                null,
+            );
             return;
         };
         defer self.allocator.free(result);
@@ -742,12 +834,17 @@ pub const Compiler = struct {
         const loop = &node.data.Loop;
 
         // Get the iterable value from runtime
-        const iterable_result = self.runtime.eval(loop.iterable) catch |err| {
-            self.has_errors = true;
-            printError("Error: Failed to evaluate loop iterable at line {d}\n", .{node.line});
-            printDetail("  Iterable: {s}\n", .{loop.iterable});
-            printTechnical("  Error: {}\n", .{err});
-            printHint("  Hint: Make sure the array variable is defined\n", .{});
+        const iterable_result = self.runtime.eval(loop.iterable) catch {
+            const detail = std.fmt.allocPrint(self.allocator, "Iterable: {s}", .{loop.iterable}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .LoopIterableEvalFailed,
+                node.line,
+                "Failed to evaluate loop iterable",
+                detail,
+                "Make sure the array variable is defined",
+            );
             return;
         };
         defer self.allocator.free(iterable_result);
@@ -799,8 +896,8 @@ pub const Compiler = struct {
             );
             defer self.allocator.free(set_item_expr);
 
-            _ = self.runtime.eval(set_item_expr) catch |err| {
-                std.debug.print("Error setting loop variable: {}\n", .{err});
+            _ = self.runtime.eval(set_item_expr) catch {
+                // Skip this iteration if variable setting fails
                 continue;
             };
 
@@ -845,8 +942,17 @@ pub const Compiler = struct {
             self.allocator,
             full_path,
             1024 * 1024, // 1MB max
-        ) catch |err| {
-            std.debug.print("Error reading include file '{s}': {}\n", .{ full_path, err });
+        ) catch {
+            const detail = std.fmt.allocPrint(self.allocator, "File: {s}", .{full_path}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .IncludeFileNotFound,
+                node.line,
+                "Failed to read include file",
+                detail,
+                "Make sure the file exists and is readable",
+            );
             return error.IncludeFileNotFound;
         };
         defer self.allocator.free(file_content);
@@ -861,14 +967,32 @@ pub const Compiler = struct {
         }
 
         // Parse the included file
-        var parser = Parser.init(self.allocator, file_content) catch |err| {
-            std.debug.print("Error parsing include file '{s}': {}\n", .{ full_path, err });
+        var parser = Parser.init(self.allocator, file_content) catch {
+            const detail = std.fmt.allocPrint(self.allocator, "File: {s}", .{full_path}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .IncludeParseError,
+                node.line,
+                "Failed to initialize parser for include file",
+                detail,
+                "Check the file for syntax errors",
+            );
             return error.IncludeParseError;
         };
         defer parser.deinit();
 
-        const included_ast = parser.parse() catch |err| {
-            std.debug.print("Error parsing include file '{s}': {}\n", .{ full_path, err });
+        const included_ast = parser.parse() catch {
+            const detail = std.fmt.allocPrint(self.allocator, "File: {s}", .{full_path}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .IncludeParseError,
+                node.line,
+                "Failed to parse include file",
+                detail,
+                "Check the file for syntax errors",
+            );
             return error.IncludeParseError;
         };
 
@@ -895,9 +1019,17 @@ pub const Compiler = struct {
         const case_node = &node.data.Case;
 
         // Evaluate the case expression
-        const case_value = self.runtime.eval(case_node.expression) catch |err| {
-            self.has_errors = true;
-            std.debug.print("Runtime error evaluating case '{s}': {}\n", .{ case_node.expression, err });
+        const case_value = self.runtime.eval(case_node.expression) catch {
+            const detail = std.fmt.allocPrint(self.allocator, "Expression: {s}", .{case_node.expression}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .CaseEvalFailed,
+                node.line,
+                "Failed to evaluate case expression",
+                detail,
+                "Check that all variables used in the expression are defined",
+            );
             return;
         };
         defer self.allocator.free(case_value);
@@ -944,7 +1076,16 @@ pub const Compiler = struct {
 
         // Find mixin definition
         const mixin_node = self.mixins.get(call.name) orelse {
-            std.debug.print("Mixin '{s}' not found\n", .{call.name});
+            const detail = std.fmt.allocPrint(self.allocator, "Mixin name: {s}", .{call.name}) catch null;
+            defer if (detail) |d| self.allocator.free(d);
+
+            self.addError(
+                .MixinNotFound,
+                node.line,
+                "Mixin not found",
+                detail,
+                "Make sure the mixin is defined before calling it",
+            );
             return error.MixinNotFound;
         };
 
@@ -962,8 +1103,8 @@ pub const Compiler = struct {
                 );
                 defer self.allocator.free(set_var_expr);
 
-                _ = self.runtime.eval(set_var_expr) catch |err| {
-                    std.debug.print("Error setting mixin parameter '{s}': {}\n", .{ param, err });
+                _ = self.runtime.eval(set_var_expr) catch {
+                    // Silently skip parameter if setting fails
                 };
             } else {
                 // Set undefined for missing arguments
@@ -1001,8 +1142,8 @@ pub const Compiler = struct {
             const rest_expr = try rest_args.toOwnedSlice(self.allocator);
             defer self.allocator.free(rest_expr);
 
-            _ = self.runtime.eval(rest_expr) catch |err| {
-                std.debug.print("Error setting rest parameter '{s}': {}\n", .{ rest_param, err });
+            _ = self.runtime.eval(rest_expr) catch {
+                // Silently skip rest parameter if setting fails
             };
         }
 

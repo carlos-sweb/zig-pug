@@ -598,6 +598,193 @@ Compilation times (approximate):
 
 *Benchmarks run on typical desktop hardware*
 
+## Error Handling
+
+zpug provides structured and detailed error messages with color coding to facilitate debugging.
+
+### Error Structure
+
+When a compilation error occurs, zpug displays:
+
+1. **Line number** - Where the error occurred
+2. **Message** - Clear description of the problem
+3. **Detail** - Additional context (expression, variable, etc.)
+4. **Hint** - Suggestion to fix the error
+
+### Color Codes
+
+Errors are shown with colors for easy reading:
+
+- 🔴 **Red**: Error messages and line numbers
+- 🔵 **Cyan**: Details and context
+- 🟡 **Yellow**: Hints and suggestions
+
+### Error Example
+
+```bash
+$ zpug template.zpug
+```
+
+**Output**:
+```
+Compilation failed with 2 error(s):
+
+Line 3: Failed to evaluate interpolation
+  Expression: #{username}
+  Hint: Check that all variables used in the expression are defined
+
+Line 5: Failed to evaluate loop iterable
+  Iterable: items
+  Hint: Make sure the array variable is defined
+```
+
+### Error Types
+
+#### 1. Interpolation Error (Undefined variable)
+
+**Template**:
+```pug
+p Hello #{name}
+```
+
+**Error**:
+```
+Line 1: Failed to evaluate interpolation
+  Expression: #{name}
+  Hint: Check that all variables used in the expression are defined
+```
+
+**Solution**: Define the variable
+```bash
+zpug -i template.zpug --var name="World"
+```
+
+#### 2. Loop Error (Undefined iterable)
+
+**Template**:
+```pug
+each item in items
+  li= item
+```
+
+**Error**:
+```
+Line 1: Failed to evaluate loop iterable
+  Iterable: items
+  Hint: Make sure the array variable is defined
+```
+
+**Solution**: Define the array
+```bash
+zpug -i template.zpug --var items='["a","b","c"]'
+```
+
+#### 3. Conditional Error (Invalid condition)
+
+**Template**:
+```pug
+if isActive
+  p Active
+```
+
+**Error**:
+```
+Line 1: Failed to evaluate conditional
+  Condition: isActive
+```
+
+**Solution**: Define the boolean variable
+```bash
+zpug -i template.zpug --var isActive=true
+```
+
+#### 4. Attribute Error (Error in attribute)
+
+**Template**:
+```pug
+a(href=url) Link
+```
+
+**Error**:
+```
+Line 1: Failed to evaluate attribute expression
+  Attribute: href=url
+  Hint: Make sure the variable 'url' is defined
+```
+
+**Solution**:
+```bash
+zpug -i template.zpug --var url="https://example.com"
+```
+
+#### 5. Include/Extends Errors
+
+**Template**:
+```pug
+include partial.zpug
+```
+
+**Error**:
+```
+Line 1: Failed to read include file
+  File: partial.zpug
+  Hint: Make sure the file exists and is readable
+```
+
+**Solution**: Verify the file exists
+```bash
+ls partial.zpug
+```
+
+### Multiple Errors
+
+zpug can report multiple errors in a single compilation:
+
+```
+Compilation failed with 3 error(s):
+
+Line 2: Failed to evaluate interpolation
+  Expression: #{title}
+  Hint: Check that all variables used in the expression are defined
+
+Line 5: Failed to evaluate loop iterable
+  Iterable: posts
+  Hint: Make sure the array variable is defined
+
+Line 8: Failed to evaluate conditional
+  Condition: isLoggedIn
+```
+
+This allows you to fix all errors at once instead of one by one.
+
+### Verbose Mode
+
+For additional debugging information:
+
+```bash
+zpug -i template.zpug --verbose
+```
+
+Shows:
+- Generated tokens
+- AST (Abstract Syntax Tree)
+- Defined variables
+- Detailed errors
+
+### Errors in Stdin
+
+When using `--stdin`, errors show the line number from the provided template:
+
+```bash
+echo 'p Hello #{undefined}' | zpug --stdin
+```
+
+```
+Line 1: Failed to evaluate interpolation
+  Expression: #{undefined}
+  Hint: Check that all variables used in the expression are defined
+```
+
 ## Troubleshooting
 
 ### "Error: No input files specified"

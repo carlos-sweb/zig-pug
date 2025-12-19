@@ -21,6 +21,8 @@ extern int zigpug_set_array_json(ZigPugContext* ctx, const char* key, const char
 extern int zigpug_set_object_json(ZigPugContext* ctx, const char* key, const char* json_str);
 extern void zigpug_free_string(char* str);
 extern const char* zigpug_version(void);
+extern size_t zigpug_get_error_count(ZigPugContext* ctx);
+extern int zigpug_get_error(ZigPugContext* ctx, size_t index, size_t* line_out, const char** message_out, const char** detail_out, const char** hint_out);
 
 // Wrapper for ZigPugContext to store in JavaScript
 typedef struct {
@@ -295,7 +297,74 @@ static napi_value Compile(napi_env env, napi_callback_info info) {
     free(template);
 
     if (!html) {
-        napi_throw_error(env, NULL, "Failed to compile template");
+        // Get error information
+        size_t error_count = zigpug_get_error_count(wrapper->ctx);
+
+        if (error_count > 0) {
+            // Create structured error object
+            napi_value error_obj;
+            napi_create_object(env, &error_obj);
+
+            // Add error count
+            napi_value count_value;
+            napi_create_uint32(env, (uint32_t)error_count, &count_value);
+            napi_set_named_property(env, error_obj, "errorCount", count_value);
+
+            // Add errors array
+            napi_value errors_array;
+            napi_create_array_with_length(env, error_count, &errors_array);
+
+            for (size_t i = 0; i < error_count; i++) {
+                size_t line;
+                const char* message;
+                const char* detail;
+                const char* hint;
+
+                if (zigpug_get_error(wrapper->ctx, i, &line, &message, &detail, &hint)) {
+                    napi_value err_obj;
+                    napi_create_object(env, &err_obj);
+
+                    // Add line number
+                    napi_value line_value;
+                    napi_create_uint32(env, (uint32_t)line, &line_value);
+                    napi_set_named_property(env, err_obj, "line", line_value);
+
+                    // Add message
+                    napi_value message_value;
+                    napi_create_string_utf8(env, message, NAPI_AUTO_LENGTH, &message_value);
+                    napi_set_named_property(env, err_obj, "message", message_value);
+
+                    // Add detail if present
+                    if (detail) {
+                        napi_value detail_value;
+                        napi_create_string_utf8(env, detail, NAPI_AUTO_LENGTH, &detail_value);
+                        napi_set_named_property(env, err_obj, "detail", detail_value);
+                    }
+
+                    // Add hint if present
+                    if (hint) {
+                        napi_value hint_value;
+                        napi_create_string_utf8(env, hint, NAPI_AUTO_LENGTH, &hint_value);
+                        napi_set_named_property(env, err_obj, "hint", hint_value);
+                    }
+
+                    napi_set_element(env, errors_array, (uint32_t)i, err_obj);
+                }
+            }
+
+            napi_set_named_property(env, error_obj, "errors", errors_array);
+
+            // Throw the structured error
+            napi_throw_error(env, NULL, "Template compilation failed");
+            napi_value error_instance;
+            napi_get_and_clear_last_exception(env, &error_instance);
+
+            // Add our structured error data to the error object
+            napi_set_named_property(env, error_instance, "compilationErrors", error_obj);
+            napi_throw(env, error_instance);
+        } else {
+            napi_throw_error(env, NULL, "Failed to compile template");
+        }
         return NULL;
     }
 

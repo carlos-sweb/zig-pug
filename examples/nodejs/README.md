@@ -28,6 +28,11 @@ node 02-interpolation.js
 node 03-compiler-class.js
 node 04-file-compilation.js
 node 05-express-integration.js
+node 06-arrays-objects.js
+node 07-error-handling.js
+
+# TypeScript example (requires ts-node)
+npx ts-node 08-typescript-example.ts
 ```
 
 ## 📚 Examples Overview
@@ -103,6 +108,69 @@ app.get('/', (req, res) => {
 ```
 
 **Learn**: Express integration, custom template engine
+
+---
+
+### 06-arrays-objects.js - Arrays and Objects
+**Working with complex data structures**
+
+```javascript
+compiler.setArray('items', ['Apple', 'Banana', 'Cherry']);
+compiler.setObject('user', { name: 'John', age: 30 });
+```
+
+**Learn**: Arrays, objects, complex data
+
+---
+
+### 07-error-handling.js - Error Handling
+**Capturing and handling compilation errors**
+
+```javascript
+try {
+    const html = zigpug.compile(template);
+} catch (error) {
+    if (error.compilationErrors) {
+        const { errorCount, errors } = error.compilationErrors;
+        errors.forEach(err => {
+            console.log(`Line ${err.line}: ${err.message}`);
+            if (err.detail) console.log(`  ${err.detail}`);
+            if (err.hint) console.log(`  💡 ${err.hint}`);
+        });
+    }
+}
+```
+
+**Learn**: Error handling, structured error information, debugging
+
+---
+
+### 08-typescript-example.ts - TypeScript Usage
+**Using zig-pug with TypeScript for type safety**
+
+```typescript
+import {
+    PugCompiler,
+    ZigPugCompilationError,
+    CompilationErrorInfo
+} from 'zig-pug';
+
+const compiler: PugCompiler = new PugCompiler();
+compiler.setString('name', 'TypeScript');
+
+try {
+    const html: string = compiler.compile('p Hello #{name}');
+} catch (error) {
+    const err = error as ZigPugCompilationError;
+    if (err.compilationErrors) {
+        err.compilationErrors.errors.forEach((e: CompilationErrorInfo) => {
+            console.error(`Line ${e.line}: ${e.message}`);
+        });
+    }
+}
+```
+
+**Learn**: TypeScript integration, type safety, IntelliSense, error types
 
 ---
 
@@ -200,15 +268,38 @@ const page2 = compiler.compile(template2);
 
 ### 2. Error Handling
 
-Wrap in try-catch:
+Always wrap compilation in try-catch to handle errors gracefully:
 
 ```javascript
 try {
     const html = zigpug.compile(template, vars);
-} catch (err) {
-    console.error('Compilation failed:', err.message);
+} catch (error) {
+    // Check for structured compilation errors
+    if (error.compilationErrors) {
+        const { errorCount, errors } = error.compilationErrors;
+        console.error(`Compilation failed with ${errorCount} error(s):`);
+
+        errors.forEach((err, i) => {
+            console.error(`\nError ${i + 1}:`);
+            console.error(`  Line: ${err.line}`);
+            console.error(`  Message: ${err.message}`);
+            if (err.detail) console.error(`  Detail: ${err.detail}`);
+            if (err.hint) console.error(`  Hint: ${err.hint}`);
+        });
+    } else {
+        // Other type of error
+        console.error('Error:', error.message);
+    }
 }
 ```
+
+**Error object structure**:
+- `error.compilationErrors.errorCount` - Number of errors
+- `error.compilationErrors.errors[]` - Array of error objects
+  - `line` - Line number where error occurred
+  - `message` - Error message
+  - `detail` - Additional context (optional)
+  - `hint` - Suggestion to fix the error (optional)
 
 ### 3. Performance
 

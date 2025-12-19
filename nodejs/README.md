@@ -14,7 +14,9 @@ High-performance Pug template engine powered by Zig and mujs.
 - ✅ **Conditionals** - if/else/unless
 - ✅ **Mixins** - Reusable components
 - ✅ **Dual package** - CommonJS (`require`) and ES Modules (`import`)
+- ✅ **TypeScript support** - Full type definitions included
 - ✅ **Bun.js compatible** - 2-5x faster than Node.js
+- ✅ **Structured errors** - Detailed error messages with line numbers, hints, and context
 - ⚡ **Native performance** - Written in Zig, compiled to native code
 - 🔋 **Zero dependencies** - Only Zig and embedded mujs
 - 🌍 **i18n ready** - Spanish, Portuguese, French, German, and more
@@ -121,6 +123,59 @@ bun run app.js
 **Performance:** Bun is 2-5x faster than Node.js for template compilation.
 
 See [examples/bun/](https://github.com/carlos-sweb/zig-pug/tree/main/examples/bun) for complete examples.
+
+## TypeScript Support
+
+zig-pug includes full TypeScript definitions for enhanced development experience with IntelliSense and type safety.
+
+### Basic Usage
+
+```typescript
+import { compile, PugCompiler, ZigPugCompilationError } from 'zig-pug';
+
+// Simple compilation with type inference
+const html: string = compile('p Hello #{name}', { name: 'TypeScript' });
+
+// Using PugCompiler class
+const compiler: PugCompiler = new PugCompiler();
+compiler
+    .setString('title', 'My Page')
+    .setNumber('count', 42)
+    .setBool('active', true);
+
+const result: string = compiler.compile('h1= title');
+```
+
+### Error Handling with Types
+
+```typescript
+try {
+    const html = compile(template, variables);
+} catch (error) {
+    const err = error as ZigPugCompilationError;
+
+    if (err.compilationErrors) {
+        const { errorCount, errors } = err.compilationErrors;
+
+        errors.forEach(e => {
+            console.error(`Line ${e.line}: ${e.message}`);
+            if (e.detail) console.error(`  Detail: ${e.detail}`);
+            if (e.hint) console.error(`  Hint: ${e.hint}`);
+        });
+    }
+}
+```
+
+### Available Types
+
+- `PugCompiler` - Main compiler class
+- `PugVariables` - Type for template variables
+- `CompilationErrorInfo` - Individual error information
+- `CompilationErrors` - Collection of compilation errors
+- `ZigPugCompilationError` - Extended Error with compilation details
+- `ErrorType` - Error type classification enum
+
+See [examples/nodejs/08-typescript-example.ts](https://github.com/carlos-sweb/zig-pug/tree/main/examples/nodejs/08-typescript-example.ts) for complete TypeScript examples.
 
 ## Pug Syntax
 

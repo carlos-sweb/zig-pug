@@ -107,6 +107,54 @@ bool zigpug_set_int(ZigPugContext* ctx, const char* key, int64_t value);
 bool zigpug_set_bool(ZigPugContext* ctx, const char* key, bool value);
 
 /**
+ * Get the number of compilation errors from the last compile call
+ *
+ * @param ctx Context handle
+ * @return Number of errors, or 0 if no errors or no compilation done
+ *
+ * Example:
+ *   char* html = zigpug_compile(ctx, pug);
+ *   if (!html) {
+ *       size_t error_count = zigpug_get_error_count(ctx);
+ *       printf("Compilation failed with %zu error(s)\n", error_count);
+ *   }
+ */
+size_t zigpug_get_error_count(ZigPugContext* ctx);
+
+/**
+ * Get a specific compilation error by index
+ *
+ * @param ctx Context handle
+ * @param index Error index (0 to error_count-1)
+ * @param line_out Output parameter for line number (can be NULL)
+ * @param message_out Output parameter for error message (can be NULL, do not free)
+ * @param detail_out Output parameter for detail (can be NULL, do not free, may be null)
+ * @param hint_out Output parameter for hint (can be NULL, do not free, may be null)
+ * @return true if error exists at index, false otherwise
+ *
+ * Example:
+ *   for (size_t i = 0; i < error_count; i++) {
+ *       size_t line;
+ *       const char* message;
+ *       const char* detail;
+ *       const char* hint;
+ *       if (zigpug_get_error(ctx, i, &line, &message, &detail, &hint)) {
+ *           printf("Line %zu: %s\n", line, message);
+ *           if (detail) printf("  %s\n", detail);
+ *           if (hint) printf("  Hint: %s\n", hint);
+ *       }
+ *   }
+ */
+bool zigpug_get_error(
+    ZigPugContext* ctx,
+    size_t index,
+    size_t* line_out,
+    const char** message_out,
+    const char** detail_out,
+    const char** hint_out
+);
+
+/**
  * Free a string returned by zig-pug
  *
  * @param str String to free (can be NULL)

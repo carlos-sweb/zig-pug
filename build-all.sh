@@ -6,14 +6,15 @@
 # ⚠️ IMPORTANTE - ESTRUCTURA DE DISTRIBUCIÓN:
 #
 # bin/              ← BINARIOS CLI DISTRIBUIBLES (git tracked)
-# libs/             ← LIBRERÍAS .so/.dll/.dylib DISTRIBUIBLES (git tracked)
-# nodejs/prebuilts/ ← LIBRERÍAS ESTÁTICAS para npm (git tracked)
+# libs/             ← LIBRERÍAS .a/.so/.dll/.dylib DISTRIBUIBLES (git tracked)
+# nodejs/prebuilts/ ← LIBRERÍAS ESTÁTICAS para node-gyp (git tracked)
+# nodejs/prebuilt-binaries/ ← ADDONS .node precompilados (git tracked)
 # zig-out/          ← ARTEFACTOS TEMPORALES (gitignored, NO distribuir)
 #
 # Este script:
 # 1. Compila a zig-out/ (temporal)
-# 2. COPIA a bin/ y libs/ (distribuibles)
-# 3. Los archivos finales están en bin/ y libs/, NO en zig-out/
+# 2. COPIA a bin/, libs/ y nodejs/ (distribuibles)
+# 3. Los archivos finales están en bin/, libs/ y nodejs/, NO en zig-out/
 #
 # Ver DISTRIBUTION.md para más detalles.
 # ============================================================================
@@ -163,25 +164,33 @@ if [ "$BUILD_NODEJS" = true ]; then
     echo ""
 
     # Limpiar builds anteriores
-    echo "🧹 Limpiando prebuilts anteriores..."
+    echo "🧹 Limpiando builds anteriores..."
     rm -rf "$PREBUILTS_DIR"
     mkdir -p "$PREBUILTS_DIR"
+
+    # Directorio para librerías distribuibles (contiene .so, .a, .dll, .lib)
+    LIBS_DIR="$PROJECT_ROOT/libs"
+    rm -rf "$LIBS_DIR"
+    mkdir -p "$LIBS_DIR"
     echo ""
 
-    # Definir plataformas Node.js
-    # Formato: "zig-target:output-folder:library-name"
-    NODEJS_TARGETS=(
-        "x86_64-linux:linux-x64:libzig-pug.a"
-        "aarch64-linux:linux-arm64:libzig-pug.a"
-        "x86_64-macos:darwin-x64:libzig-pug.a"
-        "aarch64-macos:darwin-arm64:libzig-pug.a"
-        "x86_64-windows:win32-x64:zig-pug.lib"
+    # Definir plataformas
+    # Formato: "zig-target:output-folder:static-lib:dynamic-lib"
+    LIBRARY_TARGETS=(
+        "x86_64-linux:linux-x64:libzig-pug.a:libzig-pug.so"
+        "aarch64-linux:linux-arm64:libzig-pug.a:libzig-pug.so"
+        "x86_64-macos:darwin-x64:libzig-pug.a:libzig-pug.dylib"
+        "aarch64-macos:darwin-arm64:libzig-pug.a:libzig-pug.dylib"
+        "x86_64-windows:win32-x64:zig-pug.lib:zig-pug.dll"
     )
 
-    for target in "${NODEJS_TARGETS[@]}"; do
-        IFS=: read -r zig_target output_dir lib_name <<< "$target"
+    echo -e "${BLUE}Construyendo librerías estáticas...${NC}"
+    echo ""
 
-        echo -e "${BLUE}Construyendo librería para ${output_dir}...${NC}"
+    for target in "${LIBRARY_TARGETS[@]}"; do
+        IFS=: read -r zig_target output_dir static_lib dynamic_lib <<< "$target"
+
+        echo -e "${BLUE}  • ${output_dir}/${static_lib}...${NC}"
 
         # Construir librería estática
         zig build lib-static \
@@ -190,70 +199,105 @@ if [ "$BUILD_NODEJS" = true ]; then
             --prefix-lib-dir "$PREBUILTS_DIR/$output_dir"
 
         # Verificar que se creó
-        if [ -f "$PREBUILTS_DIR/$output_dir/$lib_name" ]; then
-            size=$(du -h "$PREBUILTS_DIR/$output_dir/$lib_name" | cut -f1)
-            echo -e "${GREEN}✓ ${output_dir}/${lib_name} (${size})${NC}"
+        if [ -f "$PREBUILTS_DIR/$output_dir/$static_lib" ]; then
+            # Copiar también a libs/ (para distribución)
+            mkdir -p "$LIBS_DIR/$output_dir"
+            cp "$PREBUILTS_DIR/$output_dir/$static_lib" "$LIBS_DIR/$output_dir/"
+
+            size=$(du -h "$PREBUILTS_DIR/$output_dir/$static_lib" | cut -f1)
+            echo -e "${GREEN}    ✓ ${size}${NC}"
         else
-            echo -e "${RED}✗ Error construyendo librería para ${output_dir}${NC}"
+            echo -e "${RED}    ✗ Error construyendo librería estática para ${output_dir}${NC}"
             exit 1
         fi
-        echo ""
     done
 
-    echo -e "${GREEN}✅ Librerías estáticas Node.js completadas${NC}"
+    echo ""
+    echo -e "${GREEN}✅ Librerías estáticas completadas${NC}"
     echo ""
 
     # Construir librerías dinámicas (.so / .dll / .dylib)
     echo -e "${BLUE}Construyendo librerías dinámicas...${NC}"
     echo ""
 
-    # Directorio para librerías dinámicas (distributable)
-    DYNAMIC_LIBS_DIR="$PROJECT_ROOT/libs"
-    rm -rf "$DYNAMIC_LIBS_DIR"
-    mkdir -p "$DYNAMIC_LIBS_DIR"
+    for target in "${LIBRARY_TARGETS[@]}"; do
+        IFS=: read -r zig_target output_dir static_lib dynamic_lib <<< "$target"
 
-    # Mapeo de plataforma a extensión de librería dinámica
-    # Formato: "zig-target:output-folder:shared-lib-name"
-    DYNAMIC_TARGETS=(
-        "x86_64-linux:linux-x64:libzig-pug.so"
-        "aarch64-linux:linux-arm64:libzig-pug.so"
-        "x86_64-macos:darwin-x64:libzig-pug.dylib"
-        "aarch64-macos:darwin-arm64:libzig-pug.dylib"
-        "x86_64-windows:win32-x64:zig-pug.dll"
-    )
-
-    for target in "${DYNAMIC_TARGETS[@]}"; do
-        IFS=: read -r zig_target output_dir lib_name <<< "$target"
-
-        echo -e "${BLUE}Construyendo librería dinámica para ${output_dir}...${NC}"
+        echo -e "${BLUE}  • ${output_dir}/${dynamic_lib}...${NC}"
 
         # Construir librería dinámica
         zig build lib-shared \
             -Dtarget="$zig_target" \
             -Doptimize=ReleaseFast \
-            --prefix-lib-dir "$DYNAMIC_LIBS_DIR/$output_dir"
+            --prefix-lib-dir "$LIBS_DIR/$output_dir"
 
         # Para Windows, el .dll va a zig-out/bin/ y el .lib a lib-dir
         # Necesitamos mover el .dll al lugar correcto
         if [ "$zig_target" = "x86_64-windows" ]; then
             # Copiar DLL desde zig-out/bin/
             if [ -f "zig-out/bin/zig-pug.dll" ]; then
-                mv "zig-out/bin/zig-pug.dll" "$DYNAMIC_LIBS_DIR/$output_dir/"
+                mv "zig-out/bin/zig-pug.dll" "$LIBS_DIR/$output_dir/"
             fi
         fi
 
         # Verificar que se creó
-        if [ -f "$DYNAMIC_LIBS_DIR/$output_dir/$lib_name" ]; then
-            size=$(du -h "$DYNAMIC_LIBS_DIR/$output_dir/$lib_name" | cut -f1)
-            echo -e "${GREEN}✓ ${output_dir}/${lib_name} (${size})${NC}"
+        if [ -f "$LIBS_DIR/$output_dir/$dynamic_lib" ]; then
+            size=$(du -h "$LIBS_DIR/$output_dir/$dynamic_lib" | cut -f1)
+            echo -e "${GREEN}    ✓ ${size}${NC}"
         else
-            echo -e "${RED}✗ Error construyendo librería dinámica para ${output_dir}${NC}"
+            echo -e "${RED}    ✗ Error construyendo librería dinámica para ${output_dir}${NC}"
             exit 1
         fi
-        echo ""
     done
 
+    echo ""
     echo -e "${GREEN}✅ Librerías dinámicas completadas${NC}"
+    echo ""
+
+    # Generar archivos pkg-config (.pc) para cada plataforma
+    echo -e "${BLUE}Generando archivos pkg-config...${NC}"
+    echo ""
+
+    for target in "${LIBRARY_TARGETS[@]}"; do
+        IFS=: read -r zig_target output_dir static_lib dynamic_lib <<< "$target"
+
+        # Crear directorio pkgconfig
+        mkdir -p "$LIBS_DIR/$output_dir/pkgconfig"
+
+        # Determinar nombre de librería para -l flag
+        # libzig-pug.a -> -lzig-pug
+        # zig-pug.lib -> zig-pug.lib (Windows usa nombre completo)
+        if [[ "$output_dir" == win32-* ]]; then
+            # Windows: usar nombre completo del .lib
+            LIBS_LINE="Libs: -L\${libdir} zig-pug.lib"
+            LIBS_PRIVATE=""
+        else
+            # Unix-like: usar -l flag y agregar -lm
+            LIBS_LINE="Libs: -L\${libdir} -lzig-pug"
+            LIBS_PRIVATE="Libs.private: -lm"
+        fi
+
+        # Generar archivo .pc
+        cat > "$LIBS_DIR/$output_dir/pkgconfig/zpug.pc" << EOF
+prefix=/usr/local
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
+
+Name: zpug
+Description: High-performance Pug template engine written in Zig
+Version: ${VERSION}
+URL: https://github.com/carlos-sweb/zig-pug
+$LIBS_LINE
+$LIBS_PRIVATE
+Cflags: -I\${includedir}
+EOF
+
+        echo -e "${GREEN}  ✓ ${output_dir}/pkgconfig/zpug.pc${NC}"
+    done
+
+    echo ""
+    echo -e "${GREEN}✅ Archivos pkg-config generados${NC}"
     echo ""
 fi
 
@@ -408,11 +452,14 @@ if [ "$BUILD_CLI" = true ]; then
 fi
 
 if [ "$BUILD_NODEJS" = true ]; then
-    echo -e "${BLUE}📦 Librerías estáticas disponibles en:${NC}"
-    ls -1 "$PREBUILTS_DIR"/*/*.a "$PREBUILTS_DIR"/*/*.lib 2>/dev/null | sed 's|.*/prebuilts/|   nodejs/prebuilts/|' || true
+    echo -e "${BLUE}📦 Librerías disponibles en libs/ (estáticas + dinámicas):${NC}"
+    find "$LIBS_DIR" -type f \( -name "*.a" -o -name "*.lib" -o -name "*.so" -o -name "*.dll" -o -name "*.dylib" \) 2>/dev/null | sort | sed 's|.*/libs/|   libs/|' || true
     echo ""
-    echo -e "${BLUE}📦 Librerías dinámicas disponibles en:${NC}"
-    ls -1 "$DYNAMIC_LIBS_DIR"/*/*.{so,dll,dylib} 2>/dev/null | sed 's|.*/libs/|   libs/|' || true
+    echo -e "${BLUE}📦 Archivos pkg-config (.pc):${NC}"
+    find "$LIBS_DIR" -type f -name "*.pc" 2>/dev/null | sort | sed 's|.*/libs/|   libs/|' || true
+    echo ""
+    echo -e "${BLUE}📦 Librerías estáticas Node.js (para node-gyp) en:${NC}"
+    ls -1 "$PREBUILTS_DIR"/*/*.a "$PREBUILTS_DIR"/*/*.lib 2>/dev/null | sed 's|.*/prebuilts/|   nodejs/prebuilts/|' || true
     echo ""
 fi
 
@@ -434,10 +481,12 @@ if [ "$BUILD_CLI" = true ]; then
     du -h bin/*/zpug* 2>/dev/null | sed 's/^/    /' || true
 fi
 if [ "$BUILD_NODEJS" = true ]; then
-    echo -e "${YELLOW}  Librerías estáticas:${NC}"
+    echo -e "${YELLOW}  Librerías estáticas (nodejs/prebuilts):${NC}"
     du -h "$PREBUILTS_DIR"/*/*.{a,lib} 2>/dev/null | sed 's/^/    /' || true
-    echo -e "${YELLOW}  Librerías dinámicas:${NC}"
-    du -h "$DYNAMIC_LIBS_DIR"/*/*.{so,dll,dylib} 2>/dev/null | sed 's/^/    /' || true
+    echo -e "${YELLOW}  Librerías estáticas (libs):${NC}"
+    du -h "$LIBS_DIR"/*/*.{a,lib} 2>/dev/null | sed 's/^/    /' || true
+    echo -e "${YELLOW}  Librerías dinámicas (libs):${NC}"
+    du -h "$LIBS_DIR"/*/*.{so,dll,dylib} 2>/dev/null | sed 's/^/    /' || true
 fi
 if [ "$BUILD_ADDON" = true ]; then
     echo -e "${YELLOW}  Addon:${NC}"
@@ -450,7 +499,7 @@ echo ""
 echo -e "${YELLOW}⚠️  IMPORTANTE:${NC}"
 echo -e "${YELLOW}   Los archivos DISTRIBUIBLES están en:${NC}"
 echo -e "${GREEN}   • bin/         ${NC}← Binarios CLI (git tracked)"
-echo -e "${GREEN}   • libs/        ${NC}← Librerías dinámicas (git tracked)"
+echo -e "${GREEN}   • libs/        ${NC}← Librerías .a/.so/.dll/.dylib (git tracked)"
 echo -e "${GREEN}   • nodejs/      ${NC}← Archivos para npm (git tracked)"
 echo ""
 echo -e "${BLUE}   zig-out/ contiene solo artefactos temporales (gitignored)${NC}"

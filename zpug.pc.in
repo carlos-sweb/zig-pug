@@ -1,0 +1,12 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=@LIBDIR@
+includedir=${prefix}/include
+
+Name: zpug
+Description: High-performance Pug template engine written in Zig
+Version: @VERSION@
+URL: https://github.com/carlos-sweb/zig-pug
+Libs: -L${libdir} -lzpug
+Libs.private: -lm
+Cflags: -I${includedir}

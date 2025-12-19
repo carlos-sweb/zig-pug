@@ -72,6 +72,47 @@ export fn zigpug_compile(ctx: ?*ZigPugContext, pug_source: [*:0]const u8) ?[*:0]
     return result.ptr;
 }
 
+/// Get the number of compilation errors from the last compile call
+/// Returns: Number of errors, or 0 if no errors or no compilation has been done
+export fn zigpug_get_error_count(ctx: ?*ZigPugContext) usize {
+    const context: *Context = @ptrCast(@alignCast(ctx orelse return 0));
+    if (context.last_compiler) |comp| {
+        return comp.errors.items.len;
+    }
+    return 0;
+}
+
+/// Get a specific compilation error by index
+/// Parameters:
+///   - ctx: Context handle
+///   - index: Error index (0 to error_count-1)
+///   - line_out: Output parameter for line number
+///   - message_out: Output parameter for error message (do not free)
+///   - detail_out: Output parameter for detail (do not free, may be null)
+///   - hint_out: Output parameter for hint (do not free, may be null)
+/// Returns: true if error exists at index, false otherwise
+export fn zigpug_get_error(
+    ctx: ?*ZigPugContext,
+    index: usize,
+    line_out: ?*usize,
+    message_out: ?*[*:0]const u8,
+    detail_out: ?*?[*:0]const u8,
+    hint_out: ?*?[*:0]const u8,
+) bool {
+    const context: *Context = @ptrCast(@alignCast(ctx orelse return false));
+    if (context.last_compiler) |comp| {
+        if (index >= comp.errors.items.len) return false;
+
+        const err = &comp.errors.items[index];
+        if (line_out) |l| l.* = err.line;
+        if (message_out) |m| m.* = err.message.ptr;
+        if (detail_out) |d| d.* = if (err.detail) |detail| detail.ptr else null;
+        if (hint_out) |h| h.* = if (err.hint) |hint| hint.ptr else null;
+        return true;
+    }
+    return false;
+}
+
 /// Set a string variable in the context
 export fn zigpug_set_string(ctx: ?*ZigPugContext, key: [*:0]const u8, value: [*:0]const u8) bool {
     const context: *Context = @ptrCast(@alignCast(ctx orelse return false));
@@ -196,17 +237,20 @@ export fn zigpug_version() [*:0]const u8 {
 const Context = struct {
     allocator: std.mem.Allocator,
     runtime: *runtime.JsRuntime,
+    last_compiler: ?*compiler.Compiler, // Store compiler to access errors
 
     fn init(allocator: std.mem.Allocator) !Context {
         const rt = try runtime.JsRuntime.init(allocator);
         return Context{
             .allocator = allocator,
             .runtime = rt,
+            .last_compiler = null,
         };
     }
 
     fn deinit(self: *Context) void {
         self.runtime.deinit();
+        // Note: last_compiler is not owned, it's just a reference
     }
 
     fn compile(self: *Context, source: []const u8) ![]const u8 {
@@ -219,6 +263,10 @@ const Context = struct {
         // Compile
         var comp = try compiler.Compiler.init(self.allocator, self.runtime);
         defer comp.deinit();
+
+        // Store compiler reference for error access
+        self.last_compiler = comp;
+        defer self.last_compiler = null;
 
         return try comp.compile(tree);
     }
