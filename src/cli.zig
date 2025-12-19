@@ -89,15 +89,6 @@ const CliOptions = struct {
     }
 };
 
-fn printVersion() void {
-    print("zpug v{s}\nPug template engine powered by Zig and mujs\n", .{VERSION});
-}
-
-fn printHelp() void {
-    const help_text = @embedFile("help.txt");
-    print("{s}\n", .{help_text});
-}
-
 fn parseArguments(allocator: std.mem.Allocator) !CliOptions {
     var options = CliOptions.init(allocator);
     var args = try std.process.argsWithAllocator(allocator);
@@ -107,10 +98,10 @@ fn parseArguments(allocator: std.mem.Allocator) !CliOptions {
 
     while (args.next()) |arg| {
         if (eql(u8, arg, "-h") or eql(u8, arg, "--help")) {
-            printHelp();
+            print("{s}\n", .{@embedFile("help.txt")});
             std.process.exit(0);
         } else if (eql(u8, arg, "-v") or eql(u8, arg, "--version")) {
-            printVersion();
+            print("{s}\n", .{VERSION});
             std.process.exit(0);
         } else if (eql(u8, arg, "-i") or eql(u8, arg, "--input")) {
             const input_file = args.next() orelse {
