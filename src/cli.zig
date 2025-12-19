@@ -7,7 +7,7 @@ const c_print = @import("c_print.zig");
 const print = std.debug.print;
 const eql = std.mem.eql;
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.8";
 
 // Helper functions for colored output
 fn printError(comptime fmt: []const u8, args: anytype) void {
