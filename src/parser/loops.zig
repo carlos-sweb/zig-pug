@@ -3,7 +3,6 @@
 //! This module handles parsing of loop statements.
 
 const std = @import("std");
-const tokenizer = @import("../tokenizer.zig");
 const ast = @import("../ast.zig");
 const helpers = @import("helpers.zig");
 

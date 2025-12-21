@@ -3,7 +3,6 @@
 //! This module handles parsing of case/when switch statements.
 
 const std = @import("std");
-const tokenizer = @import("../tokenizer.zig");
 const ast = @import("../ast.zig");
 const helpers = @import("helpers.zig");
 
@@ -99,7 +98,6 @@ pub fn parseCase(self: *Parser) anyerror!*ast.AstNode {
                     } },
                 );
                 try cases.append(arena_allocator, when_node);
-
             } else if (helpers.match(self, &.{.Default})) {
                 try helpers.advance(self); // consume 'default'
                 try helpers.skipNewlines(self);

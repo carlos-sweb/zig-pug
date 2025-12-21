@@ -3,7 +3,6 @@
 //! This module handles parsing of inline text and piped text blocks.
 
 const std = @import("std");
-const tokenizer = @import("../tokenizer.zig");
 const ast = @import("../ast.zig");
 const helpers = @import("helpers.zig");
 
