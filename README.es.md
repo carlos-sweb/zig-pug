@@ -845,7 +845,6 @@ MIT License - ver [LICENSE](LICENSE) para detalles
 ## Soporte
 
 - **Issues**: [GitHub Issues](https://github.com/carlos-sweb/zig-pug/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/carlos-sweb/zig-pug/discussions)
 
 ---
 
