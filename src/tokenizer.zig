@@ -37,7 +37,8 @@
 //! - Position tracking: Every token has line and column info
 
 const std = @import("std");
-
+/// Aquyi hay que documentar mas
+pub const TokenizerState = @import("./tokenizer/TokenizerState.zig").TokenizerState;
 /// Token types representing all possible lexical elements in Pug templates
 ///
 /// Tokens are organized into categories:
@@ -51,135 +52,9 @@ const std = @import("std");
 /// - Ident("div")
 /// - Class("container")  // .container as single token
 /// - Id("main")         // #main as single token
-pub const TokenType = enum {
-    // Identificadores
-    Ident,
-    Class, // .classname
-    Id, // #idname
-
-    // Literales
-    String,
-    Number,
-    Boolean,
-
-    // Símbolos
-    LParen, // (
-    RParen, // )
-    LBracket, // [
-    RBracket, // ]
-    LBrace, // {
-    RBrace, // }
-    Dot, // .
-    Hash, // #
-    Comma, // ,
-    Colon, // :
-    Pipe, // |
-
-    // Operadores
-    Assign, // =
-    NotEqual, // !=
-    Plus, // +
-    Minus, // -
-    Greater, // >
-    Less, // <
-    GreaterEqual, // >=
-    LessEqual, // <=
-    Equal, // ==
-    And, // &&
-    Or, // ||
-
-    // Keywords
-    If,
-    Else,
-    Unless,
-    Each,
-    While,
-    Case,
-    When,
-    Default,
-    Mixin,
-    Include,
-    Extends,
-    Block,
-    Append,
-    Prepend,
-    Doctype,
-
-    // Especiales
-    Indent,
-    Dedent,
-    Newline,
-    BufferedComment, // //
-    UnbufferedComment, // //-
-    BufferedCode, // =
-    UnbufferedCode, // -
-    UnescapedCode, // !=
-    EscapedInterpol, // #{...}
-    UnescapedInterpol, // !{...}
-
-    Eof,
-};
-
-/// A single token with its type, value, and source location
-///
-/// Represents a lexical unit extracted from the source code.
-/// Contains all information needed for parsing and error reporting.
-///
-/// Fields:
-/// - type: The kind of token (see TokenType)
-/// - value: The actual text from the source (empty for symbols like INDENT)
-/// - line: 1-indexed line number where token starts
-/// - column: 1-indexed column number where token starts
-///
-/// Example:
-/// ```zig
-/// const token = Token.init(.Ident, "div", 5, 3);
-/// // Represents identifier "div" at line 5, column 3
-/// ```
-pub const Token = struct {
-    type: TokenType,
-    value: []const u8,
-    line: usize,
-    column: usize,
-
-    /// Create a new token
-    ///
-    /// Parameters:
-    /// - token_type: Type of token
-    /// - value: Text content (slice from source)
-    /// - line: Source line number (1-indexed)
-    /// - column: Source column number (1-indexed)
-    ///
-    /// Returns: Initialized token
-    ///
-    /// Example:
-    /// ```zig
-    /// const comment = Token.init(.BufferedComment, "TODO: fix this", 10, 1);
-    /// ```
-    pub fn init(token_type: TokenType, value: []const u8, line: usize, column: usize) Token {
-        return .{
-            .type = token_type,
-            .value = value,
-            .line = line,
-            .column = column,
-        };
-    }
-};
-
-/// Errors that can occur during tokenization
-///
-/// These represent lexical errors in the source code:
-/// - UnexpectedCharacter: Invalid character for current context
-/// - UnterminatedString: String literal missing closing quote
-/// - InvalidNumber: Malformed numeric literal
-/// - OutOfMemory: Allocation failure
-pub const TokenizerError = error{
-    UnexpectedCharacter,
-    UnterminatedString,
-    InvalidNumber,
-    OutOfMemory,
-};
-
+pub const TokenType = @import("./tokenizer/TokenType.zig").TokenType;
+pub const Token = @import("./tokenizer/Token.zig").Token;
+pub const TokenizerError = @import("./tokenizer/TokenizerError.zig").TokenizerError;
 /// Tokenizer - Converts source code into a stream of tokens
 ///
 /// State machine that scans Pug template source character by character,
@@ -214,6 +89,10 @@ pub const TokenizerError = error{
 /// const tok5 = try tokenizer.next(); // Ident("p")
 /// const tok6 = try tokenizer.next(); // Ident("Hello")
 /// ```
+pub fn isAlpha(ch: u8) bool {
+    return (ch >= 'a' and ch <= 'z') or (ch >= 'A' and ch <= 'Z');
+}
+
 pub const Tokenizer = struct {
     source: []const u8,
     pos: usize,
@@ -223,6 +102,7 @@ pub const Tokenizer = struct {
     indent_stack: std.ArrayListUnmanaged(usize),
     pending_tokens: std.ArrayListUnmanaged(Token),
     at_line_start: bool,
+    state: TokenizerState,
 
     /// Initialize a new tokenizer with source code
     ///
@@ -251,6 +131,7 @@ pub const Tokenizer = struct {
             .indent_stack = .{},
             .pending_tokens = .{},
             .at_line_start = true,
+            .state = TokenizerState.Root,
         };
         try tokenizer.indent_stack.append(allocator, 0); // Base level
         return tokenizer;
@@ -871,6 +752,20 @@ pub const Tokenizer = struct {
     /// // Output: Ident Class Newline Indent Ident Eof
     /// ```
     pub fn next(self: *Tokenizer) !Token {
+        if (self.state == TokenizerState.Root) {
+            if (std.mem.startsWith(u8, self.source, "doctype html")) {
+                return Token.init(.Doctype, "doctype html", self.line, 1);
+            }
+            if (std.mem.startsWith(u8, self.source, "doctype xml")) {
+                return Token.init(.Doctype, "doctype xml", self.line, 1);
+            }
+        }
+
+        //var lines = std.mem.splitAny(u8, self.source, "\n");
+        // while (lines.next()) |line| {
+        //std.debug.print("line=>{s}\n", .{line});
+        //}
+
         // Check for pending tokens first (INDENT/DEDENT)
         if (self.pending_tokens.items.len > 0) {
             return self.pending_tokens.orderedRemove(0);
