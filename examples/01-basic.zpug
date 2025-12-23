@@ -11,5 +11,5 @@ html(lang="en")
     p This is a simple paragraph
     p.destacado This paragraph has a class
     p#importante This paragraph has an ID
-    div.container
+    .container
       p Content inside a div

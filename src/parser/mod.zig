@@ -228,6 +228,7 @@ pub const Parser = struct {
     pub fn parseStatement(self: *Parser) anyerror!*ast.AstNode {
         return switch (self.current.type) {
             .Ident => try tag_parser.parseTag(self),
+            .Class, .Id => try tag_parser.parseImplicitDiv(self),
             .Pipe => try text_parser.parsePipeText(self),
             .BufferedComment, .UnbufferedComment => try code_parser.parseComment(self),
             .UnbufferedCode, .BufferedCode, .UnescapedCode => try code_parser.parseCode(self),
