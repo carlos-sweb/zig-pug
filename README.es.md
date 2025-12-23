@@ -825,7 +825,13 @@ Ver [PLAN.md](PLAN.md) para el plan completo de desarrollo.
 
 ### Documentación Técnica
 
-- **[Arquitectura del Tokenizer](docs/TOKENIZER.md)** - Análisis profundo de la máquina de estados del tokenizer, patrón labeled-switch y detalles de implementación
+**Pipeline de Compilación:**
+- **[Tokenizer](docs/tokenizer.es.md)** ([English](docs/tokenizer.md)) - Análisis léxico: máquina de estados, tipos de tokens, manejo de indentación
+- **[Parser](docs/parser.es.md)** ([English](docs/parser.md)) - Análisis sintáctico: descenso recursivo, construcción del AST, manejo de errores
+- **[AST](docs/ast.es.md)** ([English](docs/ast.md)) - Árbol de Sintaxis Abstracta: tipos de nodos, estructura, patrón visitor
+- **[Compiler](docs/compiler.es.md)** ([English](docs/compiler.md)) - Generación HTML: evaluación JavaScript, seguridad, características de plantillas
+
+**Recursos Adicionales:**
 - **[Documentación CLI](docs/es/CLI.md)** - Guía completa de la interfaz de línea de comandos
 - **[API Node.js](nodejs/README.md)** - Documentación del addon de Node.js con soporte TypeScript
 - **[Uso con pkg-config](docs/PKGCONFIG.md)** - Usando zpug desde proyectos C/C++
