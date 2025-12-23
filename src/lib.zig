@@ -2,11 +2,11 @@
 // C-compatible interface for using zig-pug from other languages
 
 const std = @import("std");
-const tokenizer = @import("tokenizer.zig");
+const tokenizer = @import("tokenizer/mod.zig");
 const parser = @import("parser/mod.zig");
-const compiler = @import("compiler.zig");
+const compiler = @import("compiler/mod.zig");
 const runtime = @import("runtime.zig");
-const ast = @import("ast.zig");
+const ast = @import("ast/mod.zig");
 const cache_mod = @import("cache.zig");
 
 // Export all modules for Zig users

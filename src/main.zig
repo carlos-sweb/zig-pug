@@ -1,6 +1,6 @@
 const std = @import("std");
-const tokenizer = @import("tokenizer.zig");
-const ast = @import("ast.zig");
+const tokenizer = @import("tokenizer/mod.zig");
+const ast = @import("ast/mod.zig");
 const parser = @import("parser/mod.zig");
 
 pub fn main() !void {

@@ -3,7 +3,7 @@
 //! This module contains utility functions used throughout the parsing process.
 
 const std = @import("std");
-const tokenizer = @import("../tokenizer.zig");
+const tokenizer = @import("../tokenizer/mod.zig");
 
 /// Parser forward declaration - full definition in mod.zig
 pub const Parser = @import("mod.zig").Parser;

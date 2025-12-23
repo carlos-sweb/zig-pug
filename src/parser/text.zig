@@ -3,7 +3,7 @@
 //! This module handles parsing of inline text and piped text blocks.
 
 const std = @import("std");
-const ast = @import("../ast.zig");
+const ast = @import("../ast/mod.zig");
 const helpers = @import("helpers.zig");
 
 /// Parser forward declaration

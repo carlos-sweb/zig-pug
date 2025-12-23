@@ -3,7 +3,7 @@
 //! This module handles parsing of HTML attributes within parentheses.
 
 const std = @import("std");
-const ast = @import("../ast.zig");
+const ast = @import("../ast/mod.zig");
 const helpers = @import("helpers.zig");
 
 /// Parser forward declaration

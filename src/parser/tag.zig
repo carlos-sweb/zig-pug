@@ -3,7 +3,7 @@
 //! This module handles parsing of HTML tag elements.
 
 const std = @import("std");
-const ast = @import("../ast.zig");
+const ast = @import("../ast/mod.zig");
 const helpers = @import("helpers.zig");
 const attributes_parser = @import("attributes.zig");
 const text_parser = @import("text.zig");

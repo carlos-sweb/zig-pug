@@ -4,7 +4,7 @@
 
 const std = @import("std");
 const Parser = @import("mod.zig").Parser;
-const ast = @import("../ast.zig");
+const ast = @import("../ast/mod.zig");
 
 test "parser - simple tag" {
     var parser = try Parser.init(std.testing.allocator, "div");

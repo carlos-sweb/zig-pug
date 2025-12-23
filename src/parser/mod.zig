@@ -38,8 +38,8 @@
 //! the AST. All nodes are freed when parser.deinit() is called.
 
 const std = @import("std");
-const tokenizer = @import("../tokenizer.zig");
-const ast = @import("../ast.zig");
+const tokenizer = @import("../tokenizer/mod.zig");
+const ast = @import("../ast/mod.zig");
 
 // Import sub-modules
 const helpers = @import("helpers.zig");

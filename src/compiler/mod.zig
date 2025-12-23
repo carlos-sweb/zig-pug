@@ -42,65 +42,19 @@
 //! - Format: Indented HTML without comments (--format flag)
 
 const std = @import("std");
-const ast = @import("ast.zig");
-const runtime = @import("runtime.zig");
-const cache = @import("cache.zig");
-const Parser = @import("parser/mod.zig").Parser;
+const ast = @import("../ast/mod.zig");
+const runtime = @import("../runtime.zig");
+const cache = @import("../cache.zig");
+const Parser = @import("../parser/mod.zig").Parser;
 
-/// Error type classification for structured error reporting
-pub const ErrorType = enum {
-    LoopIterableEvalFailed,
-    ConditionalEvalFailed,
-    InterpolationEvalFailed,
-    AttributeEvalFailed,
-    CodeExecutionFailed,
-    CaseEvalFailed,
-    MixinNotFound,
-    IncludeFileNotFound,
-    IncludeParseError,
-    ExtendsFileNotFound,
-    ExtendsParseError,
-};
+// Import error types from errors.zig
+const errors = @import("errors.zig");
+pub const ErrorType = errors.ErrorType;
+pub const CompilationError = errors.CompilationError;
+pub const CompilerError = errors.CompilerError;
 
-/// Structured compilation error with details for consumer presentation
-pub const CompilationError = struct {
-    type: ErrorType,
-    line: usize,
-    message: [:0]const u8,  // Null-terminated for C API compatibility
-    detail: ?[:0]const u8,  // e.g., "Iterable: users" or "Condition: x > 0"
-    hint: ?[:0]const u8,    // e.g., "Make sure the variable is defined"
-
-    pub fn deinit(self: *CompilationError, allocator: std.mem.Allocator) void {
-        allocator.free(self.message);
-        if (self.detail) |d| allocator.free(d);
-        if (self.hint) |h| allocator.free(h);
-    }
-};
-
-/// Errors that can occur during compilation
-///
-/// - OutOfMemory: Allocation failed
-/// - CompilationFailed: Compilation errors occurred (check errors list)
-/// - RuntimeError: JavaScript evaluation error
-/// - InvalidNode: Malformed AST node
-/// - MixinNotFound: Called undefined mixin
-/// - IncludeFileNotFound: Include file doesn't exist
-/// - IncludeParseError: Include file has syntax errors
-/// - LoopIterableNotArray: Loop target isn't an array
-/// - ExtendsFileNotFound: Parent template doesn't exist
-/// - ExtendsParseError: Parent template has syntax errors
-pub const CompilerError = error{
-    OutOfMemory,
-    CompilationFailed,
-    RuntimeError,
-    InvalidNode,
-    MixinNotFound,
-    IncludeFileNotFound,
-    IncludeParseError,
-    LoopIterableNotArray,
-    ExtendsFileNotFound,
-    ExtendsParseError,
-};
+// Import escaping functions
+const escaping = @import("escaping.zig");
 
 /// Child block information for template inheritance
 ///
@@ -558,7 +512,7 @@ pub const Compiler = struct {
                     if (attr.is_unescaped) {
                         try self.output.appendSlice(self.allocator, result);
                     } else {
-                        const escaped = try self.escapeHtml(result);
+                        const escaped = try escaping.escapeHtml(self.allocator, result);
                         defer self.allocator.free(escaped);
                         try self.output.appendSlice(self.allocator, escaped);
                     }
@@ -623,7 +577,7 @@ pub const Compiler = struct {
         if (interp.is_unescaped) {
             try self.output.appendSlice(self.allocator, result);
         } else {
-            const escaped = try self.escapeHtml(result);
+            const escaped = try escaping.escapeHtml(self.allocator, result);
             defer self.allocator.free(escaped);
             try self.output.appendSlice(self.allocator, escaped);
         }
@@ -660,7 +614,7 @@ pub const Compiler = struct {
             if (code.is_unescaped) {
                 try self.output.appendSlice(self.allocator, result);
             } else {
-                const escaped = try self.escapeHtml(result);
+                const escaped = try escaping.escapeHtml(self.allocator, result);
                 defer self.allocator.free(escaped);
                 try self.output.appendSlice(self.allocator, escaped);
             }
@@ -668,61 +622,6 @@ pub const Compiler = struct {
         // If unbuffered, we just executed it but don't output
     }
 
-    /// Escape HTML special characters to prevent XSS attacks
-    /// Optimized version that pre-calculates size to avoid reallocations
-    fn escapeHtml(self: *Self, input: []const u8) ![]const u8 {
-        // First pass: check if escaping is needed and calculate exact size
-        var needs_escaping = false;
-        var final_size: usize = 0;
-
-        for (input) |c| {
-            switch (c) {
-                '&' => {
-                    needs_escaping = true;
-                    final_size += 5; // &amp;
-                },
-                '<', '>' => {
-                    needs_escaping = true;
-                    final_size += 4; // &lt; or &gt;
-                },
-                '"' => {
-                    needs_escaping = true;
-                    final_size += 6; // &quot;
-                },
-                '\'' => {
-                    needs_escaping = true;
-                    final_size += 5; // &#39;
-                },
-                else => {
-                    final_size += 1;
-                },
-            }
-        }
-
-        // If no escaping needed, return a copy of the input
-        if (!needs_escaping) {
-            return try self.allocator.dupe(u8, input);
-        }
-
-        // Allocate exact size needed (no reallocations)
-        var result = std.ArrayList(u8){};
-        errdefer result.deinit(self.allocator);
-        try result.ensureTotalCapacity(self.allocator, final_size);
-
-        // Second pass: build escaped string
-        for (input) |c| {
-            switch (c) {
-                '&' => result.appendSliceAssumeCapacity("&amp;"),
-                '<' => result.appendSliceAssumeCapacity("&lt;"),
-                '>' => result.appendSliceAssumeCapacity("&gt;"),
-                '"' => result.appendSliceAssumeCapacity("&quot;"),
-                '\'' => result.appendSliceAssumeCapacity("&#39;"),
-                else => result.appendAssumeCapacity(c),
-            }
-        }
-
-        return try result.toOwnedSlice(self.allocator);
-    }
 
     // ========================================================================
     // Comment Compilation
@@ -737,7 +636,7 @@ pub const Compiler = struct {
             try self.output.appendSlice(self.allocator, "<!--");
             // Escape comment content to prevent injection attacks
             // Replace "--" with "- -" to prevent premature comment closing
-            const escaped = try self.escapeComment(comment.content);
+            const escaped = try escaping.escapeComment(self.allocator, comment.content);
             defer self.allocator.free(escaped);
             try self.output.appendSlice(self.allocator, escaped);
             try self.output.appendSlice(self.allocator, "-->");
@@ -747,30 +646,6 @@ pub const Compiler = struct {
     }
 
     /// Escape HTML comment content to prevent XSS/injection attacks
-    /// Replaces "--" with "- -" to prevent premature comment closing
-    fn escapeComment(self: *Self, input: []const u8) ![]const u8 {
-        // Check if escaping is needed
-        var needs_escaping = false;
-        var i: usize = 0;
-        while (i < input.len) : (i += 1) {
-            if (i + 1 < input.len and input[i] == '-' and input[i + 1] == '-') {
-                needs_escaping = true;
-                break;
-            }
-        }
-
-        if (!needs_escaping) {
-            return try self.allocator.dupe(u8, input);
-        }
-
-        // Escape "--" sequences
-        var result = std.ArrayList(u8){};
-        errdefer result.deinit(self.allocator);
-
-        i = 0;
-        while (i < input.len) {
-            if (i + 1 < input.len and input[i] == '-' and input[i + 1] == '-') {
-                try result.appendSlice(self.allocator, "- -");
                 i += 2;
             } else {
                 try result.append(self.allocator, input[i]);
@@ -1570,4 +1445,9 @@ test "compiler - doctype html" {
 
     try std.testing.expect(std.mem.startsWith(u8, html, "<!DOCTYPE html>"));
     try std.testing.expect(std.mem.indexOf(u8, html, "<html>") != null);
+}
+
+// Tests
+test {
+    _ = @import("tests.zig");
 }

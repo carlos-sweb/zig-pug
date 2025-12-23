@@ -3,9 +3,9 @@
 //! This module handles parsing of code blocks and comments.
 
 const std = @import("std");
-const ast = @import("../ast.zig");
+const ast = @import("../ast/mod.zig");
 const helpers = @import("helpers.zig");
-const TokenType = @import("../tokenizer.zig").TokenType;
+const TokenType = @import("../tokenizer/mod.zig").TokenType;
 
 /// Parser forward declaration
 pub const Parser = @import("mod.zig").Parser;
