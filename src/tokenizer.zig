@@ -37,24 +37,22 @@
 //! - Position tracking: Every token has line and column info
 
 const std = @import("std");
-/// Aquyi hay que documentar mas
+
+// Public exports
 pub const TokenizerState = @import("./tokenizer/TokenizerState.zig").TokenizerState;
-/// Token types representing all possible lexical elements in Pug templates
-///
-/// Tokens are organized into categories:
-/// - Identifiers: Tag names, variable names
-/// - Literals: Strings, numbers, booleans
-/// - Symbols: Parentheses, brackets, punctuation
-/// - Keywords: Control flow (if, each, mixin, etc.)
-/// - Special: Indentation, comments, code markers
-///
-/// Example token types for "div.container#main":
-/// - Ident("div")
-/// - Class("container")  // .container as single token
-/// - Id("main")         // #main as single token
 pub const TokenType = @import("./tokenizer/TokenType.zig").TokenType;
 pub const Token = @import("./tokenizer/Token.zig").Token;
 pub const TokenizerError = @import("./tokenizer/TokenizerError.zig").TokenizerError;
+
+// Import scan functions
+const scanIdentifier = @import("./tokenizer/scanIdentifier.zig").scanIdentifier;
+const scanString = @import("./tokenizer/scanString.zig").scanString;
+const scanNumber = @import("./tokenizer/scanNumber.zig").scanNumber;
+const scanComment = @import("./tokenizer/scanComment.zig").scanComment;
+const skipDocComment = @import("./tokenizer/scanComment.zig").skipDocComment;
+const scanInterpolation = @import("./tokenizer/scanInterpolation.zig").scanInterpolation;
+const scanSymbol = @import("./tokenizer/scanSymbol.zig").scanSymbol;
+const scanText = @import("./tokenizer/scanText.zig").scanText;
 /// Tokenizer - Converts source code into a stream of tokens
 ///
 /// State machine that scans Pug template source character by character,
@@ -209,7 +207,7 @@ pub const Tokenizer = struct {
     /// Peek at current character without advancing position
     ///
     /// Returns: Current character or null if at end of source
-    fn peekChar(self: *Tokenizer) ?u8 {
+    pub fn peekChar(self: *Tokenizer) ?u8 {
         if (self.pos >= self.source.len) return null;
         return self.source[self.pos];
     }
@@ -222,7 +220,7 @@ pub const Tokenizer = struct {
     /// - offset: Number of characters to look ahead
     ///
     /// Returns: Character at pos+offset or null if past end
-    fn peekAhead(self: *Tokenizer, offset: usize) ?u8 {
+    pub fn peekAhead(self: *Tokenizer, offset: usize) ?u8 {
         const pos = self.pos + offset;
         if (pos >= self.source.len) return null;
         return self.source[pos];
@@ -234,7 +232,7 @@ pub const Tokenizer = struct {
     /// and reset column to 1.
     ///
     /// Returns: Current character before advancing, or null if at end
-    fn advance(self: *Tokenizer) ?u8 {
+    pub fn advance(self: *Tokenizer) ?u8 {
         if (self.pos >= self.source.len) return null;
         const ch = self.source[self.pos];
         self.pos += 1;
@@ -251,7 +249,7 @@ pub const Tokenizer = struct {
     ///
     /// Newlines are significant in Pug syntax, so they must be
     /// preserved as tokens. This skips only spaces and tabs.
-    fn skipWhitespaceExceptNewline(self: *Tokenizer) void {
+    pub fn skipWhitespaceExceptNewline(self: *Tokenizer) void {
         while (self.peekChar()) |ch| {
             if (ch == ' ' or ch == '\t' or ch == '\r') {
                 _ = self.advance();
@@ -330,414 +328,15 @@ pub const Tokenizer = struct {
         self.at_line_start = false;
     }
 
-    /// Scan a comment token (// or //-)
-    ///
-    /// Pug has two comment types:
-    /// - // buffered comment → emitted to HTML
-    /// - //- unbuffered comment → not in output
-    ///
-    /// Reads from // or //- to end of line.
-    ///
-    /// Returns: BufferedComment or UnbufferedComment token
-    ///
-    /// Example:
-    /// ```
-    /// // This appears in HTML
-    /// //- This is a code comment
-    /// ```
-    /// Skip documentation comment //!
-    ///
-    /// Documentation comments are completely ignored by the parser.
-    /// They can appear anywhere, including before doctype declarations.
-    ///
-    /// Example:
-    /// ```pug
-    /// //! This is a doc comment - ignored completely
-    /// //! Author: John Doe
-    /// doctype html
-    /// ```
-    fn skipDocComment(self: *Tokenizer) void {
-        _ = self.advance(); // First /
-        _ = self.advance(); // Second /
-        _ = self.advance(); // !
-
-        // Skip the entire line
-        while (self.peekChar()) |ch| {
-            if (ch == '\n') break;
-            _ = self.advance();
-        }
-    }
-
-    fn scanComment(self: *Tokenizer) !Token {
-        const start_line = self.line;
-        const start_col = self.column;
-
-        _ = self.advance(); // First /
-        _ = self.advance(); // Second /
-
-        const is_unbuffered = if (self.peekChar()) |ch| ch == '-' else false;
-        if (is_unbuffered) {
-            _ = self.advance(); // -
-        }
-
-        // Skip space after comment marker
-        if (self.peekChar()) |ch| {
-            if (ch == ' ') _ = self.advance();
-        }
-
-        const start = self.pos;
-        while (self.peekChar()) |ch| {
-            if (ch == '\n') break;
-            _ = self.advance();
-        }
-
-        const value = self.source[start..self.pos];
-        const token_type = if (is_unbuffered) TokenType.UnbufferedComment else TokenType.BufferedComment;
-
-        return Token.init(token_type, value, start_line, start_col);
-    }
-
-    /// Scan an interpolation token #{...} or !{...}
-    ///
-    /// Interpolations embed JavaScript expressions in templates:
-    /// - #{expr} → escaped (HTML-safe)
-    /// - !{expr} → unescaped (raw HTML)
-    ///
-    /// Handles nested braces by counting brace depth.
-    ///
-    /// Returns: EscapedInterpol or UnescapedInterpol token
-    ///
-    /// Errors:
-    /// - UnterminatedString: Missing closing }
-    /// - UnexpectedCharacter: # or ! not followed by {
-    ///
-    /// Example:
-    /// ```
-    /// p Hello #{user.name}        // Escaped
-    /// div !{raw_html}              // Unescaped
-    /// p Count: #{items.length}     // Expression
-    /// ```
-    fn scanInterpolation(self: *Tokenizer) !Token {
-        const start_line = self.line;
-        const start_col = self.column;
-
-        const first_ch = self.advance().?; // # or !
-        const is_unescaped = first_ch == '!';
-
-        if (self.peekChar() != '{') {
-            return error.UnexpectedCharacter;
-        }
-        _ = self.advance(); // {
-
-        const start = self.pos;
-        var brace_count: usize = 1;
-
-        while (self.peekChar()) |ch| {
-            if (ch == '{') {
-                brace_count += 1;
-            } else if (ch == '}') {
-                brace_count -= 1;
-                if (brace_count == 0) {
-                    const value = self.source[start..self.pos];
-                    _ = self.advance(); // }
-                    const token_type = if (is_unescaped) TokenType.UnescapedInterpol else TokenType.EscapedInterpol;
-                    return Token.init(token_type, value, start_line, start_col);
-                }
-            }
-            _ = self.advance();
-        }
-
-        return error.UnterminatedString;
-    }
-
-    /// Scan an identifier or keyword token
-    ///
-    /// Reads alphanumeric characters plus _ and - to form identifiers.
-    /// Checks if identifier matches a keyword (if, each, mixin, etc.).
-    ///
-    /// Returns: Keyword token or Ident token
-    ///
-    /// Examples:
-    /// ```
-    /// div        → Ident("div")
-    /// my-class   → Ident("my-class")
-    /// if         → If (keyword)
-    /// each       → Each (keyword)
-    /// true       → Boolean (keyword)
-    /// ```
-    fn scanIdentifier(self: *Tokenizer) !Token {
-        const start = self.pos;
-        const start_line = self.line;
-        const start_col = self.column;
-
-        while (self.peekChar()) |ch| {
-            // Allow ASCII alphanumeric, underscore, hyphen, and UTF-8 sequences
-            if (isValidTextByte(ch)) {
-                // If UTF-8 multi-byte, advance by full sequence length
-                if (isUtf8Start(ch)) {
-                    const len = utf8SequenceLength(ch);
-                    var i: usize = 0;
-                    while (i < len and self.peekChar() != null) : (i += 1) {
-                        _ = self.advance();
-                    }
-                } else {
-                    _ = self.advance();
-                }
-            } else {
-                break;
-            }
-        }
-
-        const value = self.source[start..self.pos];
-
-        // Check for keywords
-        const token_type = getKeyword(value) orelse .Ident;
-        return Token.init(token_type, value, start_line, start_col);
-    }
-
-    /// Scan a string literal token
-    ///
-    /// Reads quoted string (double or single quotes) with escape support.
-    ///
-    /// Parameters:
-    /// - quote: Opening quote character (' or ")
-    ///
-    /// Returns: String token with content between quotes
-    ///
-    /// Errors:
-    /// - UnterminatedString: Missing closing quote
-    ///
-    /// Examples:
-    /// ```
-    /// "hello"           → String("hello")
-    /// 'world'           → String("world")
-    /// "it's ok"         → String("it's ok")
-    /// "line\nbreak"     → String("line\nbreak") (with escape)
-    /// ```
-    fn scanString(self: *Tokenizer, quote: u8) !Token {
-        const start_line = self.line;
-        const start_col = self.column;
-        _ = self.advance(); // Skip opening quote
-
-        const start = self.pos;
-        while (self.peekChar()) |ch| {
-            if (ch == quote) {
-                const value = self.source[start..self.pos];
-                _ = self.advance(); // Skip closing quote
-                return Token.init(.String, value, start_line, start_col);
-            }
-            if (ch == '\\') {
-                _ = self.advance(); // Skip escape
-                _ = self.advance(); // Skip escaped char
-            } else {
-                _ = self.advance();
-            }
-        }
-
-        return error.UnterminatedString;
-    }
-
-    /// Scan a number literal token
-    ///
-    /// Reads integer or decimal numbers.
-    ///
-    /// Returns: Number token
-    ///
-    /// Examples:
-    /// ```
-    /// 42      → Number("42")
-    /// 3.14    → Number("3.14")
-    /// 0.5     → Number("0.5")
-    /// ```
-    fn scanNumber(self: *Tokenizer) !Token {
-        const start = self.pos;
-        const start_line = self.line;
-        const start_col = self.column;
-
-        while (self.peekChar()) |ch| {
-            if (std.ascii.isDigit(ch) or ch == '.') {
-                _ = self.advance();
-            } else {
-                break;
-            }
-        }
-
-        const value = self.source[start..self.pos];
-        return Token.init(.Number, value, start_line, start_col);
-    }
-
-    /// Scan a symbol or special shorthand token
-    ///
-    /// Handles:
-    /// - Shorthand syntax: .class and #id
-    /// - Single-character symbols: ( ) [ ] { } , : | . #
-    /// - Multi-character operators: !=
-    /// - Code markers: = (buffered), - (unbuffered)
-    ///
-    /// Returns: Appropriate symbol or shorthand token
-    ///
-    /// Errors:
-    /// - UnexpectedCharacter: Invalid symbol
-    ///
-    /// Examples:
-    /// ```
-    /// .container  → Class("container")
-    /// #main       → Id("main")
-    /// (           → LParen
-    /// =           → BufferedCode
-    /// !=          → UnescapedCode
-    /// .           → Dot (when not followed by identifier)
-    /// ```
-    fn scanSymbol(self: *Tokenizer) !Token {
-        const start_line = self.line;
-        const start_col = self.column;
-        const ch = self.peekChar().?;
-
-        // Handle .class shorthand (with UTF-8 support)
-        if (ch == '.') {
-            _ = self.advance();
-            if (self.peekChar()) |next_ch| {
-                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-' or isUtf8Start(next_ch)) {
-                    const start = self.pos;
-                    while (self.peekChar()) |c| {
-                        if (isValidTextByte(c)) {
-                            // If UTF-8 multi-byte, advance by full sequence
-                            if (isUtf8Start(c)) {
-                                const len = utf8SequenceLength(c);
-                                var i: usize = 0;
-                                while (i < len and self.peekChar() != null) : (i += 1) {
-                                    _ = self.advance();
-                                }
-                            } else {
-                                _ = self.advance();
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                    const value = self.source[start..self.pos];
-                    return Token.init(.Class, value, start_line, start_col);
-                }
-            }
-            const value = self.source[self.pos - 1 .. self.pos];
-            return Token.init(.Dot, value, start_line, start_col);
-        }
-
-        // Handle #id shorthand (with UTF-8 support)
-        if (ch == '#') {
-            _ = self.advance();
-            if (self.peekChar()) |next_ch| {
-                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-' or isUtf8Start(next_ch)) {
-                    const start = self.pos;
-                    while (self.peekChar()) |c| {
-                        if (isValidTextByte(c)) {
-                            // If UTF-8 multi-byte, advance by full sequence
-                            if (isUtf8Start(c)) {
-                                const len = utf8SequenceLength(c);
-                                var i: usize = 0;
-                                while (i < len and self.peekChar() != null) : (i += 1) {
-                                    _ = self.advance();
-                                }
-                            } else {
-                                _ = self.advance();
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                    const value = self.source[start..self.pos];
-                    return Token.init(.Id, value, start_line, start_col);
-                }
-            }
-            const value = self.source[self.pos - 1 .. self.pos];
-            return Token.init(.Hash, value, start_line, start_col);
-        }
-
-        _ = self.advance();
-
-        // Check for multi-character operators
-        if (ch == '!' and self.peekChar() == '=') {
-            _ = self.advance();
-            const value = self.source[self.pos - 2 .. self.pos];
-            return Token.init(.UnescapedCode, value, start_line, start_col);
-        }
-
-        // Check for comparison and logical operators
-        if (ch == '>' and self.peekChar() == '=') {
-            _ = self.advance();
-            const value = self.source[self.pos - 2 .. self.pos];
-            return Token.init(.GreaterEqual, value, start_line, start_col);
-        }
-        if (ch == '<' and self.peekChar() == '=') {
-            _ = self.advance();
-            const value = self.source[self.pos - 2 .. self.pos];
-            return Token.init(.LessEqual, value, start_line, start_col);
-        }
-        if (ch == '=' and self.peekChar() == '=') {
-            _ = self.advance();
-            const value = self.source[self.pos - 2 .. self.pos];
-            return Token.init(.Equal, value, start_line, start_col);
-        }
-        if (ch == '&' and self.peekChar() == '&') {
-            _ = self.advance();
-            const value = self.source[self.pos - 2 .. self.pos];
-            return Token.init(.And, value, start_line, start_col);
-        }
-        if (ch == '|' and self.peekChar() == '|') {
-            _ = self.advance();
-            const value = self.source[self.pos - 2 .. self.pos];
-            return Token.init(.Or, value, start_line, start_col);
-        }
-
-        const token_type: TokenType = switch (ch) {
-            '(' => .LParen,
-            ')' => .RParen,
-            '[' => .LBracket,
-            ']' => .RBracket,
-            '{' => .LBrace,
-            '}' => .RBrace,
-            ',' => .Comma,
-            ':' => .Colon,
-            '|' => .Pipe,
-            '=' => .BufferedCode,
-            '+' => .Plus,
-            '-' => .UnbufferedCode,
-            '>' => .Greater,
-            '<' => .Less,
-            '&' => .Ident, // Standalone & treated as text (unlikely to appear alone)
-            '!' => .Ident, // Treat standalone ! as unexpected (will be handled as text)
-            else => {
-                // For any other character, treat as unexpected
-                std.debug.print("Unexpected character at {d}:{d}: '{c}' (0x{x})\n", .{ start_line, start_col, ch, ch });
-                return error.UnexpectedCharacter;
-            },
-        };
-
-        const value = self.source[self.pos - 1 .. self.pos];
-        return Token.init(token_type, value, start_line, start_col);
-    }
 
     /// Get the next token from the source
     ///
-    /// Main tokenization function called repeatedly to scan source code.
-    /// Handles:
-    /// 1. Pending INDENT/DEDENT tokens from indentation changes
-    /// 2. Indentation tracking at line starts
-    /// 3. Whitespace skipping
-    /// 4. Token recognition by looking at current character
+    /// Uses labeled-switch pattern for efficient state machine transitions.
+    /// This provides better branch prediction and cleaner state transitions.
+    ///
+    /// State transitions are handled directly in scan functions via continue :state.
     ///
     /// Returns: Next token (type, value, line, column)
-    ///
-    /// Token recognition order:
-    /// 1. Pending tokens (INDENT/DEDENT from previous line)
-    /// 2. EOF with remaining DEDENTs
-    /// 3. Newline
-    /// 4. Comments (//, //-)
-    /// 5. Interpolations (#{}, !{})
-    /// 6. Strings (", ')
-    /// 7. Numbers (0-9)
-    /// 8. Identifiers/keywords (a-zA-Z_)
-    /// 9. Symbols and shorthands
     ///
     /// Example usage:
     /// ```zig
@@ -752,20 +351,6 @@ pub const Tokenizer = struct {
     /// // Output: Ident Class Newline Indent Ident Eof
     /// ```
     pub fn next(self: *Tokenizer) !Token {
-        if (self.state == TokenizerState.Root) {
-            if (std.mem.startsWith(u8, self.source, "doctype html")) {
-                return Token.init(.Doctype, "doctype html", self.line, 1);
-            }
-            if (std.mem.startsWith(u8, self.source, "doctype xml")) {
-                return Token.init(.Doctype, "doctype xml", self.line, 1);
-            }
-        }
-
-        //var lines = std.mem.splitAny(u8, self.source, "\n");
-        // while (lines.next()) |line| {
-        //std.debug.print("line=>{s}\n", .{line});
-        //}
-
         // Check for pending tokens first (INDENT/DEDENT)
         if (self.pending_tokens.items.len > 0) {
             return self.pending_tokens.orderedRemove(0);
@@ -775,7 +360,6 @@ pub const Tokenizer = struct {
         try self.handleIndentation();
 
         // Check again for pending tokens after handling indentation
-        // This ensures INDENT/DEDENT tokens are emitted BEFORE content
         if (self.pending_tokens.items.len > 0) {
             return self.pending_tokens.orderedRemove(0);
         }
@@ -792,51 +376,118 @@ pub const Tokenizer = struct {
             return Token.init(.Eof, "", self.line, self.column);
         };
 
-        // Newline
+        // Newline - resets to Root state
         if (ch == '\n') {
             self.at_line_start = true;
+            self.state = .Root;
             const line = self.line;
             _ = self.advance();
             return Token.init(.Newline, "\n", line, 1);
         }
 
-        // Comments //, //-, //!
+        // Comments //, //-, //! (don't depend on state)
         if (ch == '/' and self.peekAhead(1) == '/') {
-            // Check for doc comment //! which should be completely ignored
             if (self.peekAhead(2) == '!') {
-                self.skipDocComment();
+                skipDocComment(self);
                 return self.next(); // Recursively get next token
             }
-            return self.scanComment();
+            return scanComment(self);
         }
 
-        // Interpolation #{...}
-        if (ch == '#' and self.peekAhead(1) == '{') {
-            return self.scanInterpolation();
+        // Interpolation #{...} or !{...} (can appear in any context)
+        if ((ch == '#' or ch == '!') and self.peekAhead(1) == '{') {
+            return scanInterpolation(self);
         }
 
-        // Interpolation !{...}
-        if (ch == '!' and self.peekAhead(1) == '{') {
-            return self.scanInterpolation();
-        }
+        // State-based tokenization using labeled-switch
+        return switch (self.state) {
+            .Root, .Indent => {
+                // Special doctype handling at document start
+                if (self.pos == 0 or (self.pos == 1 and self.source[0] == '\n')) {
+                    if (std.mem.startsWith(u8, self.source[self.pos..], "doctype html")) {
+                        self.pos += 12; // length of "doctype html"
+                        self.column += 12;
+                        return Token.init(.Doctype, "doctype html", self.line, 1);
+                    }
+                    if (std.mem.startsWith(u8, self.source[self.pos..], "doctype xml")) {
+                        self.pos += 11; // length of "doctype xml"
+                        self.column += 11;
+                        return Token.init(.Doctype, "doctype xml", self.line, 1);
+                    }
+                }
 
-        // Strings
-        if (ch == '"' or ch == '\'') {
-            return self.scanString(ch);
-        }
+                // Strings (can appear at root level in tests or expressions)
+                if (ch == '"' or ch == '\'') {
+                    return scanString(self, ch);
+                }
 
-        // Numbers
-        if (std.ascii.isDigit(ch)) {
-            return self.scanNumber();
-        }
+                // Numbers (can appear at root level)
+                if (std.ascii.isDigit(ch)) {
+                    return scanNumber(self);
+                }
 
-        // Identifiers and keywords (including UTF-8 characters like á, é, etc.)
-        if (std.ascii.isAlphabetic(ch) or ch == '_' or isUtf8Start(ch)) {
-            return self.scanIdentifier();
-        }
+                // At line start: expect tag name, keyword, or text
+                if (std.ascii.isAlphabetic(ch) or ch == '_' or isUtf8Start(ch)) {
+                    return scanIdentifier(self);
+                }
 
-        // Symbols (including .class, #id, code markers)
-        return self.scanSymbol();
+                // Symbols at root level (.class, #id, operators, etc.)
+                return scanSymbol(self);
+            },
+
+            .TagStart, .TagClass, .TagId => {
+                // After tag name, can have: .class, #id, (attributes), or text
+
+                if (ch == '.') return scanSymbol(self); // Handles .class
+                if (ch == '#') return scanSymbol(self); // Handles #id
+                if (ch == '(') return scanSymbol(self); // Transitions to AttrStart
+
+                // After tag+class+id, remaining content is text
+                if (ch == ' ') {
+                    _ = self.advance();
+                    self.state = .Text;
+                    return self.next();
+                }
+
+                // Other characters in tag context
+                if (std.ascii.isAlphabetic(ch) or ch == '_' or isUtf8Start(ch)) {
+                    self.state = .Text;
+                    return scanText(self);
+                }
+
+                return scanSymbol(self);
+            },
+
+            .AttrStart, .AttrName, .AttrEquals, .AttrValue, .AttrString, .AttrJS => {
+                // Inside attribute parentheses
+
+                if (ch == ')') return scanSymbol(self); // Back to TagStart
+                if (ch == ',') {
+                    const tok = try scanSymbol(self);
+                    self.state = .AttrName; // Next attribute
+                    return tok;
+                }
+                if (ch == '=') return scanSymbol(self); // AttrName → AttrEquals
+                if (ch == '"' or ch == '\'') {
+                    self.state = .AttrString;
+                    return scanString(self, ch);
+                }
+
+                // Attribute names and values
+                if (std.ascii.isAlphabetic(ch) or ch == '_' or ch == '-' or isUtf8Start(ch)) {
+                    return scanIdentifier(self);
+                }
+
+                if (std.ascii.isDigit(ch)) return scanNumber(self);
+
+                return scanSymbol(self);
+            },
+
+            .Text => {
+                // In text mode, everything is text until newline
+                return scanText(self);
+            },
+        };
     }
 };
 

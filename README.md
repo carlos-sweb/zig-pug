@@ -821,6 +821,23 @@ zig-pug uses [**mujs**](https://mujs.com/) as its JavaScript engine:
 
 See [PLAN.md](PLAN.md) for the complete development plan.
 
+## 📚 Documentation
+
+### Technical Documentation
+
+- **[Tokenizer Architecture](docs/TOKENIZER.md)** - Deep dive into the tokenizer's state machine, labeled-switch pattern, and implementation details
+- **[CLI Documentation](docs/en/CLI.md)** - Complete command-line interface guide
+- **[Node.js API](nodejs/README.md)** - Node.js addon documentation with TypeScript support
+- **[pkg-config Usage](docs/PKGCONFIG.md)** - Using zpug from C/C++ projects
+
+### Language-Specific Guides
+
+- **English:**
+  - [CLI Guide](docs/en/CLI.md)
+  - [Termux/Android Support](docs/en/TERMUX.md)
+- **Español:**
+  - [Guía CLI](docs/es/CLI.md)
+
 ## Contributing
 
 Contributions are welcome! Please:
