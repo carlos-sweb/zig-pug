@@ -487,6 +487,29 @@ pub const Tokenizer = struct {
                 // In text mode, everything is text until newline
                 return scanText(self);
             },
+
+            .Code => {
+                // In Code mode (after =, !=, -), parse JavaScript expressions
+                // Similar to Root but . and # are always operators, never class/id
+
+                // Strings
+                if (ch == '"' or ch == '\'') {
+                    return scanString(self, ch);
+                }
+
+                // Numbers
+                if (std.ascii.isDigit(ch)) {
+                    return scanNumber(self);
+                }
+
+                // Identifiers
+                if (std.ascii.isAlphabetic(ch) or ch == '_' or isUtf8Start(ch)) {
+                    return scanIdentifier(self);
+                }
+
+                // All other symbols (., [, ], (, ), etc.)
+                return scanSymbol(self);
+            },
         };
     }
 };

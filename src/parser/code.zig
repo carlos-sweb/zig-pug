@@ -5,9 +5,32 @@
 const std = @import("std");
 const ast = @import("../ast.zig");
 const helpers = @import("helpers.zig");
+const TokenType = @import("../tokenizer.zig").TokenType;
 
 /// Parser forward declaration
 pub const Parser = @import("mod.zig").Parser;
+
+/// Check if a space is needed before a token
+///
+/// Certain tokens should not have a space before them in JavaScript expressions.
+/// For example: "item.title" not "item . title", "arr[0]" not "arr [0]"
+fn needsSpaceBefore(token_type: TokenType) bool {
+    return switch (token_type) {
+        .Dot, .LBracket, .RBracket, .RParen, .Comma, .Colon => false,
+        else => true,
+    };
+}
+
+/// Check if a space is needed after a token
+///
+/// Certain tokens should not have a space after them in JavaScript expressions.
+/// For example: "item.title" not "item. title", "fn()" not "fn( )"
+fn needsSpaceAfter(token_type: TokenType) bool {
+    return switch (token_type) {
+        .Dot, .LBracket, .LParen => false,
+        else => true,
+    };
+}
 
 /// Parse comment (// buffered or //- unbuffered)
 ///
@@ -61,10 +84,18 @@ pub fn parseCode(self: *Parser) anyerror!*ast.AstNode {
 
     // Collect code until newline
     var code: std.ArrayList(u8) = .{};
+    var last_token_type: ?TokenType = null;
+
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
-        if (code.items.len > 0) {
-            try code.append(arena_allocator, ' ');
+        // Smart spacing: only add space if needed between tokens
+        if (code.items.len > 0 and last_token_type != null) {
+            const needs_space = needsSpaceAfter(last_token_type.?) and
+                               needsSpaceBefore(self.current.type);
+            if (needs_space) {
+                try code.append(arena_allocator, ' ');
+            }
         }
+
         // Preserve string quotes
         if (self.current.type == .String) {
             try code.append(arena_allocator, '"');
@@ -73,6 +104,8 @@ pub fn parseCode(self: *Parser) anyerror!*ast.AstNode {
         } else {
             try code.appendSlice(arena_allocator, self.current.value);
         }
+
+        last_token_type = self.current.type;
         try helpers.advance(self);
     }
 

@@ -56,8 +56,10 @@ pub fn scanSymbol(tokenizer: anytype) !Token {
         _ = tokenizer.advance();
 
         // Treat as class in tag context or at root (implicit div)
-        if (tokenizer.state == .Root or tokenizer.state == .Indent or
-            tokenizer.state == .TagStart or tokenizer.state == .TagClass or tokenizer.state == .TagId) {
+        // BUT NOT in Code context (JavaScript expressions)
+        if ((tokenizer.state == .Root or tokenizer.state == .Indent or
+            tokenizer.state == .TagStart or tokenizer.state == .TagClass or tokenizer.state == .TagId) and
+            tokenizer.state != .Code) {
             if (tokenizer.peekChar()) |next_ch| {
                 if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-' or isUtf8Start(next_ch)) {
                     const start = tokenizer.pos;
@@ -93,8 +95,10 @@ pub fn scanSymbol(tokenizer: anytype) !Token {
         _ = tokenizer.advance();
 
         // Treat as id in tag context or at root (implicit div)
-        if (tokenizer.state == .Root or tokenizer.state == .Indent or
-            tokenizer.state == .TagStart or tokenizer.state == .TagClass or tokenizer.state == .TagId) {
+        // BUT NOT in Code context (JavaScript expressions)
+        if ((tokenizer.state == .Root or tokenizer.state == .Indent or
+            tokenizer.state == .TagStart or tokenizer.state == .TagClass or tokenizer.state == .TagId) and
+            tokenizer.state != .Code) {
             if (tokenizer.peekChar()) |next_ch| {
                 if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-' or isUtf8Start(next_ch)) {
                     const start = tokenizer.pos;
@@ -131,6 +135,7 @@ pub fn scanSymbol(tokenizer: anytype) !Token {
     if (ch == '!' and tokenizer.peekChar() == '=') {
         _ = tokenizer.advance();
         const value = tokenizer.source[tokenizer.pos - 2 .. tokenizer.pos];
+        tokenizer.state = .Code;  // Enter JavaScript expression context
         return Token.init(.UnescapedCode, value, start_line, start_col);
     }
 
@@ -185,9 +190,15 @@ pub fn scanSymbol(tokenizer: anytype) !Token {
         ',' => .Comma,
         ':' => .Colon,
         '|' => .Pipe,
-        '=' => .BufferedCode,
+        '=' => blk: {
+            tokenizer.state = .Code;  // Enter JavaScript expression context
+            break :blk .BufferedCode;
+        },
         '+' => .Plus,
-        '-' => .UnbufferedCode,
+        '-' => blk: {
+            tokenizer.state = .Code;  // Enter JavaScript expression context
+            break :blk .UnbufferedCode;
+        },
         '>' => .Greater,
         '<' => .Less,
         '&' => .Ident, // Standalone & treated as text

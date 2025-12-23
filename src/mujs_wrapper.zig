@@ -231,6 +231,70 @@ pub const JsRuntime = struct {
         js_setglobal(self.state, key_z);
     }
 
+    /// Recursively serialize a JSON value to JavaScript code
+    ///
+    /// Converts Zig JSON values to valid JavaScript code, handling nested
+    /// objects and arrays recursively.
+    fn serializeJsonValue(self: *Self, value: std.json.Value, js_code: *std.ArrayList(u8)) !void {
+        switch (value) {
+            .string => |str| {
+                try js_code.append(self.allocator, '"');
+                for (str) |c| {
+                    switch (c) {
+                        '"' => try js_code.appendSlice(self.allocator, "\\\""),
+                        '\\' => try js_code.appendSlice(self.allocator, "\\\\"),
+                        '\n' => try js_code.appendSlice(self.allocator, "\\n"),
+                        '\r' => try js_code.appendSlice(self.allocator, "\\r"),
+                        '\t' => try js_code.appendSlice(self.allocator, "\\t"),
+                        else => try js_code.append(self.allocator, c),
+                    }
+                }
+                try js_code.append(self.allocator, '"');
+            },
+            .integer => |num| {
+                var buf: [32]u8 = undefined;
+                const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
+                try js_code.appendSlice(self.allocator, formatted);
+            },
+            .float => |num| {
+                var buf: [64]u8 = undefined;
+                const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
+                try js_code.appendSlice(self.allocator, formatted);
+            },
+            .number_string => |num_str| {
+                // Number represented as string, pass it through directly
+                try js_code.appendSlice(self.allocator, num_str);
+            },
+            .bool => |b| {
+                try js_code.appendSlice(self.allocator, if (b) "true" else "false");
+            },
+            .null => {
+                try js_code.appendSlice(self.allocator, "null");
+            },
+            .array => |arr| {
+                try js_code.append(self.allocator, '[');
+                for (arr.items, 0..) |item, i| {
+                    if (i > 0) try js_code.appendSlice(self.allocator, ", ");
+                    try self.serializeJsonValue(item, js_code);
+                }
+                try js_code.append(self.allocator, ']');
+            },
+            .object => |obj| {
+                try js_code.append(self.allocator, '{');
+                var it = obj.iterator();
+                var first = true;
+                while (it.next()) |entry| {
+                    if (!first) try js_code.appendSlice(self.allocator, ", ");
+                    first = false;
+                    try js_code.appendSlice(self.allocator, entry.key_ptr.*);
+                    try js_code.appendSlice(self.allocator, ": ");
+                    try self.serializeJsonValue(entry.value_ptr.*, js_code);
+                }
+                try js_code.append(self.allocator, '}');
+            },
+        }
+    }
+
     /// Set an array variable in the global scope from JSON values
     pub fn setArrayFromJson(self: *Self, key: []const u8, values: []const std.json.Value) !void {
         // Pre-calculate approximate size to reduce allocations
@@ -249,44 +313,8 @@ pub const JsRuntime = struct {
             if (i > 0) {
                 try js_code.appendSlice(self.allocator, ", ");
             }
-
-            switch (value) {
-                .string => |str| {
-                    try js_code.append(self.allocator, '"');
-                    // Escape special characters in string
-                    for (str) |c| {
-                        switch (c) {
-                            '"' => try js_code.appendSlice(self.allocator, "\\\""),
-                            '\\' => try js_code.appendSlice(self.allocator, "\\\\"),
-                            '\n' => try js_code.appendSlice(self.allocator, "\\n"),
-                            '\r' => try js_code.appendSlice(self.allocator, "\\r"),
-                            '\t' => try js_code.appendSlice(self.allocator, "\\t"),
-                            else => try js_code.append(self.allocator, c),
-                        }
-                    }
-                    try js_code.append(self.allocator, '"');
-                },
-                .integer => |num| {
-                    var buf: [32]u8 = undefined;
-                    const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
-                    try js_code.appendSlice(self.allocator, formatted);
-                },
-                .float => |num| {
-                    var buf: [64]u8 = undefined;
-                    const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
-                    try js_code.appendSlice(self.allocator, formatted);
-                },
-                .bool => |b| {
-                    try js_code.appendSlice(self.allocator, if (b) "true" else "false");
-                },
-                .null => {
-                    try js_code.appendSlice(self.allocator, "null");
-                },
-                else => {
-                    // For nested arrays/objects, stringify as JSON
-                    try js_code.appendSlice(self.allocator, "null");
-                },
-            }
+            // Use recursive serialization for all value types
+            try self.serializeJsonValue(value, &js_code);
         }
 
         try js_code.appendSlice(self.allocator, "]");
@@ -327,44 +355,9 @@ pub const JsRuntime = struct {
             try js_code.appendSlice(self.allocator, entry.key_ptr.*);
             try js_code.appendSlice(self.allocator, ": ");
 
-            // Property value
+            // Property value - use recursive serialization for all value types
             const value = entry.value_ptr.*;
-            switch (value) {
-                .string => |str| {
-                    try js_code.append(self.allocator, '"');
-                    for (str) |c| {
-                        switch (c) {
-                            '"' => try js_code.appendSlice(self.allocator, "\\\""),
-                            '\\' => try js_code.appendSlice(self.allocator, "\\\\"),
-                            '\n' => try js_code.appendSlice(self.allocator, "\\n"),
-                            '\r' => try js_code.appendSlice(self.allocator, "\\r"),
-                            '\t' => try js_code.appendSlice(self.allocator, "\\t"),
-                            else => try js_code.append(self.allocator, c),
-                        }
-                    }
-                    try js_code.append(self.allocator, '"');
-                },
-                .integer => |num| {
-                    var buf: [32]u8 = undefined;
-                    const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
-                    try js_code.appendSlice(self.allocator, formatted);
-                },
-                .float => |num| {
-                    var buf: [64]u8 = undefined;
-                    const formatted = std.fmt.bufPrint(&buf, "{d}", .{num}) catch "0";
-                    try js_code.appendSlice(self.allocator, formatted);
-                },
-                .bool => |b| {
-                    try js_code.appendSlice(self.allocator, if (b) "true" else "false");
-                },
-                .null => {
-                    try js_code.appendSlice(self.allocator, "null");
-                },
-                else => {
-                    // Nested objects/arrays not supported yet, use null
-                    try js_code.appendSlice(self.allocator, "null");
-                },
-            }
+            try self.serializeJsonValue(value, &js_code);
         }
 
         try js_code.appendSlice(self.allocator, "}");

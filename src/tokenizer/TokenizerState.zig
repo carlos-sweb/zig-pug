@@ -11,4 +11,5 @@ pub const TokenizerState = enum {
     AttrString,
     AttrJS,
     Text,
+    Code,  // JavaScript expression context (after =, !=, -)
 };
