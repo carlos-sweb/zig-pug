@@ -47,6 +47,7 @@ all: $(TARGETS)
 03-arrays-objects: 03-arrays-objects.c
 04-error-handling: 04-error-handling.c
 05-file-template: 05-file-template.c
+06-builder-api: 06-builder-api.c
 
 # Run targets
 run-basic: 01-basic
@@ -71,6 +72,10 @@ run-file: 05-file-template
 	./05-file-template test-template.pug
 	@rm -f test-template.pug
 
+run-builder: 06-builder-api
+	@echo "=== Running 06-builder-api ==="
+	./06-builder-api
+
 # Run all examples
 run-all: all
 	@echo "\n=== Running all examples ===\n"
@@ -83,6 +88,8 @@ run-all: all
 	@$(MAKE) run-errors
 	@echo ""
 	@$(MAKE) run-file
+	@echo ""
+	@$(MAKE) run-builder
 
 # Clean
 clean:

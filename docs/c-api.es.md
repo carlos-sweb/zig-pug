@@ -328,6 +328,516 @@ p Host: #{config.server.host}
 - Se soportan objetos anidados
 - Acceso a propiedades con notación de punto
 
+### Builder API - Avanzado (Para Geeks de Verdad 🤓)
+
+La **Builder API** proporciona una forma poderosa y segura en tipos para construir matrices y objetos dinámicamente. Este es el enfoque avanzado para cuando necesitas construir estructuras de datos complejas programáticamente.
+
+#### ¿Por qué Builder API?
+
+**Usa Builder API cuando:**
+- ✅ Construyes datos desde bucles/bases de datos/APIs
+- ✅ Necesitas seguridad de tipos (sin escapado manual)
+- ✅ Construyes estructuras anidadas complejas
+- ✅ Datos dinámicos desde entrada del usuario/cálculos
+
+**Usa cadenas JSON cuando:**
+- ✅ Datos simples y estáticos
+- ✅ Los datos ya están en formato JSON
+- ✅ Prototipado rápido
+
+#### El Enfoque Híbrido (Recomendado)
+
+¡Combina ambos! Usa JSON para casos simples, Builder para los complejos:
+
+```c
+// Simple/estático: Usa JSON
+zigpug_set_array_json(ctx, "colors", "[\"red\",\"green\",\"blue\"]");
+
+// Dinámico/complejo: Usa Builder
+ZigPugArray* numbers = zigpug_array_create(ctx);
+for (int i = 0; i < count; i++) {
+    zigpug_array_add_int(numbers, database_results[i]);
+}
+zigpug_set_array(ctx, "numbers", numbers);
+zigpug_array_free(numbers);
+```
+
+#### Funciones de Array Builder
+
+##### `zigpug_array_create()`
+
+Crea un nuevo constructor de matriz.
+
+```c
+ZigPugArray* zigpug_array_create(ZigPugContext* ctx);
+```
+
+**Parámetros:**
+- `ctx` - Identificador de contexto
+
+**Retorna:**
+- Identificador del constructor de matriz en caso de éxito
+- `NULL` en caso de error
+
+**Ejemplo:**
+```c
+ZigPugArray* arr = zigpug_array_create(ctx);
+if (!arr) {
+    fprintf(stderr, "Failed to create array\n");
+    return 1;
+}
+```
+
+**Notas:**
+- Debe liberarse con `zigpug_array_free()`
+- Puede liberarse inmediatamente después de `zigpug_set_array()`
+
+##### `zigpug_array_free()`
+
+Libera un constructor de matriz.
+
+```c
+void zigpug_array_free(ZigPugArray* arr);
+```
+
+**Parámetros:**
+- `arr` - Identificador del constructor de matriz (puede ser `NULL`)
+
+**Ejemplo:**
+```c
+zigpug_array_free(arr);  // Safe to call with NULL
+```
+
+##### `zigpug_array_add_string()`
+
+Agrega una cadena a la matriz.
+
+```c
+bool zigpug_array_add_string(ZigPugArray* arr, const char* value);
+```
+
+**Parámetros:**
+- `arr` - Identificador del constructor de matriz
+- `value` - Valor de cadena (terminado en nulo)
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_array_add_string(arr, "Apple");
+zigpug_array_add_string(arr, "Banana");
+zigpug_array_add_string(arr, "Orange");
+```
+
+##### `zigpug_array_add_int()`
+
+Agrega un entero a la matriz.
+
+```c
+bool zigpug_array_add_int(ZigPugArray* arr, int64_t value);
+```
+
+**Parámetros:**
+- `arr` - Identificador del constructor de matriz
+- `value` - Valor entero (64-bit)
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_array_add_int(arr, 42);
+zigpug_array_add_int(arr, -100);
+zigpug_array_add_int(arr, 9999);
+```
+
+##### `zigpug_array_add_double()`
+
+Agrega un double/float a la matriz.
+
+```c
+bool zigpug_array_add_double(ZigPugArray* arr, double value);
+```
+
+**Parámetros:**
+- `arr` - Identificador del constructor de matriz
+- `value` - Valor double
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_array_add_double(arr, 3.14159);
+zigpug_array_add_double(arr, -2.5);
+zigpug_array_add_double(arr, 98.6);
+```
+
+##### `zigpug_array_add_bool()`
+
+Agrega un booleano a la matriz.
+
+```c
+bool zigpug_array_add_bool(ZigPugArray* arr, bool value);
+```
+
+**Parámetros:**
+- `arr` - Identificador del constructor de matriz
+- `value` - Valor booleano
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_array_add_bool(arr, true);
+zigpug_array_add_bool(arr, false);
+```
+
+##### `zigpug_array_add_null()`
+
+Agrega null a la matriz.
+
+```c
+bool zigpug_array_add_null(ZigPugArray* arr);
+```
+
+**Parámetros:**
+- `arr` - Identificador del constructor de matriz
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_array_add_null(arr);
+```
+
+##### `zigpug_set_array()`
+
+Establece una variable de matriz en el contexto usando un constructor.
+
+```c
+bool zigpug_set_array(ZigPugContext* ctx, const char* key, ZigPugArray* arr);
+```
+
+**Parámetros:**
+- `ctx` - Identificador de contexto
+- `key` - Nombre de la variable (terminado en nulo)
+- `arr` - Identificador del constructor de matriz
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+ZigPugArray* fruits = zigpug_array_create(ctx);
+zigpug_array_add_string(fruits, "Apple");
+zigpug_array_add_string(fruits, "Banana");
+zigpug_set_array(ctx, "fruits", fruits);
+zigpug_array_free(fruits);  // Safe to free after set
+```
+
+**Notas:**
+- La matriz se copia, el constructor puede liberarse inmediatamente
+- El constructor permanece válido y puede reutilizarse
+
+#### Funciones de Object Builder
+
+##### `zigpug_object_create()`
+
+Crea un nuevo constructor de objeto.
+
+```c
+ZigPugObject* zigpug_object_create(ZigPugContext* ctx);
+```
+
+**Parámetros:**
+- `ctx` - Identificador de contexto
+
+**Retorna:**
+- Identificador del constructor de objeto en caso de éxito
+- `NULL` en caso de error
+
+**Ejemplo:**
+```c
+ZigPugObject* obj = zigpug_object_create(ctx);
+if (!obj) {
+    fprintf(stderr, "Failed to create object\n");
+    return 1;
+}
+```
+
+##### `zigpug_object_free()`
+
+Libera un constructor de objeto.
+
+```c
+void zigpug_object_free(ZigPugObject* obj);
+```
+
+**Parámetros:**
+- `obj` - Identificador del constructor de objeto (puede ser `NULL`)
+
+**Ejemplo:**
+```c
+zigpug_object_free(obj);  // Safe to call with NULL
+```
+
+##### `zigpug_object_set_string()`
+
+Establece una propiedad de cadena en el objeto.
+
+```c
+bool zigpug_object_set_string(ZigPugObject* obj, const char* key, const char* value);
+```
+
+**Parámetros:**
+- `obj` - Identificador del constructor de objeto
+- `key` - Nombre de la propiedad (terminado en nulo)
+- `value` - Valor de cadena (terminado en nulo)
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_object_set_string(user, "name", "Alice");
+zigpug_object_set_string(user, "email", "alice@example.com");
+```
+
+##### `zigpug_object_set_int()`
+
+Establece una propiedad entera en el objeto.
+
+```c
+bool zigpug_object_set_int(ZigPugObject* obj, const char* key, int64_t value);
+```
+
+**Parámetros:**
+- `obj` - Identificador del constructor de objeto
+- `key` - Nombre de la propiedad (terminado en nulo)
+- `value` - Valor entero (64-bit)
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_object_set_int(user, "age", 30);
+zigpug_object_set_int(user, "score", 9999);
+```
+
+##### `zigpug_object_set_double()`
+
+Establece una propiedad double/float en el objeto.
+
+```c
+bool zigpug_object_set_double(ZigPugObject* obj, const char* key, double value);
+```
+
+**Parámetros:**
+- `obj` - Identificador del constructor de objeto
+- `key` - Nombre de la propiedad (terminado en nulo)
+- `value` - Valor double
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_object_set_double(product, "price", 19.99);
+zigpug_object_set_double(product, "rating", 4.5);
+```
+
+##### `zigpug_object_set_bool()`
+
+Establece una propiedad booleana en el objeto.
+
+```c
+bool zigpug_object_set_bool(ZigPugObject* obj, const char* key, bool value);
+```
+
+**Parámetros:**
+- `obj` - Identificador del constructor de objeto
+- `key` - Nombre de la propiedad (terminado en nulo)
+- `value` - Valor booleano
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_object_set_bool(user, "admin", true);
+zigpug_object_set_bool(user, "verified", false);
+```
+
+##### `zigpug_object_set_null()`
+
+Establece una propiedad null en el objeto.
+
+```c
+bool zigpug_object_set_null(ZigPugObject* obj, const char* key);
+```
+
+**Parámetros:**
+- `obj` - Identificador del constructor de objeto
+- `key` - Nombre de la propiedad (terminado en nulo)
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+zigpug_object_set_null(obj, "optional_field");
+```
+
+##### `zigpug_set_object()`
+
+Establece una variable de objeto en el contexto usando un constructor.
+
+```c
+bool zigpug_set_object(ZigPugContext* ctx, const char* key, ZigPugObject* obj);
+```
+
+**Parámetros:**
+- `ctx` - Identificador de contexto
+- `key` - Nombre de la variable (terminado en nulo)
+- `obj` - Identificador del constructor de objeto
+
+**Retorna:**
+- `true` en caso de éxito
+- `false` en caso de error
+
+**Ejemplo:**
+```c
+ZigPugObject* user = zigpug_object_create(ctx);
+zigpug_object_set_string(user, "name", "Alice");
+zigpug_object_set_int(user, "age", 30);
+zigpug_object_set_bool(user, "admin", true);
+zigpug_set_object(ctx, "user", user);
+zigpug_object_free(user);  // Safe to free after set
+```
+
+#### Ejemplos de Builder API
+
+##### Ejemplo: Matriz Dinámica desde Base de Datos
+
+```c
+// Simulate database results
+struct Product {
+    const char* name;
+    double price;
+};
+
+struct Product products[] = {
+    {"Laptop", 999.99},
+    {"Mouse", 29.99},
+    {"Keyboard", 79.99},
+};
+int count = 3;
+
+// Build array dynamically
+ZigPugArray* product_names = zigpug_array_create(ctx);
+ZigPugArray* product_prices = zigpug_array_create(ctx);
+
+for (int i = 0; i < count; i++) {
+    zigpug_array_add_string(product_names, products[i].name);
+    zigpug_array_add_double(product_prices, products[i].price);
+}
+
+zigpug_set_array(ctx, "names", product_names);
+zigpug_set_array(ctx, "prices", product_prices);
+
+zigpug_array_free(product_names);
+zigpug_array_free(product_prices);
+
+// Template
+const char* template =
+    "ul.products\n"
+    "  each name, i in names\n"
+    "    li #{name}: $#{prices[i]}";
+
+char* html = zigpug_compile(ctx, template);
+```
+
+##### Ejemplo: Objeto Dinámico desde Respuesta de API
+
+```c
+// Simulate API response
+typedef struct {
+    const char* username;
+    int followers;
+    double rating;
+    bool verified;
+} UserProfile;
+
+UserProfile api_data = {
+    .username = "geek_coder",
+    .followers = 1337,
+    .rating = 4.8,
+    .verified = true
+};
+
+// Build object
+ZigPugObject* profile = zigpug_object_create(ctx);
+zigpug_object_set_string(profile, "username", api_data.username);
+zigpug_object_set_int(profile, "followers", api_data.followers);
+zigpug_object_set_double(profile, "rating", api_data.rating);
+zigpug_object_set_bool(profile, "verified", api_data.verified);
+
+zigpug_set_object(ctx, "profile", profile);
+zigpug_object_free(profile);
+
+// Template
+const char* template =
+    "div.profile\n"
+    "  h2= profile.username\n"
+    "  p Followers: #{profile.followers}\n"
+    "  p Rating: #{profile.rating}/5.0\n"
+    "  if profile.verified\n"
+    "    span.badge ✓ Verified";
+
+char* html = zigpug_compile(ctx, template);
+```
+
+##### Ejemplo: Matriz de Tipos Mixtos
+
+```c
+// Array with different types
+ZigPugArray* mixed = zigpug_array_create(ctx);
+
+zigpug_array_add_string(mixed, "Hello");
+zigpug_array_add_int(mixed, 42);
+zigpug_array_add_double(mixed, 3.14);
+zigpug_array_add_bool(mixed, true);
+zigpug_array_add_null(mixed);
+
+zigpug_set_array(ctx, "mixed", mixed);
+zigpug_array_free(mixed);
+
+// Template
+const char* template =
+    "ul\n"
+    "  each item in mixed\n"
+    "    li= item";
+
+char* html = zigpug_compile(ctx, template);
+// Output: <ul><li>Hello</li><li>42</li><li>3.14</li><li>true</li><li></li></ul>
+```
+
 ### Manejo de Errores
 
 #### `zigpug_get_error_count()`

@@ -231,6 +231,265 @@ export fn zigpug_version() [*:0]const u8 {
 }
 
 // ============================================================================
+// Builder API - Arrays and Objects (Advanced)
+// ============================================================================
+
+/// Array builder for dynamic array construction
+pub const ArrayBuilder = opaque {};
+
+/// Object builder for dynamic object construction
+pub const ObjectBuilder = opaque {};
+
+/// Internal array builder implementation
+const ArrayBuilderImpl = struct {
+    allocator: std.mem.Allocator,
+    items: std.ArrayList(std.json.Value),
+
+    fn init(allocator: std.mem.Allocator) !*ArrayBuilderImpl {
+        const builder = try allocator.create(ArrayBuilderImpl);
+        builder.* = .{
+            .allocator = allocator,
+            .items = std.ArrayList(std.json.Value){},
+        };
+        return builder;
+    }
+
+    fn deinit(self: *ArrayBuilderImpl) void {
+        // Free string values
+        for (self.items.items) |item| {
+            switch (item) {
+                .string => |s| self.allocator.free(s),
+                else => {},
+            }
+        }
+        self.items.deinit(self.allocator);
+        self.allocator.destroy(self);
+    }
+
+    fn addString(self: *ArrayBuilderImpl, value: []const u8) !void {
+        const owned = try self.allocator.dupe(u8, value);
+        try self.items.append(self.allocator, std.json.Value{ .string = owned });
+    }
+
+    fn addInt(self: *ArrayBuilderImpl, value: i64) !void {
+        try self.items.append(self.allocator, std.json.Value{ .integer = value });
+    }
+
+    fn addFloat(self: *ArrayBuilderImpl, value: f64) !void {
+        try self.items.append(self.allocator, std.json.Value{ .float = value });
+    }
+
+    fn addBool(self: *ArrayBuilderImpl, value: bool) !void {
+        try self.items.append(self.allocator, std.json.Value{ .bool = value });
+    }
+
+    fn addNull(self: *ArrayBuilderImpl) !void {
+        try self.items.append(self.allocator, std.json.Value.null);
+    }
+
+    fn toJsonValue(self: *ArrayBuilderImpl) !std.json.Value {
+        const array = try std.json.Array.initCapacity(self.allocator, self.items.items.len);
+        return std.json.Value{ .array = array };
+    }
+};
+
+/// Internal object builder implementation
+const ObjectBuilderImpl = struct {
+    allocator: std.mem.Allocator,
+    map: std.json.ObjectMap,
+
+    fn init(allocator: std.mem.Allocator) !*ObjectBuilderImpl {
+        const builder = try allocator.create(ObjectBuilderImpl);
+        builder.* = .{
+            .allocator = allocator,
+            .map = std.json.ObjectMap.init(allocator),
+        };
+        return builder;
+    }
+
+    fn deinit(self: *ObjectBuilderImpl) void {
+        var it = self.map.iterator();
+        while (it.next()) |entry| {
+            self.allocator.free(entry.key_ptr.*);
+            // Free string values
+            switch (entry.value_ptr.*) {
+                .string => |s| self.allocator.free(s),
+                else => {},
+            }
+        }
+        self.map.deinit();
+        self.allocator.destroy(self);
+    }
+
+    fn setString(self: *ObjectBuilderImpl, key: []const u8, value: []const u8) !void {
+        const owned_key = try self.allocator.dupe(u8, key);
+        const owned_value = try self.allocator.dupe(u8, value);
+        try self.map.put(owned_key, std.json.Value{ .string = owned_value });
+    }
+
+    fn setInt(self: *ObjectBuilderImpl, key: []const u8, value: i64) !void {
+        const owned_key = try self.allocator.dupe(u8, key);
+        try self.map.put(owned_key, std.json.Value{ .integer = value });
+    }
+
+    fn setFloat(self: *ObjectBuilderImpl, key: []const u8, value: f64) !void {
+        const owned_key = try self.allocator.dupe(u8, key);
+        try self.map.put(owned_key, std.json.Value{ .float = value });
+    }
+
+    fn setBool(self: *ObjectBuilderImpl, key: []const u8, value: bool) !void {
+        const owned_key = try self.allocator.dupe(u8, key);
+        try self.map.put(owned_key, std.json.Value{ .bool = value });
+    }
+
+    fn setNull(self: *ObjectBuilderImpl, key: []const u8) !void {
+        const owned_key = try self.allocator.dupe(u8, key);
+        try self.map.put(owned_key, std.json.Value.null);
+    }
+};
+
+// ========== Array Builder Functions ==========
+
+/// Create a new array builder
+export fn zigpug_array_create(ctx: ?*ZigPugContext) ?*ArrayBuilder {
+    const context: *Context = @ptrCast(@alignCast(ctx orelse return null));
+    const builder = ArrayBuilderImpl.init(context.allocator) catch return null;
+    return @ptrCast(builder);
+}
+
+/// Free an array builder
+export fn zigpug_array_free(arr: ?*ArrayBuilder) void {
+    if (arr) |a| {
+        const builder: *ArrayBuilderImpl = @ptrCast(@alignCast(a));
+        builder.deinit();
+    }
+}
+
+/// Add a string to the array
+export fn zigpug_array_add_string(arr: ?*ArrayBuilder, value: [*:0]const u8) bool {
+    const builder: *ArrayBuilderImpl = @ptrCast(@alignCast(arr orelse return false));
+    const value_str = std.mem.span(value);
+    builder.addString(value_str) catch return false;
+    return true;
+}
+
+/// Add an integer to the array
+export fn zigpug_array_add_int(arr: ?*ArrayBuilder, value: i64) bool {
+    const builder: *ArrayBuilderImpl = @ptrCast(@alignCast(arr orelse return false));
+    builder.addInt(value) catch return false;
+    return true;
+}
+
+/// Add a float/double to the array
+export fn zigpug_array_add_double(arr: ?*ArrayBuilder, value: f64) bool {
+    const builder: *ArrayBuilderImpl = @ptrCast(@alignCast(arr orelse return false));
+    builder.addFloat(value) catch return false;
+    return true;
+}
+
+/// Add a boolean to the array
+export fn zigpug_array_add_bool(arr: ?*ArrayBuilder, value: bool) bool {
+    const builder: *ArrayBuilderImpl = @ptrCast(@alignCast(arr orelse return false));
+    builder.addBool(value) catch return false;
+    return true;
+}
+
+/// Add null to the array
+export fn zigpug_array_add_null(arr: ?*ArrayBuilder) bool {
+    const builder: *ArrayBuilderImpl = @ptrCast(@alignCast(arr orelse return false));
+    builder.addNull() catch return false;
+    return true;
+}
+
+/// Set an array variable in the context using a builder
+export fn zigpug_set_array(ctx: ?*ZigPugContext, key: [*:0]const u8, arr: ?*ArrayBuilder) bool {
+    const context: *Context = @ptrCast(@alignCast(ctx orelse return false));
+    const builder: *ArrayBuilderImpl = @ptrCast(@alignCast(arr orelse return false));
+    const key_str = std.mem.span(key);
+
+    // Convert builder items to JSON array
+    var json_array = std.json.Array.init(context.allocator);
+    for (builder.items.items) |item| {
+        json_array.append(item) catch return false;
+    }
+
+    // Set array in runtime
+    context.runtime.setArrayFromJson(key_str, json_array.items) catch return false;
+
+    return true;
+}
+
+// ========== Object Builder Functions ==========
+
+/// Create a new object builder
+export fn zigpug_object_create(ctx: ?*ZigPugContext) ?*ObjectBuilder {
+    const context: *Context = @ptrCast(@alignCast(ctx orelse return null));
+    const builder = ObjectBuilderImpl.init(context.allocator) catch return null;
+    return @ptrCast(builder);
+}
+
+/// Free an object builder
+export fn zigpug_object_free(obj: ?*ObjectBuilder) void {
+    if (obj) |o| {
+        const builder: *ObjectBuilderImpl = @ptrCast(@alignCast(o));
+        builder.deinit();
+    }
+}
+
+/// Set a string property in the object
+export fn zigpug_object_set_string(obj: ?*ObjectBuilder, key: [*:0]const u8, value: [*:0]const u8) bool {
+    const builder: *ObjectBuilderImpl = @ptrCast(@alignCast(obj orelse return false));
+    const key_str = std.mem.span(key);
+    const value_str = std.mem.span(value);
+    builder.setString(key_str, value_str) catch return false;
+    return true;
+}
+
+/// Set an integer property in the object
+export fn zigpug_object_set_int(obj: ?*ObjectBuilder, key: [*:0]const u8, value: i64) bool {
+    const builder: *ObjectBuilderImpl = @ptrCast(@alignCast(obj orelse return false));
+    const key_str = std.mem.span(key);
+    builder.setInt(key_str, value) catch return false;
+    return true;
+}
+
+/// Set a float/double property in the object
+export fn zigpug_object_set_double(obj: ?*ObjectBuilder, key: [*:0]const u8, value: f64) bool {
+    const builder: *ObjectBuilderImpl = @ptrCast(@alignCast(obj orelse return false));
+    const key_str = std.mem.span(key);
+    builder.setFloat(key_str, value) catch return false;
+    return true;
+}
+
+/// Set a boolean property in the object
+export fn zigpug_object_set_bool(obj: ?*ObjectBuilder, key: [*:0]const u8, value: bool) bool {
+    const builder: *ObjectBuilderImpl = @ptrCast(@alignCast(obj orelse return false));
+    const key_str = std.mem.span(key);
+    builder.setBool(key_str, value) catch return false;
+    return true;
+}
+
+/// Set a null property in the object
+export fn zigpug_object_set_null(obj: ?*ObjectBuilder, key: [*:0]const u8) bool {
+    const builder: *ObjectBuilderImpl = @ptrCast(@alignCast(obj orelse return false));
+    const key_str = std.mem.span(key);
+    builder.setNull(key_str) catch return false;
+    return true;
+}
+
+/// Set an object variable in the context using a builder
+export fn zigpug_set_object(ctx: ?*ZigPugContext, key: [*:0]const u8, obj: ?*ObjectBuilder) bool {
+    const context: *Context = @ptrCast(@alignCast(ctx orelse return false));
+    const builder: *ObjectBuilderImpl = @ptrCast(@alignCast(obj orelse return false));
+    const key_str = std.mem.span(key);
+
+    // Set object in runtime
+    context.runtime.setObjectFromJson(key_str, builder.map) catch return false;
+
+    return true;
+}
+
+// ============================================================================
 // Internal Context (not exported to C)
 // ============================================================================
 

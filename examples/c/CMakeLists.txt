@@ -46,8 +46,11 @@ target_link_libraries(04-error-handling zig-pug m)
 add_executable(05-file-template 05-file-template.c)
 target_link_libraries(05-file-template zig-pug m)
 
+add_executable(06-builder-api 06-builder-api.c)
+target_link_libraries(06-builder-api zig-pug m)
+
 # Install targets
-install(TARGETS 01-basic 02-variables 03-arrays-objects 04-error-handling 05-file-template
+install(TARGETS 01-basic 02-variables 03-arrays-objects 04-error-handling 05-file-template 06-builder-api
         RUNTIME DESTINATION bin)
 
 # Print instructions
@@ -63,4 +66,5 @@ message(STATUS "  ./02-variables")
 message(STATUS "  ./03-arrays-objects")
 message(STATUS "  ./04-error-handling")
 message(STATUS "  ./05-file-template template.pug")
+message(STATUS "  ./06-builder-api")
 message(STATUS "")

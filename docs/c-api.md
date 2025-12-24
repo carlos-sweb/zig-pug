@@ -328,6 +328,516 @@ p Host: #{config.server.host}
 - Nested objects supported
 - Property access with dot notation
 
+### Builder API - Advanced (For Real Geeks 🤓)
+
+The **Builder API** provides a powerful, type-safe way to construct arrays and objects dynamically. This is the advanced approach for when you need to build complex data structures programmatically.
+
+#### Why Builder API?
+
+**Use Builder API when:**
+- ✅ Building data from loops/databases/APIs
+- ✅ Need type safety (no manual escaping)
+- ✅ Constructing complex nested structures
+- ✅ Dynamic data from user input/calculations
+
+**Use JSON strings when:**
+- ✅ Simple, static data
+- ✅ Data is already in JSON format
+- ✅ Quick prototyping
+
+#### The Hybrid Approach (Recommended)
+
+Combine both! Use JSON for simple cases, Builder for complex ones:
+
+```c
+// Simple/static: Use JSON
+zigpug_set_array_json(ctx, "colors", "[\"red\",\"green\",\"blue\"]");
+
+// Dynamic/complex: Use Builder
+ZigPugArray* numbers = zigpug_array_create(ctx);
+for (int i = 0; i < count; i++) {
+    zigpug_array_add_int(numbers, database_results[i]);
+}
+zigpug_set_array(ctx, "numbers", numbers);
+zigpug_array_free(numbers);
+```
+
+#### Array Builder Functions
+
+##### `zigpug_array_create()`
+
+Create a new array builder.
+
+```c
+ZigPugArray* zigpug_array_create(ZigPugContext* ctx);
+```
+
+**Parameters:**
+- `ctx` - Context handle
+
+**Returns:**
+- Array builder handle on success
+- `NULL` on error
+
+**Example:**
+```c
+ZigPugArray* arr = zigpug_array_create(ctx);
+if (!arr) {
+    fprintf(stderr, "Failed to create array\n");
+    return 1;
+}
+```
+
+**Notes:**
+- Must be freed with `zigpug_array_free()`
+- Can be freed immediately after `zigpug_set_array()`
+
+##### `zigpug_array_free()`
+
+Free an array builder.
+
+```c
+void zigpug_array_free(ZigPugArray* arr);
+```
+
+**Parameters:**
+- `arr` - Array builder handle (can be `NULL`)
+
+**Example:**
+```c
+zigpug_array_free(arr);  // Safe to call with NULL
+```
+
+##### `zigpug_array_add_string()`
+
+Add a string to the array.
+
+```c
+bool zigpug_array_add_string(ZigPugArray* arr, const char* value);
+```
+
+**Parameters:**
+- `arr` - Array builder handle
+- `value` - String value (null-terminated)
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_array_add_string(arr, "Apple");
+zigpug_array_add_string(arr, "Banana");
+zigpug_array_add_string(arr, "Orange");
+```
+
+##### `zigpug_array_add_int()`
+
+Add an integer to the array.
+
+```c
+bool zigpug_array_add_int(ZigPugArray* arr, int64_t value);
+```
+
+**Parameters:**
+- `arr` - Array builder handle
+- `value` - Integer value (64-bit)
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_array_add_int(arr, 42);
+zigpug_array_add_int(arr, -100);
+zigpug_array_add_int(arr, 9999);
+```
+
+##### `zigpug_array_add_double()`
+
+Add a double/float to the array.
+
+```c
+bool zigpug_array_add_double(ZigPugArray* arr, double value);
+```
+
+**Parameters:**
+- `arr` - Array builder handle
+- `value` - Double value
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_array_add_double(arr, 3.14159);
+zigpug_array_add_double(arr, -2.5);
+zigpug_array_add_double(arr, 98.6);
+```
+
+##### `zigpug_array_add_bool()`
+
+Add a boolean to the array.
+
+```c
+bool zigpug_array_add_bool(ZigPugArray* arr, bool value);
+```
+
+**Parameters:**
+- `arr` - Array builder handle
+- `value` - Boolean value
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_array_add_bool(arr, true);
+zigpug_array_add_bool(arr, false);
+```
+
+##### `zigpug_array_add_null()`
+
+Add null to the array.
+
+```c
+bool zigpug_array_add_null(ZigPugArray* arr);
+```
+
+**Parameters:**
+- `arr` - Array builder handle
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_array_add_null(arr);
+```
+
+##### `zigpug_set_array()`
+
+Set an array variable in the context using a builder.
+
+```c
+bool zigpug_set_array(ZigPugContext* ctx, const char* key, ZigPugArray* arr);
+```
+
+**Parameters:**
+- `ctx` - Context handle
+- `key` - Variable name (null-terminated)
+- `arr` - Array builder handle
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+ZigPugArray* fruits = zigpug_array_create(ctx);
+zigpug_array_add_string(fruits, "Apple");
+zigpug_array_add_string(fruits, "Banana");
+zigpug_set_array(ctx, "fruits", fruits);
+zigpug_array_free(fruits);  // Safe to free after set
+```
+
+**Notes:**
+- The array is copied, builder can be freed immediately
+- Builder remains valid and can be reused
+
+#### Object Builder Functions
+
+##### `zigpug_object_create()`
+
+Create a new object builder.
+
+```c
+ZigPugObject* zigpug_object_create(ZigPugContext* ctx);
+```
+
+**Parameters:**
+- `ctx` - Context handle
+
+**Returns:**
+- Object builder handle on success
+- `NULL` on error
+
+**Example:**
+```c
+ZigPugObject* obj = zigpug_object_create(ctx);
+if (!obj) {
+    fprintf(stderr, "Failed to create object\n");
+    return 1;
+}
+```
+
+##### `zigpug_object_free()`
+
+Free an object builder.
+
+```c
+void zigpug_object_free(ZigPugObject* obj);
+```
+
+**Parameters:**
+- `obj` - Object builder handle (can be `NULL`)
+
+**Example:**
+```c
+zigpug_object_free(obj);  // Safe to call with NULL
+```
+
+##### `zigpug_object_set_string()`
+
+Set a string property in the object.
+
+```c
+bool zigpug_object_set_string(ZigPugObject* obj, const char* key, const char* value);
+```
+
+**Parameters:**
+- `obj` - Object builder handle
+- `key` - Property name (null-terminated)
+- `value` - String value (null-terminated)
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_object_set_string(user, "name", "Alice");
+zigpug_object_set_string(user, "email", "alice@example.com");
+```
+
+##### `zigpug_object_set_int()`
+
+Set an integer property in the object.
+
+```c
+bool zigpug_object_set_int(ZigPugObject* obj, const char* key, int64_t value);
+```
+
+**Parameters:**
+- `obj` - Object builder handle
+- `key` - Property name (null-terminated)
+- `value` - Integer value (64-bit)
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_object_set_int(user, "age", 30);
+zigpug_object_set_int(user, "score", 9999);
+```
+
+##### `zigpug_object_set_double()`
+
+Set a double/float property in the object.
+
+```c
+bool zigpug_object_set_double(ZigPugObject* obj, const char* key, double value);
+```
+
+**Parameters:**
+- `obj` - Object builder handle
+- `key` - Property name (null-terminated)
+- `value` - Double value
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_object_set_double(product, "price", 19.99);
+zigpug_object_set_double(product, "rating", 4.5);
+```
+
+##### `zigpug_object_set_bool()`
+
+Set a boolean property in the object.
+
+```c
+bool zigpug_object_set_bool(ZigPugObject* obj, const char* key, bool value);
+```
+
+**Parameters:**
+- `obj` - Object builder handle
+- `key` - Property name (null-terminated)
+- `value` - Boolean value
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_object_set_bool(user, "admin", true);
+zigpug_object_set_bool(user, "verified", false);
+```
+
+##### `zigpug_object_set_null()`
+
+Set a null property in the object.
+
+```c
+bool zigpug_object_set_null(ZigPugObject* obj, const char* key);
+```
+
+**Parameters:**
+- `obj` - Object builder handle
+- `key` - Property name (null-terminated)
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+zigpug_object_set_null(obj, "optional_field");
+```
+
+##### `zigpug_set_object()`
+
+Set an object variable in the context using a builder.
+
+```c
+bool zigpug_set_object(ZigPugContext* ctx, const char* key, ZigPugObject* obj);
+```
+
+**Parameters:**
+- `ctx` - Context handle
+- `key` - Variable name (null-terminated)
+- `obj` - Object builder handle
+
+**Returns:**
+- `true` on success
+- `false` on error
+
+**Example:**
+```c
+ZigPugObject* user = zigpug_object_create(ctx);
+zigpug_object_set_string(user, "name", "Alice");
+zigpug_object_set_int(user, "age", 30);
+zigpug_object_set_bool(user, "admin", true);
+zigpug_set_object(ctx, "user", user);
+zigpug_object_free(user);  // Safe to free after set
+```
+
+#### Builder API Examples
+
+##### Example: Dynamic Array from Database
+
+```c
+// Simulate database results
+struct Product {
+    const char* name;
+    double price;
+};
+
+struct Product products[] = {
+    {"Laptop", 999.99},
+    {"Mouse", 29.99},
+    {"Keyboard", 79.99},
+};
+int count = 3;
+
+// Build array dynamically
+ZigPugArray* product_names = zigpug_array_create(ctx);
+ZigPugArray* product_prices = zigpug_array_create(ctx);
+
+for (int i = 0; i < count; i++) {
+    zigpug_array_add_string(product_names, products[i].name);
+    zigpug_array_add_double(product_prices, products[i].price);
+}
+
+zigpug_set_array(ctx, "names", product_names);
+zigpug_set_array(ctx, "prices", product_prices);
+
+zigpug_array_free(product_names);
+zigpug_array_free(product_prices);
+
+// Template
+const char* template =
+    "ul.products\n"
+    "  each name, i in names\n"
+    "    li #{name}: $#{prices[i]}";
+
+char* html = zigpug_compile(ctx, template);
+```
+
+##### Example: Dynamic Object from API Response
+
+```c
+// Simulate API response
+typedef struct {
+    const char* username;
+    int followers;
+    double rating;
+    bool verified;
+} UserProfile;
+
+UserProfile api_data = {
+    .username = "geek_coder",
+    .followers = 1337,
+    .rating = 4.8,
+    .verified = true
+};
+
+// Build object
+ZigPugObject* profile = zigpug_object_create(ctx);
+zigpug_object_set_string(profile, "username", api_data.username);
+zigpug_object_set_int(profile, "followers", api_data.followers);
+zigpug_object_set_double(profile, "rating", api_data.rating);
+zigpug_object_set_bool(profile, "verified", api_data.verified);
+
+zigpug_set_object(ctx, "profile", profile);
+zigpug_object_free(profile);
+
+// Template
+const char* template =
+    "div.profile\n"
+    "  h2= profile.username\n"
+    "  p Followers: #{profile.followers}\n"
+    "  p Rating: #{profile.rating}/5.0\n"
+    "  if profile.verified\n"
+    "    span.badge ✓ Verified";
+
+char* html = zigpug_compile(ctx, template);
+```
+
+##### Example: Mixed Types Array
+
+```c
+// Array with different types
+ZigPugArray* mixed = zigpug_array_create(ctx);
+
+zigpug_array_add_string(mixed, "Hello");
+zigpug_array_add_int(mixed, 42);
+zigpug_array_add_double(mixed, 3.14);
+zigpug_array_add_bool(mixed, true);
+zigpug_array_add_null(mixed);
+
+zigpug_set_array(ctx, "mixed", mixed);
+zigpug_array_free(mixed);
+
+// Template
+const char* template =
+    "ul\n"
+    "  each item in mixed\n"
+    "    li= item";
+
+char* html = zigpug_compile(ctx, template);
+// Output: <ul><li>Hello</li><li>42</li><li>3.14</li><li>true</li><li></li></ul>
+```
+
 ### Error Handling
 
 #### `zigpug_get_error_count()`

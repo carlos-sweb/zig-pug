@@ -56,6 +56,35 @@ char* html = zigpug_compile(ctx, template);
 free(template);
 ```
 
+### 06-builder-api.c
+**⭐ BUILDER API - Para Geeks Avanzados**
+
+Demonstrates the powerful Builder API for dynamic array and object construction. Perfect for constructing data structures programmatically from databases, APIs, or any dynamic source.
+
+```c
+// Dynamic array construction
+ZigPugArray* arr = zigpug_array_create(ctx);
+zigpug_array_add_string(arr, "Apple");
+zigpug_array_add_int(arr, 42);
+zigpug_array_add_bool(arr, true);
+zigpug_set_array(ctx, "items", arr);
+zigpug_array_free(arr);
+
+// Dynamic object construction
+ZigPugObject* obj = zigpug_object_create(ctx);
+zigpug_object_set_string(obj, "name", "Alice");
+zigpug_object_set_int(obj, "age", 30);
+zigpug_object_set_bool(obj, "admin", true);
+zigpug_set_object(ctx, "user", obj);
+zigpug_object_free(obj);
+```
+
+**Why Builder API?**
+- Type-safe: No string escaping needed
+- Dynamic: Build from loops/databases
+- Clean: No JSON string construction
+- Powerful: Mixed types supported
+
 ## Building with Make
 
 ```bash
