@@ -68,7 +68,7 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 try helpers.advance(self);
 
                 // Check if there are more tokens (operators, etc.)
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less})) {
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
                     // Complex expression - add quotes back for JavaScript
                     var expr_str = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{original_str});
 
@@ -100,12 +100,43 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
                             is_expression = true;
                             try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.GreaterEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LessEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Equal})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.And})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Or})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Question})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Colon})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
+                            is_expression = true;
+                            try helpers.advance(self);
                         } else if (helpers.match(self, &.{.String})) {
                             // Tokenizer strips quotes, need to add them back for JavaScript
                             const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Number})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Boolean})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Ident})) {
@@ -125,9 +156,74 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 value = self.current.value;
                 try helpers.advance(self);
             } else if (helpers.match(self, &.{.Ident})) {
-                value = self.current.value;
+                var expr_str = self.current.value;
                 is_expression = true; // Identifier = expression to evaluate
                 try helpers.advance(self);
+
+                // Check for complex expressions after identifier (e.g., active ? "yes" : "no")
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                        if (helpers.match(self, &.{.Plus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Minus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Dot})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Greater})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Less})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.GreaterEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LessEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Equal})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.And})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Or})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Question})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Colon})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.String})) {
+                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Number})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Boolean})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Ident})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                value = expr_str;
             }
         } else if (helpers.match(self, &.{.BufferedCode})) {
             // Handle = for dynamic values (same as Assign)
@@ -148,7 +244,7 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 try helpers.advance(self);
 
                 // Check for operators (complex expression)
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less})) {
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
                     // Complex expression - add quotes back for JavaScript
                     var expr_str = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{original_str});
 
@@ -180,11 +276,42 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
                             is_expression = true;
                             try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.GreaterEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LessEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Equal})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.And})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Or})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Question})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Colon})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
+                            is_expression = true;
+                            try helpers.advance(self);
                         } else if (helpers.match(self, &.{.String})) {
                             const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Number})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Boolean})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Ident})) {
@@ -198,9 +325,74 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                     value = expr_str;
                 }
             } else if (helpers.match(self, &.{.Ident})) {
-                value = self.current.value;
+                var expr_str = self.current.value;
                 is_expression = true;
                 try helpers.advance(self);
+
+                // Check for complex expressions after identifier
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                        if (helpers.match(self, &.{.Plus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Minus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Dot})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Greater})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Less})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.GreaterEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LessEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Equal})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.And})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Or})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Question})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Colon})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.String})) {
+                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Number})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Boolean})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Ident})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                value = expr_str;
             }
         } else if (helpers.match(self, &.{.UnescapedCode})) {
             // Handle != for unescaped dynamic values
@@ -217,9 +409,74 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 }
                 try helpers.advance(self);
             } else if (helpers.match(self, &.{.Ident})) {
-                value = self.current.value;
+                var expr_str = self.current.value;
                 is_expression = true;
                 try helpers.advance(self);
+
+                // Check for complex expressions after identifier
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                        if (helpers.match(self, &.{.Plus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Minus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Dot})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Greater})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Less})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.GreaterEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LessEqual})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Equal})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.And})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Or})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Question})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Colon})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.String})) {
+                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Number})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Boolean})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Ident})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                value = expr_str;
             }
         }
         // If no value, it's a boolean attribute (e.g., checked, disabled)

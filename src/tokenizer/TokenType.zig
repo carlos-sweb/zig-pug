@@ -47,6 +47,7 @@ pub const TokenType = enum {
     Equal, // ==
     And, // &&
     Or, // ||
+    Question, // ? (ternary operator)
 
     // Keywords
     If,

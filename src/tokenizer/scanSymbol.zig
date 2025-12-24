@@ -190,6 +190,7 @@ pub fn scanSymbol(tokenizer: anytype) !Token {
         ',' => .Comma,
         ':' => .Colon,
         '|' => .Pipe,
+        '?' => .Question,
         '=' => blk: {
             tokenizer.state = .Code;  // Enter JavaScript expression context
             break :blk .BufferedCode;

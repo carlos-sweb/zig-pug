@@ -1,0 +1,36 @@
+//- Ternary Operators in Attributes
+//-
+//- This example demonstrates the use of ternary conditional operators (? :)
+//- in attribute expressions for dynamic class and attribute values
+
+- var isActive = true
+- var count = 5
+- var user = { name: "Alice", age: 30, role: "admin" }
+- var theme = "dark"
+
+//- Simple ternary operator
+div(class=isActive ? "active" : "inactive") Status Badge
+
+//- Ternary with number comparison
+p(data-level=count > 3 ? "high" : "low") Item count: #{count}
+
+//- Ternary with equality check
+button(class=theme == "dark" ? "btn-dark" : "btn-light") Toggle Theme
+
+//- Ternary with property access and comparison
+span(title=user.age >= 18 ? "adult" : "minor") #{user.name}
+
+//- Ternary for boolean values
+input(type="checkbox", disabled=count < 1 ? true : false)
+
+//- Ternary with property comparison
+a(href=user.role == "admin" ? "/admin" : "/dashboard") Dashboard
+
+//- Ternary with logical AND operator
+div(class=isActive && count > 0 ? "visible" : "hidden") Content Area
+
+//- Ternary with logical OR operator
+span(data-permission=user.role == "admin" || user.role == "moderator" ? "elevated" : "normal") User Panel
+
+//- Multiple ternary expressions
+div(data-status=count > 10 ? "high" : count > 5 ? "medium" : "low") Nested ternary
