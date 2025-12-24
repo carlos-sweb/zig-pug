@@ -84,6 +84,21 @@ gcc hello.c -o hello -I/path/to/include -L/path/to/libs/darwin-x64 -lzig-pug
 gcc hello.c -o hello.exe -I/path/to/include -L/path/to/libs/win32-x64 -lzig-pug
 ```
 
+**Usando TCC (Tiny C Compiler) - Compilación rápida:**
+```bash
+# Instalar TCC (si no está instalado)
+# Ubuntu/Debian: sudo apt-get install tcc
+# Arch: sudo pacman -S tcc
+# macOS: brew install tcc
+
+# Compilar con TCC (¡muy rápido!)
+tcc -run hello.c -I/path/to/include -L/path/to/libs/linux-x64 -lzig-pug -lm
+
+# O compilar a ejecutable
+tcc hello.c -o hello -I/path/to/include -L/path/to/libs/linux-x64 -lzig-pug -lm
+./hello
+```
+
 **Salida:**
 ```html
 <p>Hello World!</p>
