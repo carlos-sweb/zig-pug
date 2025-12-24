@@ -832,7 +832,8 @@ See [PLAN.md](PLAN.md) for the complete development plan.
 - **[Compiler](docs/compiler.md)** ([Español](docs/compiler.es.md)) - HTML generation: JavaScript evaluation, security, template features
 
 **Language APIs:**
-- **[C API](docs/c-api.md)** ([Español](docs/c-api.es.md)) - Complete C API reference with examples, error handling, and thread safety
+- **[C/C++ Guide](docs/c.md)** ([Español](docs/c.es.md)) - Getting started guide for using zig-pug from C/C++
+- **[C API Reference](docs/c-api.md)** ([Español](docs/c-api.es.md)) - Complete C API reference with examples, error handling, and thread safety
 - **[Node.js API](nodejs/README.md)** - Node.js addon documentation with TypeScript support
 
 **Additional Resources:**
