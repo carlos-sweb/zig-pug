@@ -52,10 +52,72 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
         if (helpers.match(self, &.{.Assign})) {
             try helpers.advance(self);
 
-            // Parse value - can be string, number, identifier, or expression
+            // Parse value - can be string, number, identifier, or complex expression
+            // First, try simple single-token case for backward compatibility
             if (helpers.match(self, &.{.String})) {
-                value = self.current.value;
+                // Save original value with quotes for potential complex expression
+                const original_str = self.current.value;
+
+                // Strip quotes from simple string literals (tokenizer includes them)
+                const str_val = self.current.value;
+                if (str_val.len >= 2 and str_val[0] == '"' and str_val[str_val.len - 1] == '"') {
+                    value = str_val[1 .. str_val.len - 1];
+                } else {
+                    value = str_val;
+                }
                 try helpers.advance(self);
+
+                // Check if there are more tokens (operators, etc.)
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less})) {
+                    // Complex expression - add quotes back for JavaScript
+                    var expr_str = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{original_str});
+
+                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                        if (helpers.match(self, &.{.Plus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Minus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Dot})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Greater})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Less})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.String})) {
+                            // Tokenizer strips quotes, need to add them back for JavaScript
+                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Number})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Ident})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else {
+                            break;
+                        }
+                    }
+                    value = expr_str;
+                }
             } else if (helpers.match(self, &.{.Number})) {
                 value = self.current.value;
                 try helpers.advance(self);
@@ -68,13 +130,73 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 try helpers.advance(self);
             }
         } else if (helpers.match(self, &.{.BufferedCode})) {
-            // Handle = for dynamic values
+            // Handle = for dynamic values (same as Assign)
             try helpers.advance(self);
             is_unescaped = false;
 
             if (helpers.match(self, &.{.String})) {
-                value = self.current.value;
+                // Save original value with quotes for potential complex expression
+                const original_str = self.current.value;
+
+                // Strip quotes from simple string literals
+                const str_val = self.current.value;
+                if (str_val.len >= 2 and str_val[0] == '"' and str_val[str_val.len - 1] == '"') {
+                    value = str_val[1 .. str_val.len - 1];
+                } else {
+                    value = str_val;
+                }
                 try helpers.advance(self);
+
+                // Check for operators (complex expression)
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less})) {
+                    // Complex expression - add quotes back for JavaScript
+                    var expr_str = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{original_str});
+
+                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                        if (helpers.match(self, &.{.Plus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Minus})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Dot})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RBracket})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Greater})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Less})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.String})) {
+                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Number})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.Ident})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
+                            is_expression = true;
+                            try helpers.advance(self);
+                        } else {
+                            break;
+                        }
+                    }
+                    value = expr_str;
+                }
             } else if (helpers.match(self, &.{.Ident})) {
                 value = self.current.value;
                 is_expression = true;
@@ -86,7 +208,13 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
             is_unescaped = true;
 
             if (helpers.match(self, &.{.String})) {
-                value = self.current.value;
+                // Strip quotes from simple string literals
+                const str_val = self.current.value;
+                if (str_val.len >= 2 and str_val[0] == '"' and str_val[str_val.len - 1] == '"') {
+                    value = str_val[1 .. str_val.len - 1];
+                } else {
+                    value = str_val;
+                }
                 try helpers.advance(self);
             } else if (helpers.match(self, &.{.Ident})) {
                 value = self.current.value;

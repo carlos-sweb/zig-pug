@@ -235,6 +235,18 @@ button(class=myClass) Click
 a(href=myUrl) Link
 // Output: <button class="active">Click</button>
 
+// Complex expressions (v4.0.0+)
+- var alertType = "success"
+- var userId = 42
+div(class="alert alert-"+alertType)
+div(id="user-"+userId)
+// Output: <div class="alert alert-success">
+//         <div id="user-42">
+
+// Operators: +, -, ., [], <, >
+a(href=user.profile.url) Profile
+div(data-first=items[0]) First Item
+
 // Multiple lines
 div(
   class="card"

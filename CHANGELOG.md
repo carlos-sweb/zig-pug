@@ -13,6 +13,18 @@ This is a major release introducing the powerful Builder API for dynamic data co
 
 ### Added
 
+#### Complex Attribute Expressions
+- **Expression Parser Enhancement** - Support for complex expressions in attributes
+  - String concatenation: `class="alert alert-"+type`
+  - Multiple operators: `class="btn btn-"+size+" btn-"+variant`
+  - Numeric concatenation: `id="user-"+userId`
+  - Property access: `href=user.profile.url`
+  - Array access: `data-first=items[0]`
+  - Supported operators: `+`, `-`, `.`, `[]`, `<`, `>`
+  - Enhanced `src/parser/attributes.zig` to parse multi-token expressions
+  - Proper quote handling for both simple and complex expressions
+  - Example file: `examples/05-attribute-expressions.zpug`
+
 #### Builder API for C/C++
 - **Array Builder Functions** - 8 new functions for dynamic array construction
   - `zigpug_array_create()` - Create new array builder

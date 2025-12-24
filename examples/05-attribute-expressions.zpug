@@ -1,0 +1,144 @@
+//! Example 5: Attribute Expressions
+//! This example demonstrates complex attribute expressions with operators
+
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title Attribute Expressions Demo
+    style.
+      .alert { padding: 10px; margin: 10px 0; border-radius: 4px; }
+      .alert-success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+      .alert-warning { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+      .alert-danger { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+      .btn { padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+      .btn-primary { background: #007bff; color: white; }
+      .btn-secondary { background: #6c757d; color: white; }
+      .card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; }
+  body
+    h1 Attribute Expression Examples
+
+    //- 1. Simple String Concatenation
+    h2 1. String Concatenation with Variables
+    p
+      strong Pattern:
+      code  class="prefix-"+variable
+    - var alertType = "success"
+    div(class="alert alert-"+alertType)
+      p This div has class="alert alert-success"
+
+    - var btnStyle = "primary"
+    button(class="btn btn-"+btnStyle) Click me
+    p This button has class="btn btn-primary"
+
+    //- 2. Multiple String Concatenations
+    h2 2. Multiple Concatenations
+    p
+      strong Pattern:
+      code  class="prefix "+variable1+" "+variable2
+    - var status = "warning"
+    - var size = "large"
+    div(class="alert alert-"+status+" alert-"+size)
+      p This div combines multiple classes
+
+    //- 3. Numeric Concatenation
+    h2 3. Numbers in Concatenation
+    p
+      strong Pattern:
+      code  id="user-"+userId
+    - var userId = 42
+    - var itemNum = 5
+    div(id="user-"+userId)
+      p This div has id="user-42"
+    div(data-item="item-"+itemNum)
+      p This div has data-item="item-5"
+
+    //- 4. Expressions in Mixins
+    h2 4. Using Expressions in Mixins
+    p
+      strong Use case:
+      |  Dynamic class names in reusable components
+
+    mixin alert(type, message)
+      div(class="alert alert-"+type)
+        p= message
+
+    mixin button(style, text)
+      button(class="btn btn-"+style)= text
+
+    +alert("success", "Operation completed successfully!")
+    +alert("warning", "Please review your input")
+    +alert("danger", "An error occurred")
+
+    +button("primary", "Save")
+    +button("secondary", "Cancel")
+
+    //- 5. Complex Real-World Example
+    h2 5. Real-World Use Case
+    p Building a card component with dynamic styling
+
+    - var cardType = "danger"
+    - var cardId = 101
+    div(class="card card-"+cardType)
+      h3 Card ##{cardId}
+      p This card has dynamic class attribute
+      p Class: "card card-#{cardType}"
+
+    div(id="card-"+cardId)
+      p This div has dynamic id attribute
+      p ID: "card-#{cardId}"
+
+    //- 6. Supported Operators
+    h2 6. Supported Operators
+    ul
+      li
+        strong Plus (+):
+        |  String and numeric concatenation
+        br
+        code class="alert alert-"+type
+      li
+        strong Minus (-):
+        |  Numeric operations
+        br
+        code data-offset="value-"+offset
+      li
+        strong Dot (.):
+        |  Object property access
+        br
+        code id=user.name
+      li
+        strong Brackets ([]):
+        |  Array access
+        br
+        code data-value=items[0]
+
+    //- 7. Important Notes
+    h2 7. Important Notes
+    div(class="alert alert-warning")
+      ul
+        li Expressions must start with a string literal when using operators
+        li
+          | Use interpolation
+          code  #{"{variable}"}
+          |  for simple cases
+        li
+          | Use concatenation
+          code  "prefix-"+variable
+          |  for dynamic class building
+        li Operators work in attribute values: +, -, ., [], less than, greater than
+
+    //- 8. Comparison: Interpolation vs Concatenation
+    h2 8. Interpolation vs Concatenation
+    - var theme = "success"
+
+    p
+      strong Interpolation (simpler):
+    div(class="alert alert-#{theme}")
+      code class="alert alert-#{theme}"
+
+    p
+      strong Concatenation (more flexible):
+    div(class="alert alert-"+theme)
+      code class="alert alert-"+theme
+
+    p Both produce the same result, but concatenation allows more complex expressions

@@ -107,8 +107,39 @@ div(class=myVar data-count=items.length)
 **Tipos de Atributo**:
 - **Literal**: `href="/home"` (cadena estática)
 - **Expresión**: `class=myVar` (variable JavaScript)
+- **Expresión Compleja**: `class="alert alert-"+type` (concatenación de cadenas)
 - **Booleano**: `checked` (sin valor)
 - **Sin escapar**: `data-html!=content` (HTML sin procesar)
+
+**Expresiones Complejas** (v4.0.0+):
+
+Los atributos ahora soportan expresiones JavaScript complejas con operadores:
+
+```pug
+// Concatenación de cadenas
+div(class="alert alert-"+alertType)
+
+// Múltiples concatenaciones
+div(class="btn btn-"+size+" btn-"+variant)
+
+// Concatenación numérica
+div(id="user-"+userId)
+
+// Acceso a propiedades de objeto
+a(href=user.profile.url)
+
+// Acceso a arrays
+div(data-first=items[0])
+```
+
+**Operadores Soportados**:
+- `+` - Suma/concatenación
+- `-` - Resta
+- `.` - Acceso a propiedades
+- `[]` - Acceso a arrays/objetos
+- `<`, `>` - Operadores de comparación
+
+**Importante**: Las expresiones complejas deben comenzar con un literal de cadena cuando se usan operadores como `+`.
 
 ### 4. Texto e Interpolación (`text.zig`)
 

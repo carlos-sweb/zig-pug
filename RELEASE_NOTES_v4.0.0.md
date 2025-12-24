@@ -1,8 +1,46 @@
 # zig-pug v4.0.0 - Builder API & Comprehensive C/C++ Support 🚀
 
-**Major release introducing the powerful Builder API for dynamic data construction and world-class C/C++ integration.**
+**Major release introducing the powerful Builder API for dynamic data construction, complex attribute expressions, and world-class C/C++ integration.**
 
 ## 🎯 What's New
+
+### Complex Attribute Expressions ⚡
+
+Dynamic attribute building with JavaScript operators - perfect for building dynamic class names and IDs!
+
+**Simple String Concatenation:**
+```pug
+- var alertType = "success"
+div(class="alert alert-"+alertType)
+// → <div class="alert alert-success">
+```
+
+**Multiple Concatenations:**
+```pug
+- var size = "large"
+- var variant = "primary"
+div(class="btn btn-"+size+" btn-"+variant)
+// → <div class="btn btn-large btn-primary">
+```
+
+**Use in Mixins:**
+```pug
+mixin alert(type, message)
+  div(class="alert alert-"+type)
+    p= message
+
++alert("warning", "Please review your input")
+// → <div class="alert alert-warning"><p>Please review your input</p></div>
+```
+
+**Supported Operators:**
+- `+` - String/numeric concatenation
+- `-` - Numeric operations
+- `.` - Property access (`user.name`)
+- `[]` - Array access (`items[0]`)
+- `<`, `>` - Comparison
+
+See [examples/05-attribute-expressions.zpug](examples/05-attribute-expressions.zpug) for complete examples!
 
 ### Builder API - For Real Geeks 🤓
 

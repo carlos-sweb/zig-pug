@@ -107,8 +107,39 @@ div(class=myVar data-count=items.length)
 **Attribute Types**:
 - **Literal**: `href="/home"` (static string)
 - **Expression**: `class=myVar` (JavaScript variable)
+- **Complex Expression**: `class="alert alert-"+type` (string concatenation)
 - **Boolean**: `checked` (no value)
 - **Unescaped**: `data-html!=content` (raw HTML)
+
+**Complex Expressions** (v4.0.0+):
+
+Attributes now support complex JavaScript expressions with operators:
+
+```pug
+// String concatenation
+div(class="alert alert-"+alertType)
+
+// Multiple concatenations
+div(class="btn btn-"+size+" btn-"+variant)
+
+// Numeric concatenation
+div(id="user-"+userId)
+
+// Object property access
+a(href=user.profile.url)
+
+// Array access
+div(data-first=items[0])
+```
+
+**Supported Operators**:
+- `+` - Addition/concatenation
+- `-` - Subtraction
+- `.` - Property access
+- `[]` - Array/object access
+- `<`, `>` - Comparison operators
+
+**Important**: Complex expressions must start with a string literal when using operators like `+`.
 
 ### 4. Text & Interpolation (`text.zig`)
 
