@@ -831,9 +831,13 @@ See [PLAN.md](PLAN.md) for the complete development plan.
 - **[AST](docs/ast.md)** ([Español](docs/ast.es.md)) - Abstract Syntax Tree: node types, structure, visitor pattern
 - **[Compiler](docs/compiler.md)** ([Español](docs/compiler.es.md)) - HTML generation: JavaScript evaluation, security, template features
 
+**Language APIs:**
+- **[C API](docs/c-api.md)** ([Español](docs/c-api.es.md)) - Complete C API reference with examples, error handling, and thread safety
+- **[Node.js API](nodejs/README.md)** - Node.js addon documentation with TypeScript support
+
 **Additional Resources:**
 - **[CLI Documentation](docs/en/CLI.md)** - Complete command-line interface guide
-- **[Node.js API](nodejs/README.md)** - Node.js addon documentation with TypeScript support
+- **[C Examples](examples/c/)** - Complete C examples with Makefile and CMake
 - **[pkg-config Usage](docs/PKGCONFIG.md)** - Using zpug from C/C++ projects
 
 ### Language-Specific Guides

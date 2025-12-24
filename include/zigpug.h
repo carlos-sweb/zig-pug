@@ -107,6 +107,87 @@ bool zigpug_set_int(ZigPugContext* ctx, const char* key, int64_t value);
 bool zigpug_set_bool(ZigPugContext* ctx, const char* key, bool value);
 
 /**
+ * Set an array variable from a JSON string
+ *
+ * @param ctx Context handle
+ * @param key Variable name (null-terminated)
+ * @param json_str JSON array string (e.g., "[\"a\",\"b\",\"c\"]")
+ * @return true on success, false on error
+ *
+ * Example:
+ *   zigpug_set_array_json(ctx, "items", "[\"Apple\",\"Banana\",\"Orange\"]");
+ *   zigpug_set_array_json(ctx, "numbers", "[1,2,3,4,5]");
+ *
+ * Note: The JSON must be a valid array. Mixed types are supported.
+ */
+bool zigpug_set_array_json(ZigPugContext* ctx, const char* key, const char* json_str);
+
+/**
+ * Set an object variable from a JSON string
+ *
+ * @param ctx Context handle
+ * @param key Variable name (null-terminated)
+ * @param json_str JSON object string (e.g., "{\"name\":\"Alice\",\"age\":30}")
+ * @return true on success, false on error
+ *
+ * Example:
+ *   zigpug_set_object_json(ctx, "user", "{\"name\":\"John\",\"age\":25,\"admin\":true}");
+ *   zigpug_set_object_json(ctx, "config", "{\"debug\":false,\"port\":8080}");
+ *
+ * Note: The JSON must be a valid object. Nested objects are supported.
+ */
+bool zigpug_set_object_json(ZigPugContext* ctx, const char* key, const char* json_str);
+
+/**
+ * Get the number of compilation errors from the last compile call
+ *
+ * @param ctx Context handle
+ * @return Number of errors (0 if no errors or no compilation done)
+ *
+ * Example:
+ *   char* html = zigpug_compile(ctx, pug_source);
+ *   if (!html) {
+ *       size_t error_count = zigpug_get_error_count(ctx);
+ *       printf("Compilation failed with %zu errors\n", error_count);
+ *   }
+ */
+size_t zigpug_get_error_count(ZigPugContext* ctx);
+
+/**
+ * Get a specific compilation error by index
+ *
+ * @param ctx Context handle
+ * @param index Error index (0 to error_count-1)
+ * @param line_out Output: line number where error occurred (can be NULL)
+ * @param message_out Output: error message (do not free, can be NULL)
+ * @param detail_out Output: detailed error info (do not free, can be NULL, may be NULL even on success)
+ * @param hint_out Output: hint for fixing error (do not free, can be NULL, may be NULL even on success)
+ * @return true if error exists at index, false otherwise
+ *
+ * Example:
+ *   size_t count = zigpug_get_error_count(ctx);
+ *   for (size_t i = 0; i < count; i++) {
+ *       size_t line;
+ *       const char* message;
+ *       const char* detail;
+ *       const char* hint;
+ *       if (zigpug_get_error(ctx, i, &line, &message, &detail, &hint)) {
+ *           printf("Error at line %zu: %s\n", line, message);
+ *           if (detail) printf("  Detail: %s\n", detail);
+ *           if (hint) printf("  Hint: %s\n", hint);
+ *       }
+ *   }
+ */
+bool zigpug_get_error(
+    ZigPugContext* ctx,
+    size_t index,
+    size_t* line_out,
+    const char** message_out,
+    const char** detail_out,
+    const char** hint_out
+);
+
+/**
  * Free a string returned by zig-pug
  *
  * @param str String to free (can be NULL)

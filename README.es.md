@@ -831,9 +831,13 @@ Ver [PLAN.md](PLAN.md) para el plan completo de desarrollo.
 - **[AST](docs/ast.es.md)** ([English](docs/ast.md)) - Árbol de Sintaxis Abstracta: tipos de nodos, estructura, patrón visitor
 - **[Compiler](docs/compiler.es.md)** ([English](docs/compiler.md)) - Generación HTML: evaluación JavaScript, seguridad, características de plantillas
 
+**APIs de Lenguajes:**
+- **[API C](docs/c-api.es.md)** ([English](docs/c-api.md)) - Referencia completa de la API C con ejemplos, manejo de errores y seguridad en hilos
+- **[API Node.js](nodejs/README.md)** - Documentación del addon de Node.js con soporte TypeScript
+
 **Recursos Adicionales:**
 - **[Documentación CLI](docs/es/CLI.md)** - Guía completa de la interfaz de línea de comandos
-- **[API Node.js](nodejs/README.md)** - Documentación del addon de Node.js con soporte TypeScript
+- **[Ejemplos en C](examples/c/)** - Ejemplos completos en C con Makefile y CMake
 - **[Uso con pkg-config](docs/PKGCONFIG.md)** - Usando zpug desde proyectos C/C++
 
 ### Guías por Idioma
