@@ -103,7 +103,7 @@ Code
 - Parentheses: `LParen` `(`, `RParen` `)`
 - Brackets: `LBracket` `[`, `RBracket` `]`
 - Braces: `LBrace` `{`, `RBrace` `}`
-- Operators: `Dot` `.`, `Comma` `,`, `Colon` `:`, `Pipe` `|`
+- Operators: `Dot` `.`, `Comma` `,`, `Colon` `:`, `Pipe` `|`, `Question` `?`
 - Comparison: `Equal` `==`, `Greater` `>`, `Less` `<`, `GreaterEqual` `>=`, `LessEqual` `<=`
 - Logical: `And` `&&`, `Or` `||`
 
@@ -120,6 +120,31 @@ Code
 ### Interpolation
 - `EscapedInterpol`: `#{expr}` (HTML-escaped output)
 - `UnescapedInterpol`: `!{expr}` (raw HTML output)
+
+## Ternary Operator Support
+
+The tokenizer recognizes the `?` symbol as the `Question` token, enabling ternary conditional expressions in attribute values:
+
+```pug
+div(class=isActive ? "active" : "inactive")
+```
+
+### Tokenization Flow
+
+When encountering a ternary expression like `isActive ? "active" : "inactive"`:
+
+1. `Ident("isActive")` - variable name
+2. `Question` - ternary operator `?`
+3. `String("active")` - true value
+4. `Colon` - separator `:`
+5. `String("inactive")` - false value
+
+The tokenizer handles all operators needed for ternary expressions:
+- **Ternary**: `Question` (`?`), `Colon` (`:`)
+- **Comparison**: `Equal` (`==`), `Greater` (`>`), `Less` (`<`), `GreaterEqual` (`>=`), `LessEqual` (`<=`)
+- **Logical**: `And` (`&&`), `Or` (`||`)
+
+See [Ternary Operators Documentation](ternary-operators.md) for usage examples.
 
 ## Indentation Handling
 

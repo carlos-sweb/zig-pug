@@ -137,9 +137,43 @@ div(data-first=items[0])
 - `-` - Subtraction
 - `.` - Property access
 - `[]` - Array/object access
-- `<`, `>` - Comparison operators
+- `<`, `>`, `<=`, `>=`, `==` - Comparison operators
+- `&&`, `||` - Logical operators
+- `?`, `:` - Ternary conditional operator
 
-**Important**: Complex expressions must start with a string literal when using operators like `+`.
+**Ternary Operators** (v0.4.0+):
+
+Attributes support full ternary conditional expressions:
+
+```pug
+// Simple ternary
+div(class=isActive ? "active" : "inactive")
+
+// With comparisons
+p(data-level=count > 3 ? "high" : "low")
+
+// With equality
+button(class=theme == "dark" ? "btn-dark" : "btn-light")
+
+// With logical operators
+div(class=isLoggedIn && hasPermission ? "authorized" : "unauthorized")
+
+// With property access
+span(title=user.age >= 18 ? "adult" : "minor")
+
+// Nested ternary
+div(data-status=count > 10 ? "high" : count > 5 ? "medium" : "low")
+```
+
+The parser handles ternary operators by:
+1. Recognizing `?` and `:` tokens in attribute expressions
+2. Building complex expression strings with proper operator precedence
+3. Supporting all comparison (`>`, `<`, `>=`, `<=`, `==`) and logical (`&&`, `||`) operators
+4. Allowing nested ternary expressions for multi-level conditionals
+
+See [Ternary Operators Documentation](en/ternary-operators.md) for detailed examples and best practices.
+
+**Important**: Complex expressions with operators like `+` should start with a string literal or identifier.
 
 ### 4. Text & Interpolation (`text.zig`)
 
