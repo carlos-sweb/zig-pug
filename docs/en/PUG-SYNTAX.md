@@ -206,6 +206,39 @@ Output:
 <input class="form-control" type="email" name="email"/>
 ```
 
+### Implicit Div (Attributes Only)
+
+You can create a `<div>` tag using only attributes, without specifying a class or ID:
+
+```pug
+(data-role="container" data-theme="dark") Content
+(style="color: red;") Styled div
+```
+
+Output:
+```html
+<div data-role="container" data-theme="dark">Content</div>
+<div style="color: red;">Styled div</div>
+```
+
+### All Implicit Div Shortcuts
+
+```pug
+//- These all create <div> tags:
+.container Content                        // div with class
+#header Content                           // div with id
+(data-test="value") Content               // div with attributes only
+.box#main(data-role="primary") Content    // div with all three
+```
+
+Output:
+```html
+<div class="container">Content</div>
+<div id="header">Content</div>
+<div data-test="value">Content</div>
+<div id="main" class="box" data-role="primary">Content</div>
+```
+
 ---
 
 ## Text Content

@@ -206,6 +206,39 @@ Salida:
 <input class="form-control" type="email" name="email"/>
 ```
 
+### Div Implícito (Solo Atributos)
+
+Puedes crear un tag `<div>` usando solo atributos, sin especificar una clase o ID:
+
+```pug
+(data-role="container" data-theme="dark") Contenido
+(style="color: red;") Div con estilos
+```
+
+Salida:
+```html
+<div data-role="container" data-theme="dark">Contenido</div>
+<div style="color: red;">Div con estilos</div>
+```
+
+### Todos los Atajos de Div Implícito
+
+```pug
+//- Todos estos crean tags <div>:
+.container Contenido                      // div con clase
+#header Contenido                         // div con id
+(data-test="value") Contenido             // div solo con atributos
+.box#main(data-role="primary") Contenido  // div con los tres
+```
+
+Salida:
+```html
+<div class="container">Contenido</div>
+<div id="header">Contenido</div>
+<div data-test="value">Contenido</div>
+<div id="main" class="box" data-role="primary">Contenido</div>
+```
+
 ---
 
 ## Contenido de Texto

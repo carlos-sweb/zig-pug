@@ -36,13 +36,44 @@ div#main-content
 
 // Combined
 div.container#app.main
+
+// Implicit div with class only
+.wrapper
+.card.shadow
+
+// Implicit div with ID only
+#header
+#main-content
+
+// Implicit div with attributes only (NEW!)
+(data-role="container" data-theme="dark")
+(style="color: red;")
+
+// All combined
+#main.container(data-role="primary")
 ```
 
-**Status:** ✅ Fully implemented (Phase 1 - Fixed class concatenation)
+**Status:** ✅ Fully implemented (Phase 1 - Fixed class concatenation; Latest - Added implicit div with attributes)
 
 **Changes:**
 - Before: `<div class="btn" class="primary">` (duplicate attributes)
 - After: `<div class="btn primary">` (single concatenated attribute)
+
+**Implicit Div Shortcuts:**
+All of these create `<div>` elements without explicitly writing "div":
+- `.class` → `<div class="class">`
+- `#id` → `<div id="id">`
+- `(attrs)` → `<div attrs>` (NEW in v4.0.0!)
+- `.class#id(attrs)` → `<div id="id" class="class" attrs>`
+
+**Examples:**
+```zpug
+// These are equivalent:
+div(data-test="value") Content
+(data-test="value") Content
+
+// Output: <div data-test="value">Content</div>
+```
 
 ---
 

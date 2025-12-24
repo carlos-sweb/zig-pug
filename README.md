@@ -224,6 +224,12 @@ div.container
 p#main-text
 button.btn.btn-primary#submit
 
+// Implicit divs (NEW in v4.0.0!)
+.wrapper                    // <div class="wrapper">
+#header                     // <div id="header">
+(data-role="main")          // <div data-role="main">
+#app.container(data-v="2")  // <div id="app" class="container" data-v="2">
+
 // Attributes (static)
 a(href="https://example.com" target="_blank") Link
 input(type="text" name="username" required)
