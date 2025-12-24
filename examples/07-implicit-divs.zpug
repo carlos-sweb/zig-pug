@@ -1,0 +1,66 @@
+//! Example 7: Implicit Div Elements
+//! Demonstrates that divs can be created implicitly using shortcuts
+
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title Implicit Divs
+  body
+    h1 Implicit Div Syntax
+
+    h2 Class Shorthand
+    //- .class creates <div class="class">
+    .container
+      p Content inside a container div
+
+    .card.shadow
+      p Div with multiple classes
+
+    h2 ID Shorthand
+    //- #id creates <div id="id">
+    #header
+      p Content inside header div
+
+    #footer
+      p Content inside footer div
+
+    h2 Combined Class and ID
+    //- You can combine them in any order
+    #main.content
+      p ID first, then class
+
+    .wrapper#app
+      p Class first, then ID
+
+    h2 Attributes Only (NEW!)
+    //- (attrs) creates <div attrs>
+    (data-role="container" data-theme="dark")
+      p Div with only attributes, no class or id needed!
+
+    (style="color: red;")
+      p Styled div without class
+
+    h2 All Combined
+    //- Class + ID + Attributes
+    #primary.container.main(data-role="primary" data-index="1")
+      p Everything together
+
+    .box(data-test="value")
+      p Class and attributes
+
+    #myId(data-test="value")
+      p ID and attributes
+
+    h2 Comparison
+    //- These are equivalent:
+    div(my-attr="some") Explicit div
+    (my-attr="some") Implicit div
+
+    //- These are also equivalent:
+    div.myClass My content
+    .myClass My content
+
+    //- And these too:
+    div#myId My content
+    #myId My content
