@@ -93,6 +93,8 @@ const ChildBlockInfo = struct {
 /// defer allocator.free(html);
 /// ```
 pub const Compiler = struct {
+    const Self = @This();
+
     allocator: std.mem.Allocator,
     runtime: *runtime.JsRuntime,
     output: std.ArrayList(u8),
@@ -105,8 +107,6 @@ pub const Compiler = struct {
     include_comments: bool, // Include HTML comments in output (true for --pretty, false for production)
     has_errors: bool, // Track if any compilation errors occurred (for strict mode)
     errors: std.ArrayList(CompilationError), // Accumulated compilation errors
-
-    const Self = @This();
 
     /// Add a compilation error to the errors list
     fn addError(
@@ -643,17 +643,6 @@ pub const Compiler = struct {
         }
         // Production mode (include_comments=false): comments are stripped
         // Development mode (include_comments=true): comments are included
-    }
-
-    /// Escape HTML comment content to prevent XSS/injection attacks
-                i += 2;
-            } else {
-                try result.append(self.allocator, input[i]);
-                i += 1;
-            }
-        }
-
-        return try result.toOwnedSlice(self.allocator);
     }
 
     // ========================================================================
