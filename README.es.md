@@ -34,6 +34,8 @@ html(lang="en")
 - ✅ **Comentarios de documentación** - `//!` para metadata de archivos (ignorados por el parser)
 - **Node.js addon** - Integración nativa vía N-API
 - ✅ **Bun.js compatible** - 2-5x más rápido que Node.js
+- ✅ **API de C** - API completa compatible con C para integración FFI
+- ✅ **API de C++** - Wrapper moderno de C++ con RAII, excepciones, STL (C++11/17)
 - ✅ **Soporte de editores** - VS Code, Sublime Text, CodeMirror
 - ✅ **Sin dependencias** - Solo Zig 0.15.2 y mujs embebido
 - ⚡ **Rápido** - Compilación nativa en Zig con optimizaciones
