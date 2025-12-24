@@ -436,11 +436,20 @@ pub const Tokenizer = struct {
             },
 
             .TagStart, .TagClass, .TagId => {
-                // After tag name, can have: .class, #id, (attributes), or text
+                // After tag name, can have: .class, #id, (attributes), =, !=, -, or text
 
                 if (ch == '.') return scanSymbol(self); // Handles .class
                 if (ch == '#') return scanSymbol(self); // Handles #id
                 if (ch == '(') return scanSymbol(self); // Transitions to AttrStart
+
+                // Handle code operators: =, !=, -
+                if (ch == '=') return scanSymbol(self); // Buffered code
+                if (ch == '!') {
+                    if (self.peekAhead(1) == '=') {
+                        return scanSymbol(self); // Unescaped code !=
+                    }
+                }
+                if (ch == '-') return scanSymbol(self); // Unbuffered code
 
                 // After tag+class+id, remaining content is text
                 if (ch == ' ') {
@@ -449,13 +458,10 @@ pub const Tokenizer = struct {
                     return self.next();
                 }
 
-                // Other characters in tag context
-                if (std.ascii.isAlphabetic(ch) or ch == '_' or isUtf8Start(ch)) {
-                    self.state = .Text;
-                    return scanText(self);
-                }
-
-                return scanSymbol(self);
+                // Any other character (including @, $, !, etc.) should be treated as text
+                // Only exception is newline which is handled earlier
+                self.state = .Text;
+                return scanText(self);
             },
 
             .AttrStart, .AttrName, .AttrEquals, .AttrValue, .AttrString, .AttrJS => {

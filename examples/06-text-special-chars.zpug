@@ -1,0 +1,53 @@
+//! Example 6: Text with Special Characters
+//! Demonstrates that text content can include special characters
+
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title Special Characters in Text
+  body
+    h1 Special Characters Support
+
+    //- Social media usernames
+    h2 Social Media
+    p Follow us on Twitter: @zigpug
+    p Instagram: @zig_pug_templates
+    p Telegram: @idTelegram
+
+    //- Email addresses
+    h2 Contact Information
+    p Email: contact@zigpug.com
+    p Support: support@example.org
+
+    //- Prices and percentages
+    h2 Pricing
+    p Regular price: $99
+    p Sale price: $49 (50% off!)
+    p Tax: $4.90 (~10%)
+
+    //- Code and technical text
+    h2 Technical Content
+    code function greet() { return "Hello"; }
+    p Variables start with $ in some languages
+    p Percentage: 75%
+    p Tilde: ~root/directory
+    p Backtick: `command`
+    p Caret: x^2 means x squared
+
+    //- Mixed content
+    h2 Mixed Content
+    p Email user@domain.com with price $50 for 25% discount!
+    div Check @twitter or email support@help.com
+    
+    //- Important: these are PLAIN TEXT, not expressions
+    h2 Important Note
+    p These characters are treated as plain text
+    p Only when you use = or != they become JavaScript expressions:
+    
+    //- This is an expression (evaluates the variable)
+    - var username = "@johndoe"
+    p.expression= username
+    
+    //- This is plain text (literal @ character)
+    p.text @johndoe

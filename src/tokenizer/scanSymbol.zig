@@ -203,7 +203,16 @@ pub fn scanSymbol(tokenizer: anytype) !Token {
         '<' => .Less,
         '&' => .Ident, // Standalone & treated as text
         '!' => .Ident, // Standalone ! treated as text
+        '@', '$', '%', '^', '~', '`' => .Ident, // Special characters treated as text
         else => {
+            // If we're in a context where text is expected, treat unknown chars as text start
+            // This happens when scanSymbol is called from TagStart/TagClass/TagId states
+            if (tokenizer.state == .TagStart or tokenizer.state == .TagClass or tokenizer.state == .TagId) {
+                // Return the character as an identifier token and let the state machine handle it
+                const value = tokenizer.source[tokenizer.pos - 1 .. tokenizer.pos];
+                return Token.init(.Ident, value, start_line, start_col);
+            }
+
             std.debug.print("Unexpected character at {d}:{d}: '{c}' (0x{x})\n", .{ start_line, start_col, ch, ch });
             return error.UnexpectedCharacter;
         },

@@ -90,17 +90,17 @@ pub fn scanIdentifier(tokenizer: anytype) !Token {
 
     const value = tokenizer.source[start..tokenizer.pos];
 
+    // Check for keywords first to determine if this is a tag or keyword
+    const token_type = getKeyword(value) orelse .Ident;
+
     // State transitions based on current state
     switch (tokenizer.state) {
         .Root, .Indent => {
             // At start of line: could be tag name or keyword
-            // Only transition to TagStart if followed by .class, #id, or (
-            // Otherwise stay in Root for sequences of keywords/identifiers
-            if (tokenizer.peekChar()) |ch| {
-                if (ch == '.' or ch == '#' or ch == '(') {
-                    tokenizer.state = .TagStart;
-                }
-                // Otherwise stay in Root
+            // If not a keyword, it's a tag → always transition to TagStart
+            // Keywords stay in Root for their specific parsing
+            if (token_type == .Ident) {
+                tokenizer.state = .TagStart;
             }
         },
         .TagStart => {
@@ -119,7 +119,5 @@ pub fn scanIdentifier(tokenizer: anytype) !Token {
         },
     }
 
-    // Check for keywords
-    const token_type = getKeyword(value) orelse .Ident;
     return Token.init(token_type, value, start_line, start_col);
 }
