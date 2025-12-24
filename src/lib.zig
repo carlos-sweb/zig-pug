@@ -227,7 +227,7 @@ export fn zigpug_free_string(str: ?[*:0]u8) void {
 
 /// Get version string
 export fn zigpug_version() [*:0]const u8 {
-    return "0.1.0";
+    return "4.0.0";
 }
 
 // ============================================================================
