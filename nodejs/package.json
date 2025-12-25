@@ -21,8 +21,7 @@
     "clean": "node-gyp clean",
     "test": "node test/test.js",
     "build-prebuilts": "./build-prebuilts.sh",
-    "build-binaries": "./build-node-binaries.sh",
-    "prepublishOnly": "npm run build-prebuilts && npm run build-binaries"
+    "build-binaries": "./build-node-binaries.sh"
   },
   "keywords": [
     "pug",
