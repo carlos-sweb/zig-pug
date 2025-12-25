@@ -98,9 +98,12 @@ pub fn scanIdentifier(tokenizer: anytype) !Token {
         .Root, .Indent => {
             // At start of line: could be tag name or keyword
             // If not a keyword, it's a tag → always transition to TagStart
-            // Keywords stay in Root for their specific parsing
+            // Keywords: each/while need Code state for their expressions
             if (token_type == .Ident) {
                 tokenizer.state = .TagStart;
+            } else if (token_type == .Each or token_type == .While) {
+                // Loop keywords need Code state to avoid treating iterator as tag
+                tokenizer.state = .Code;
             }
         },
         .TagStart => {

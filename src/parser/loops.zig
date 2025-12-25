@@ -41,7 +41,7 @@ pub fn parseLoop(self: *Parser) anyerror!*ast.AstNode {
         }
 
         // Check for optional index variable: ", index"
-        if (self.current.type == .Ident and std.mem.eql(u8, self.current.value, ",")) {
+        if (helpers.match(self, &.{.Comma})) {
             try helpers.advance(self); // consume ','
             if (helpers.match(self, &.{.Ident})) {
                 index_var = self.current.value;
