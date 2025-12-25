@@ -55,6 +55,7 @@ pub const TokenType = enum {
     Unless,
     Each,
     While,
+    In, // for "each item in items"
     Case,
     When,
     Default,

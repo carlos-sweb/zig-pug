@@ -516,6 +516,34 @@ pub const Tokenizer = struct {
                 // All other symbols (., [, ], (, ), etc.)
                 return scanSymbol(self);
             },
+
+            .Loop => {
+                // In Loop mode (after each/while), parse loop syntax
+                // Similar to Code but specific to loop context: "item in items" or "item, idx in items"
+
+                // Strings
+                if (ch == '"' or ch == '\'') {
+                    return scanString(self, ch);
+                }
+
+                // Numbers
+                if (std.ascii.isDigit(ch)) {
+                    return scanNumber(self);
+                }
+
+                // Identifiers (iterator, index, "in" keyword)
+                if (std.ascii.isAlphabetic(ch) or ch == '_' or isUtf8Start(ch)) {
+                    return scanIdentifier(self);
+                }
+
+                // Comma for "item, index in items"
+                if (ch == ',') {
+                    return scanSymbol(self);
+                }
+
+                // All other symbols
+                return scanSymbol(self);
+            },
         };
     }
 };

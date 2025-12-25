@@ -12,4 +12,5 @@ pub const TokenizerState = enum {
     AttrJS,
     Text,
     Code,  // JavaScript expression context (after =, !=, -)
+    Loop,  // Loop context (after each/while) - prevents identifiers from being treated as tags
 };

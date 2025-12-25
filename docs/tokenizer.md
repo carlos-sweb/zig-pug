@@ -53,6 +53,7 @@ The tokenizer uses a **labeled-switch state machine** for efficient token recogn
 11. **AttrJS**: JavaScript expression in attribute
 12. **Text**: Plain text content
 13. **Code**: JavaScript expression context (after `=`, `!=`, `-`)
+14. **Loop**: Loop syntax context (after `each`/`while`), prevents iterator from being treated as tag
 
 ### State Transitions
 
@@ -60,6 +61,7 @@ The tokenizer uses a **labeled-switch state machine** for efficient token recogn
 Root/Indent
   ├─> TagStart (on tag name)
   ├─> Code (on =, !=, -)
+  ├─> Loop (on each, while)
   └─> Text (on text content)
 
 TagStart
@@ -72,6 +74,9 @@ AttrStart
   ├─> AttrName (on identifier)
   ├─> AttrEquals (on '=')
   └─> TagStart (on ')')
+
+Loop
+  └─> Code (on 'in' keyword)
 
 Code
   └─> Root (on newline)
@@ -95,9 +100,11 @@ Code
 - `Boolean`: `true`, `false`
 
 ### Keyword Tokens
-- Control flow: `If`, `Else`, `Unless`, `Each`, `While`, `Case`, `When`, `Default`
+- Control flow: `If`, `Else`, `Unless`, `Each`, `While`, `In`, `Case`, `When`, `Default`
 - Templates: `Mixin`, `Include`, `Extends`, `Block`, `Append`, `Prepend`
 - Special: `Doctype`
+
+**Note**: The `In` keyword is specifically used in loop syntax (`each item in items`) and is tokenized as a distinct keyword type for robust parsing.
 
 ### Symbol Tokens
 - Parentheses: `LParen` `(`, `RParen` `)`
@@ -145,6 +152,52 @@ The tokenizer handles all operators needed for ternary expressions:
 - **Logical**: `And` (`&&`), `Or` (`||`)
 
 See [Ternary Operators Documentation](ternary-operators.md) for usage examples.
+
+## Loop Tokenization
+
+The tokenizer has special handling for loop syntax to ensure robust parsing:
+
+### State Machine Flow for `each item in items`
+
+```
+1. Root state detects "each" → emits Each token
+2. Transitions to Loop state (prevents "item" from being treated as tag)
+3. In Loop state: "item" → emits Ident token
+4. In Loop state: "in" → emits In keyword token (NOT Ident)
+5. In keyword detected → transitions to Code state
+6. In Code state: "items" → emits Ident token (iterable expression)
+```
+
+### Why This Matters
+
+**Before** (fragile design):
+- `each` keyword → stayed in Root state
+- `item` → treated as HTML tag → entered TagStart state
+- Space after `item` → entered Text state
+- `in items` → read as single text token ❌ **BUG**
+
+**After** (robust design with Loop state):
+- `each` keyword → enters Loop state
+- `item` → treated as identifier (not tag) ✅
+- `in` → recognized as keyword token ✅
+- After `in` → enters Code state for iterable expression ✅
+
+### Token Examples
+
+**Simple loop**: `each item in items`
+```
+Each("each") → Ident("item") → In("in") → Ident("items")
+```
+
+**Loop with index**: `each item, i in items`
+```
+Each("each") → Ident("item") → Comma → Ident("i") → In("in") → Ident("items")
+```
+
+**While loop**: `while condition`
+```
+While("while") → Ident("condition")
+```
 
 ## Indentation Handling
 

@@ -49,6 +49,7 @@ fn getKeyword(ident: []const u8) ?TokenType {
         .{ "unless", .Unless },
         .{ "each", .Each },
         .{ "while", .While },
+        .{ "in", .In },
         .{ "case", .Case },
         .{ "when", .When },
         .{ "default", .Default },
@@ -98,13 +99,22 @@ pub fn scanIdentifier(tokenizer: anytype) !Token {
         .Root, .Indent => {
             // At start of line: could be tag name or keyword
             // If not a keyword, it's a tag → always transition to TagStart
-            // Keywords: each/while need Code state for their expressions
+            // Loop keywords need Loop state for proper syntax handling
             if (token_type == .Ident) {
                 tokenizer.state = .TagStart;
             } else if (token_type == .Each or token_type == .While) {
-                // Loop keywords need Code state to avoid treating iterator as tag
+                // Loop keywords transition to Loop state
+                // This prevents iterator from being treated as tag
+                tokenizer.state = .Loop;
+            }
+        },
+        .Loop => {
+            // In loop state, after "in" keyword, transition to Code state
+            // for iterable expression
+            if (token_type == .In) {
                 tokenizer.state = .Code;
             }
+            // Stay in Loop state for iterator variable and comma
         },
         .TagStart => {
             // After tag name, could be continuation (rare) or text

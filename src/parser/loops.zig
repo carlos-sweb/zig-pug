@@ -49,8 +49,8 @@ pub fn parseLoop(self: *Parser) anyerror!*ast.AstNode {
             }
         }
 
-        // Expect "in" keyword
-        if (helpers.match(self, &.{.Ident}) and std.mem.eql(u8, self.current.value, "in")) {
+        // Expect "in" keyword (now a proper token type, not string comparison)
+        if (helpers.match(self, &.{.In})) {
             try helpers.advance(self); // consume 'in'
         }
 

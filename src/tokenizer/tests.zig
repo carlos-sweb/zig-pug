@@ -14,12 +14,13 @@ const Tokenizer = @import("mod.zig").Tokenizer;
 const TokenType = @import("TokenType.zig").TokenType;
 
 test "tokenizer - identifiers" {
-    var tokenizer = try Tokenizer.init(std.testing.allocator, "div hello world123");
+    // Test identifiers in code context (not after tags)
+    // Using "- " to enter code mode where identifiers are separate tokens
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "- hello world123");
     defer tokenizer.deinit();
 
     const token1 = try tokenizer.next();
-    try std.testing.expectEqual(TokenType.Ident, token1.type);
-    try std.testing.expectEqualStrings("div", token1.value);
+    try std.testing.expectEqual(TokenType.UnbufferedCode, token1.type);
 
     const token2 = try tokenizer.next();
     try std.testing.expectEqual(TokenType.Ident, token2.type);
@@ -158,4 +159,67 @@ test "tokenizer - eof" {
 
     const token = try tokenizer.next();
     try std.testing.expectEqual(TokenType.Eof, token.type);
+}
+
+test "tokenizer - each loop tokens" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "each item in items");
+    defer tokenizer.deinit();
+
+    std.debug.print("\n=== TOKENS para 'each item in items' ===\n", .{});
+
+    var count: usize = 0;
+    while (true) {
+        const token = try tokenizer.next();
+        count += 1;
+
+        std.debug.print("{d}. {s:20} = '{s}'\n", .{
+            count,
+            @tagName(token.type),
+            token.value,
+        });
+
+        if (token.type == TokenType.Eof) break;
+        if (count > 20) break; // safety
+    }
+}
+
+test "tokenizer - each loop with index" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "each item, i in items");
+    defer tokenizer.deinit();
+
+    // Verify correct token sequence
+    const tok1 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Each, tok1.type);
+    try std.testing.expectEqualStrings("each", tok1.value);
+
+    const tok2 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Ident, tok2.type);
+    try std.testing.expectEqualStrings("item", tok2.value);
+
+    const tok3 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Comma, tok3.type);
+
+    const tok4 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Ident, tok4.type);
+    try std.testing.expectEqualStrings("i", tok4.value);
+
+    const tok5 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.In, tok5.type);
+    try std.testing.expectEqualStrings("in", tok5.value);
+
+    const tok6 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Ident, tok6.type);
+    try std.testing.expectEqualStrings("items", tok6.value);
+}
+
+test "tokenizer - while loop tokens" {
+    var tokenizer = try Tokenizer.init(std.testing.allocator, "while condition");
+    defer tokenizer.deinit();
+
+    const tok1 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.While, tok1.type);
+
+    const tok2 = try tokenizer.next();
+    try std.testing.expectEqual(TokenType.Ident, tok2.type);
+    try std.testing.expectEqualStrings("condition", tok2.value);
 }
