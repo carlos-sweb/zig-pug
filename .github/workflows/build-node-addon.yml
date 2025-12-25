@@ -3,10 +3,14 @@ name: Build Node.js Addon
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'nodejs/package.json'  # Only trigger when package.json changes (version bump)
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
+    paths:
+      - 'nodejs/package.json'
+  workflow_dispatch:  # Manual trigger still available
 
 jobs:
   build-addon:
