@@ -25,3 +25,6 @@ Thumbs.db
 
 # Test output files (generated)
 tests/cli/output/
+
+# NPM test directory for manual package testing
+npm-test/
