@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Space-separated Attributes in Complex Expressions** - Fixed parser bug where space-separated attributes would fail when the previous attribute value contained complex expressions
+  - Issue: `div(first=c ? "yes" : "no" second="static")` would fail with parsing error
+  - Fixed by implementing lookahead detection for attribute names in expression parsing
+  - Added pending attribute mechanism to properly handle tokenizer synchronization
+  - Now supports all combinations of space and comma separators with complex expressions:
+    - String concatenation: `div(value="base"+vl name="prefix")` ✓
+    - Multiple concatenations: `div(first="pre"+a second="mid"+b)` ✓
+    - Ternary operators: `div(first=c ? "yes" : "no" second="static")` ✓
+    - Mixed with identifiers: `div(first=c ? "yes" : "no" second=s)` ✓
+  - Enhanced `src/parser/attributes.zig` with intelligent attribute boundary detection
+  - See `docs/attribute-parsing-fix.md` for detailed technical documentation
+
 ## [4.0.0] - 2024-12-24
 
 ### 🎉 Major Release - Builder API & Comprehensive C/C++ Support
