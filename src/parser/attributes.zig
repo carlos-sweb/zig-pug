@@ -24,6 +24,8 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
     // Atributos pueden estar en múltiples líneas
     try helpers.skipNewlines(self);
 
+    var pending_attr_name: ?[]const u8 = null;
+
     while (!helpers.match(self, &.{ .RParen, .Eof })) {
         try helpers.skipNewlines(self);
 
@@ -140,9 +142,26 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Ident})) {
+                            // Save the identifier value in case we need it for pending attribute
+                            const saved_ident_value = self.current.value;
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             is_expression = true;
                             try helpers.advance(self);
+
+                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
+                            if (helpers.match(self, &.{.BufferedCode})) {
+                                // This Ident is the start of a new attribute, not part of the expression
+                                // Store it as pending and don't restore current (leave it as BufferedCode)
+                                pending_attr_name = saved_ident_value;
+                                // Remove the Ident we added to expr_str by recalculating without it
+                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
+                                break;
+                            }
+
+                            // Check if next token is an operator that continues the expression
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                                break;
+                            }
                         } else {
                             break;
                         }
@@ -216,8 +235,26 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Ident})) {
+                            // Save the identifier value in case we need it for pending attribute
+                            const saved_ident_value = self.current.value;
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
+
+                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
+                            if (helpers.match(self, &.{.BufferedCode})) {
+                                // This Ident is the start of a new attribute, not part of the expression
+                                // Store it as pending and don't restore current (leave it as BufferedCode)
+                                pending_attr_name = saved_ident_value;
+                                // Remove the Ident we added to expr_str by recalculating without it
+                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
+                                break;
+                            }
+
+                            // Check if next token is an operator that continues the expression
+                            // If not (e.g., next token is BufferedCode for a new attribute), stop here
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
+                                break;
+                            }
                         } else {
                             break;
                         }
@@ -315,9 +352,26 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Ident})) {
+                            // Save the identifier value in case we need it for pending attribute
+                            const saved_ident_value = self.current.value;
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             is_expression = true;
                             try helpers.advance(self);
+
+                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
+                            if (helpers.match(self, &.{.BufferedCode})) {
+                                // This Ident is the start of a new attribute, not part of the expression
+                                // Store it as pending and don't restore current (leave it as BufferedCode)
+                                pending_attr_name = saved_ident_value;
+                                // Remove the Ident we added to expr_str by recalculating without it
+                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
+                                break;
+                            }
+
+                            // Check if next token is an operator that continues the expression
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                                break;
+                            }
                         } else {
                             break;
                         }
@@ -385,8 +439,26 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Ident})) {
+                            // Save the identifier value in case we need it for pending attribute
+                            const saved_ident_value = self.current.value;
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
+
+                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
+                            if (helpers.match(self, &.{.BufferedCode})) {
+                                // This Ident is the start of a new attribute, not part of the expression
+                                // Store it as pending and don't restore current (leave it as BufferedCode)
+                                pending_attr_name = saved_ident_value;
+                                // Remove the Ident we added to expr_str by recalculating without it
+                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
+                                break;
+                            }
+
+                            // Check if next token is an operator that continues the expression
+                            // If not (e.g., next token is BufferedCode for a new attribute), stop here
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
+                                break;
+                            }
                         } else {
                             break;
                         }
@@ -469,8 +541,26 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Ident})) {
+                            // Save the identifier value in case we need it for pending attribute
+                            const saved_ident_value = self.current.value;
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
                             try helpers.advance(self);
+
+                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
+                            if (helpers.match(self, &.{.BufferedCode})) {
+                                // This Ident is the start of a new attribute, not part of the expression
+                                // Store it as pending and don't restore current (leave it as BufferedCode)
+                                pending_attr_name = saved_ident_value;
+                                // Remove the Ident we added to expr_str by recalculating without it
+                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
+                                break;
+                            }
+
+                            // Check if next token is an operator that continues the expression
+                            // If not (e.g., next token is BufferedCode for a new attribute), stop here
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
+                                break;
+                            }
                         } else {
                             break;
                         }
@@ -487,6 +577,42 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
             .is_unescaped = is_unescaped,
             .is_expression = is_expression,
         });
+
+        // Check if there's a pending attribute from expression parsing
+        if (pending_attr_name) |pending_name| {
+            // Current is BufferedCode (=), parse the value
+            if (!helpers.match(self, &.{.BufferedCode})) {
+                return error.UnexpectedToken;
+            }
+            try helpers.advance(self);
+
+            // Parse the pending attribute's value (simplified - just handle common cases)
+            var pending_value: ?[]const u8 = null;
+            var pending_is_expression = false;
+
+            if (helpers.match(self, &.{.String})) {
+                const str_val = self.current.value;
+                if (str_val.len >= 2 and str_val[0] == '"' and str_val[str_val.len - 1] == '"') {
+                    pending_value = str_val[1 .. str_val.len - 1];
+                } else {
+                    pending_value = str_val;
+                }
+                try helpers.advance(self);
+            } else if (helpers.match(self, &.{.Ident})) {
+                pending_value = self.current.value;
+                pending_is_expression = true;
+                try helpers.advance(self);
+            }
+
+            try attributes.append(arena_allocator, .{
+                .name = pending_name,
+                .value = pending_value,
+                .is_unescaped = false,
+                .is_expression = pending_is_expression,
+            });
+
+            pending_attr_name = null;
+        }
 
         try helpers.skipNewlines(self);
 
