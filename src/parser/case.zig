@@ -26,11 +26,24 @@ pub fn parseCase(self: *Parser) anyerror!*ast.AstNode {
     const start_line = self.current.line;
     try helpers.advance(self); // consume 'case'
 
-    // Parse case expression
+    // Parse case expression (everything until newline)
+    // Concatenate tokens WITHOUT spaces to preserve property access (object.property)
+    // and operators (>=, <=, etc). JavaScript expressions don't require spaces.
     var expression: std.ArrayList(u8) = .{};
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
-        if (expression.items.len > 0) {
-            try expression.append(arena_allocator, ' ');
+        // Special handling for .Class and .Id tokens - prepend the dot
+        // because tokenizer removes it from the value
+        if (self.current.type == .Class or self.current.type == .Id) {
+            try expression.append(arena_allocator, '.');
+        }
+        // Special handling for .String tokens - wrap with quotes
+        // because tokenizer removes them from the value
+        else if (self.current.type == .String) {
+            try expression.append(arena_allocator, '"');
+            try expression.appendSlice(arena_allocator, self.current.value);
+            try expression.append(arena_allocator, '"');
+            try helpers.advance(self);
+            continue;
         }
         try expression.appendSlice(arena_allocator, self.current.value);
         try helpers.advance(self);
