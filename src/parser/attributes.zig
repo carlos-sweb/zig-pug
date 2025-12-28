@@ -69,12 +69,17 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 }
                 try helpers.advance(self);
 
-                // Check if there are more tokens (operators, etc.)
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                // Check if there are more tokens (operators, method calls, etc.)
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
                     // Complex expression - add quotes back for JavaScript
                     var expr_str = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{original_str});
+                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
 
-                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                    while (true) {
+                        // Stop if we hit comma or newline (attribute separators)
+                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
+                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
+                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
                         if (helpers.match(self, &.{.Plus})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
                             is_expression = true;
@@ -93,6 +98,15 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.RBracket})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LParen})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
+                            paren_depth += 1; // Entering nested parentheses
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RParen})) {
+                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
+                            paren_depth -= 1; // Exiting nested parentheses
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Greater})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
@@ -159,7 +173,7 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             }
 
                             // Check if next token is an operator that continues the expression
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
                                 break;
                             }
                         } else {
@@ -179,9 +193,14 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 is_expression = true; // Identifier = expression to evaluate
                 try helpers.advance(self);
 
-                // Check for complex expressions after identifier (e.g., active ? "yes" : "no")
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
-                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                // Check for complex expressions after identifier (e.g., active ? "yes" : "no", obj.method())
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
+                    while (true) {
+                        // Stop if we hit comma or newline (attribute separators)
+                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
+                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
+                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
                         if (helpers.match(self, &.{.Plus})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
                             try helpers.advance(self);
@@ -196,6 +215,15 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.RBracket})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LParen})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
+                            paren_depth += 1; // Entering nested parentheses
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RParen})) {
+                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
+                            paren_depth -= 1; // Exiting nested parentheses
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Greater})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
@@ -252,7 +280,7 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
 
                             // Check if next token is an operator that continues the expression
                             // If not (e.g., next token is BufferedCode for a new attribute), stop here
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
                                 break;
                             }
                         } else {
@@ -280,12 +308,17 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 }
                 try helpers.advance(self);
 
-                // Check for operators (complex expression)
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                // Check for operators (complex expression with method calls)
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
                     // Complex expression - add quotes back for JavaScript
                     var expr_str = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{original_str});
+                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
 
-                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                    while (true) {
+                        // Stop if we hit comma or newline (attribute separators)
+                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
+                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
+                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
                         if (helpers.match(self, &.{.Plus})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
                             is_expression = true;
@@ -304,6 +337,15 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.RBracket})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LParen})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
+                            paren_depth += 1; // Entering nested parentheses
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RParen})) {
+                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
+                            paren_depth -= 1; // Exiting nested parentheses
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Greater})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
@@ -369,7 +411,7 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             }
 
                             // Check if next token is an operator that continues the expression
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
                                 break;
                             }
                         } else {
@@ -383,9 +425,14 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 is_expression = true;
                 try helpers.advance(self);
 
-                // Check for complex expressions after identifier
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
-                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                // Check for complex expressions after identifier (including method calls)
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
+                    while (true) {
+                        // Stop if we hit comma or newline (attribute separators)
+                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
+                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
+                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
                         if (helpers.match(self, &.{.Plus})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
                             try helpers.advance(self);
@@ -400,6 +447,15 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.RBracket})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LParen})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
+                            paren_depth += 1; // Entering nested parentheses
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RParen})) {
+                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
+                            paren_depth -= 1; // Exiting nested parentheses
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Greater})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
@@ -456,7 +512,7 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
 
                             // Check if next token is an operator that continues the expression
                             // If not (e.g., next token is BufferedCode for a new attribute), stop here
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
                                 break;
                             }
                         } else {
@@ -485,9 +541,14 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                 is_expression = true;
                 try helpers.advance(self);
 
-                // Check for complex expressions after identifier
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
-                    while (!helpers.match(self, &.{ .Comma, .RParen, .Eof, .Newline })) {
+                // Check for complex expressions after identifier (including method calls)
+                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
+                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
+                    while (true) {
+                        // Stop if we hit comma or newline (attribute separators)
+                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
+                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
+                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
                         if (helpers.match(self, &.{.Plus})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
                             try helpers.advance(self);
@@ -502,6 +563,15 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.RBracket})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.LParen})) {
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
+                            paren_depth += 1; // Entering nested parentheses
+                            try helpers.advance(self);
+                        } else if (helpers.match(self, &.{.RParen})) {
+                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
+                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
+                            paren_depth -= 1; // Exiting nested parentheses
                             try helpers.advance(self);
                         } else if (helpers.match(self, &.{.Greater})) {
                             expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
@@ -558,7 +628,7 @@ pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.At
 
                             // Check if next token is an operator that continues the expression
                             // If not (e.g., next token is BufferedCode for a new attribute), stop here
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
+                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
                                 break;
                             }
                         } else {

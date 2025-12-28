@@ -138,14 +138,75 @@ Salida:
 ### Atributos Dinámicos
 
 ```pug
-//- With variables
+//- Con variables
 a(href=linkUrl) Click
 img(src=imagePath alt=imageAlt)
 
-//- With expressions
+//- Con expresiones
 div(class="btn-" + buttonType)
 input(value=count * 2)
 ```
+
+### Llamadas a Métodos en Atributos
+
+Puedes llamar métodos de JavaScript directamente dentro de expresiones de atributos, incluyendo métodos de cadenas, conversiones y acceso a propiedades con métodos:
+
+```pug
+//- Métodos de cadenas
+div(class="btn-" + buttonType.toLowerCase())
+input(placeholder=label.toUpperCase())
+span(title=text.trim())
+
+//- Métodos encadenados
+div(data-text=message.trim().toUpperCase())
+
+//- Acceso a propiedades de objetos con métodos
+div(class="user-" + user.name.toLowerCase())
+span(data-age=user.age.toString())
+
+//- Expresiones complejas
+a(href="/" + page.slug.toLowerCase() + ".html")
+div(class=isActive ? "active" : "inactive")
+```
+
+Salida:
+```html
+<div class="btn-primary"></div>
+<input placeholder="ENTER NAME"/>
+<span title="Hello World"></span>
+<div data-text="HELLO WORLD"></div>
+<div class="user-john"></div>
+<span data-age="30"></span>
+<a href="/about.html"></a>
+<div class="active"></div>
+```
+
+**Nota:** Las llamadas a métodos usan paréntesis `()`. El parser distingue automáticamente entre paréntesis de llamadas a métodos y paréntesis de cierre de atributos mediante seguimiento de profundidad.
+
+**Separadores de Atributos:**
+- Los atributos pueden separarse con **espacios** o **comas** (o ambos)
+- La mayoría de formatos son válidos:
+
+```pug
+//- Separador de espacio (atributos simples)
+div(class="btn" data-id="123") Texto
+
+//- Separador de coma
+div(class="btn", data-id="123") Texto
+
+//- Separadores mixtos
+div(class="btn" data-id="123", title="Info") Texto
+
+//- Las llamadas a métodos REQUIEREN separadores de coma
+div(class="btn-" + type.toLowerCase(), data-id=id.toString()) Texto
+```
+
+**Limitaciones:**
+- Solo se soportan características de JavaScript ES5.1 (runtime mujs)
+- Los métodos no deben requerir parámetros adicionales (ej: `split()` funciona, pero `split(",")` aún no está soportado)
+- Al usar llamadas a métodos en atributos, **usa separadores de coma** entre atributos
+- Múltiples atributos con llamadas a métodos separados solo por espacios no está soportado actualmente
+- Las operaciones asíncronas no están soportadas
 
 ---
 

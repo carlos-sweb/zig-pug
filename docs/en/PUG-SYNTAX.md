@@ -147,6 +147,67 @@ div(class="btn-" + buttonType)
 input(value=count * 2)
 ```
 
+### Method Calls in Attributes
+
+You can call JavaScript methods directly within attribute expressions, including string methods, conversions, and property access with methods:
+
+```pug
+//- String methods
+div(class="btn-" + buttonType.toLowerCase())
+input(placeholder=label.toUpperCase())
+span(title=text.trim())
+
+//- Chained methods
+div(data-text=message.trim().toUpperCase())
+
+//- Object property access with methods
+div(class="user-" + user.name.toLowerCase())
+span(data-age=user.age.toString())
+
+//- Complex expressions
+a(href="/" + page.slug.toLowerCase() + ".html")
+div(class=isActive ? "active" : "inactive")
+```
+
+Output:
+```html
+<div class="btn-primary"></div>
+<input placeholder="ENTER NAME"/>
+<span title="Hello World"></span>
+<div data-text="HELLO WORLD"></div>
+<div class="user-john"></div>
+<span data-age="30"></span>
+<a href="/about.html"></a>
+<div class="active"></div>
+```
+
+**Note:** Method calls use parentheses `()`. The parser automatically distinguishes between method call parentheses and attribute-closing parentheses using depth tracking.
+
+**Attribute Separators:**
+- Attributes can be separated by **spaces** or **commas** (or both)
+- Most formats are valid:
+
+```pug
+//- Space separator (simple attributes)
+div(class="btn" data-id="123") Text
+
+//- Comma separator
+div(class="btn", data-id="123") Text
+
+//- Mixed separators
+div(class="btn" data-id="123", title="Info") Text
+
+//- Method calls REQUIRE comma separators
+div(class="btn-" + type.toLowerCase(), data-id=id.toString()) Text
+```
+
+**Limitations:**
+- Only ES5.1 JavaScript features are supported (mujs runtime)
+- Methods must not require additional parameters (e.g., `split()` works, but `split(",")` is not yet supported)
+- When using method calls in attributes, **use comma separators** between attributes
+- Multiple attributes with method calls separated by spaces only is not currently supported
+- Asynchronous operations are not supported
+
 ---
 
 ## Classes and IDs
