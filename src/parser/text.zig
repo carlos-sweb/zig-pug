@@ -65,6 +65,12 @@ pub fn parseInlineText(self: *Parser) anyerror!std.ArrayListUnmanaged(*ast.AstNo
             try nodes.append(arena_allocator, interp_node);
             has_content = true; // Mark that we have content
         } else {
+            // Skip empty tokens (can occur when EOF is reached without newline)
+            if (self.current.value.len == 0) {
+                try helpers.advance(self);
+                continue;
+            }
+
             // Add space before token if we've already processed content
             // This preserves spacing between words/interpolations
             if (has_content) {
@@ -168,6 +174,12 @@ pub fn parsePipeText(self: *Parser) anyerror!*ast.AstNode {
             try nodes.append(arena_allocator, interp_node);
             has_content = true; // Mark that we have content
         } else {
+            // Skip empty tokens (can occur when EOF is reached without newline)
+            if (self.current.value.len == 0) {
+                try helpers.advance(self);
+                continue;
+            }
+
             // Add space before token if we've already processed content
             // This preserves spacing between words/interpolations
             if (has_content) {

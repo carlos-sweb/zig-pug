@@ -40,8 +40,14 @@ pub fn scanText(tokenizer: anytype) !Token {
 
     const value = tokenizer.source[start..tokenizer.pos];
 
-    // If we hit newline, we'll return to Root on next token
-    if (tokenizer.peekChar() == '\n') {
+    // Return to Root state at newline or EOF
+    // This prevents returning empty tokens when EOF is reached
+    if (tokenizer.peekChar()) |ch| {
+        if (ch == '\n') {
+            tokenizer.state = .Root;
+        }
+    } else {
+        // At EOF, return to Root state
         tokenizer.state = .Root;
     }
 
