@@ -74,12 +74,11 @@ fn minifyHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
     return result.toOwnedSlice(allocator);
 }
 
-/// Pretty-print HTML with indentation (simplified version for lib)
+/// Pretty-print HTML with indentation (matches CLI algorithm)
 fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8, include_comments: bool) ![]const u8 {
     var result = std.ArrayList(u8){};
     var indent: usize = 0;
     var i: usize = 0;
-    var last_was_text = false;
 
     while (i < html.len) {
         if (html[i] == '<') {
@@ -114,71 +113,107 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8, include_comme
             // Check if closing tag
             const is_closing = i + 1 < html.len and html[i + 1] == '/';
 
-            // Extract tag name to check if it's void/self-closing
-            var tag_name_start: usize = i + 1;
-            if (is_closing) tag_name_start += 1;
-            var tag_name_end = tag_name_start;
-            while (tag_name_end < html.len and
-                   html[tag_name_end] != '>' and
-                   html[tag_name_end] != ' ' and
-                   html[tag_name_end] != '/') : (tag_name_end += 1) {}
-            const tag_name = html[tag_name_start..tag_name_end];
+            // Extract tag name
+            const tag_name = blk: {
+                if (is_closing or is_comment or is_doctype) break :blk "";
 
-            // Check if it's a void element
-            const is_void = isVoidElement(tag_name);
+                var j = i + 1;
+                while (j < html.len and html[j] == ' ') : (j += 1) {}
 
-            // Peek ahead to see if next content is text (for inline elements)
-            var peek_i = i;
-            while (peek_i < html.len and html[peek_i] != '>') : (peek_i += 1) {}
-            if (peek_i < html.len) peek_i += 1; // skip '>'
+                const start = j;
+                while (j < html.len and html[j] != ' ' and html[j] != '>' and html[j] != '/') : (j += 1) {}
 
-            // Skip whitespace
-            while (peek_i < html.len and std.ascii.isWhitespace(html[peek_i])) : (peek_i += 1) {}
+                if (j > start) {
+                    break :blk html[start..j];
+                }
+                break :blk "";
+            };
 
-            const next_is_text = peek_i < html.len and html[peek_i] != '<';
-            const is_inline = next_is_text and !is_closing;
+            // Check if self-closing
+            const is_self_closing = blk: {
+                var j = i;
+                while (j < html.len and html[j] != '>') : (j += 1) {}
+                const ends_with_slash = j > 0 and html[j - 1] == '/';
+                const is_void = isVoidElement(tag_name);
+                break :blk ends_with_slash or is_void;
+            };
 
-            // Decrease indent for closing tags (before printing)
+            // For closing tags: check if content before it is only text (no nested tags)
+            const closing_has_only_text = blk: {
+                if (!is_closing) break :blk false;
+
+                var idx: usize = result.items.len;
+
+                // Skip any whitespace/newlines at the end
+                while (idx > 0 and (result.items[idx - 1] == ' ' or result.items[idx - 1] == '\n')) {
+                    idx -= 1;
+                }
+
+                // Look for '>' and check there's no '<' before it
+                while (idx > 0) {
+                    idx -= 1;
+                    const c = result.items[idx];
+
+                    if (c == '<') {
+                        // Found a '<' before finding '>', means there are nested tags
+                        break :blk false;
+                    }
+
+                    if (c == '>') {
+                        // Found '>'. Check if it's from a closing tag
+                        var tag_start_idx = idx;
+                        while (tag_start_idx > 0 and result.items[tag_start_idx] != '<') {
+                            tag_start_idx -= 1;
+                        }
+
+                        // Check if this is a closing tag
+                        if (tag_start_idx + 1 < result.items.len and result.items[tag_start_idx + 1] == '/') {
+                            // This is a closing tag, so there are nested tags
+                            break :blk false;
+                        }
+
+                        // This is an opening tag, and no '<' between it and current position
+                        break :blk true;
+                    }
+                }
+
+                break :blk false;
+            };
+
             if (is_closing and indent > 0) {
                 indent -= 1;
             }
 
-            // Add newline and indentation (except for inline elements or text content)
-            if (result.items.len > 0 and !last_was_text and !is_inline) {
+            // Add indentation (newline + spaces)
+            // Skip newline for: closing tags with only text, or the very first tag
+            if (!closing_has_only_text and result.items.len > 0) {
                 try result.append(allocator, '\n');
-                var ind: usize = 0;
-                while (ind < indent) : (ind += 1) {
-                    try result.appendSlice(allocator, "  ");
+                var j: usize = 0;
+                while (j < indent * 2) : (j += 1) {
+                    try result.append(allocator, ' ');
                 }
             }
 
-            // Copy tag
-            const tag_start = i;
-            while (i < html.len and html[i] != '>') : (i += 1) {}
-            if (i < html.len) i += 1;
-            try result.appendSlice(allocator, html[tag_start..i]);
+            // Add tag
+            while (i < html.len and html[i] != '>') : (i += 1) {
+                try result.append(allocator, html[i]);
+            }
+            if (i < html.len) {
+                try result.append(allocator, html[i]); // Add '>'
+                i += 1;
+            }
 
-            // Increase indent for opening tags (after printing)
-            if (!is_closing and !is_doctype and !is_comment and !is_void) {
+            // Don't increase indent for comments, doctype, or self-closing tags
+            if (!is_closing and !is_self_closing and !is_comment and !is_doctype) {
                 indent += 1;
             }
-
-            last_was_text = false;
         } else {
-            // Copy content between tags
-            const content_start = i;
-            while (i < html.len and html[i] != '<') : (i += 1) {}
-            const content = html[content_start..i];
-
-            // Only add non-whitespace content
-            const trimmed = std.mem.trim(u8, content, &std.ascii.whitespace);
-            if (trimmed.len > 0) {
-                try result.appendSlice(allocator, trimmed);
-                last_was_text = true;
-            }
+            try result.append(allocator, html[i]);
+            i += 1;
         }
     }
 
+    try result.append(allocator, '\n');
     return result.toOwnedSlice(allocator);
 }
 
