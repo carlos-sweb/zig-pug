@@ -79,6 +79,7 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8, include_comme
     var result = std.ArrayList(u8){};
     var indent: usize = 0;
     var i: usize = 0;
+    var last_was_text = false;
 
     while (i < html.len) {
         if (html[i] == '<') {
@@ -90,7 +91,6 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8, include_comme
 
             // Skip comments if not including them
             if (is_comment and !include_comments) {
-                // Find end of comment
                 while (i < html.len) : (i += 1) {
                     if (i + 2 < html.len and html[i] == '-' and html[i + 1] == '-' and html[i + 2] == '>') {
                         i += 3;
@@ -114,17 +114,42 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8, include_comme
             // Check if closing tag
             const is_closing = i + 1 < html.len and html[i + 1] == '/';
 
+            // Extract tag name to check if it's void/self-closing
+            var tag_name_start: usize = i + 1;
+            if (is_closing) tag_name_start += 1;
+            var tag_name_end = tag_name_start;
+            while (tag_name_end < html.len and
+                   html[tag_name_end] != '>' and
+                   html[tag_name_end] != ' ' and
+                   html[tag_name_end] != '/') : (tag_name_end += 1) {}
+            const tag_name = html[tag_name_start..tag_name_end];
+
+            // Check if it's a void element
+            const is_void = isVoidElement(tag_name);
+
+            // Peek ahead to see if next content is text (for inline elements)
+            var peek_i = i;
+            while (peek_i < html.len and html[peek_i] != '>') : (peek_i += 1) {}
+            if (peek_i < html.len) peek_i += 1; // skip '>'
+
+            // Skip whitespace
+            while (peek_i < html.len and std.ascii.isWhitespace(html[peek_i])) : (peek_i += 1) {}
+
+            const next_is_text = peek_i < html.len and html[peek_i] != '<';
+            const is_inline = next_is_text and !is_closing;
+
+            // Decrease indent for closing tags (before printing)
             if (is_closing and indent > 0) {
                 indent -= 1;
             }
 
-            // Add newline and indentation
-            if (result.items.len > 0) {
+            // Add newline and indentation (except for inline elements or text content)
+            if (result.items.len > 0 and !last_was_text and !is_inline) {
                 try result.append(allocator, '\n');
-            }
-            var ind: usize = 0;
-            while (ind < indent) : (ind += 1) {
-                try result.appendSlice(allocator, "  ");
+                var ind: usize = 0;
+                while (ind < indent) : (ind += 1) {
+                    try result.appendSlice(allocator, "  ");
+                }
             }
 
             // Copy tag
@@ -133,9 +158,12 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8, include_comme
             if (i < html.len) i += 1;
             try result.appendSlice(allocator, html[tag_start..i]);
 
-            if (!is_closing and !is_doctype and !is_comment) {
+            // Increase indent for opening tags (after printing)
+            if (!is_closing and !is_doctype and !is_comment and !is_void) {
                 indent += 1;
             }
+
+            last_was_text = false;
         } else {
             // Copy content between tags
             const content_start = i;
@@ -146,6 +174,7 @@ fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8, include_comme
             const trimmed = std.mem.trim(u8, content, &std.ascii.whitespace);
             if (trimmed.len > 0) {
                 try result.appendSlice(allocator, trimmed);
+                last_was_text = true;
             }
         }
     }
