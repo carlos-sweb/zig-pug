@@ -43,13 +43,28 @@ if (fs.existsSync(prebuiltPath)) {
 
 /**
  * PugCompiler class - High-level API for compiling Pug templates
+ * @param {Object} options - Compiler options
+ * @param {boolean} options.pretty - Enable pretty-print with indentation and comments (development mode)
+ * @param {boolean} options.format - Enable pretty-print without comments (readable mode)
+ * @param {boolean} options.minify - Enable HTML minification (production mode)
+ * @param {boolean} options.includeComments - Include HTML comments (only with pretty/format)
  */
 class PugCompiler {
-    constructor() {
+    constructor(options = {}) {
         this.context = binding.createContext();
         if (!this.context) {
             throw new Error('Failed to create zig-pug context');
         }
+
+        // Default options
+        this.defaultOptions = {
+            pretty: options.pretty || false,
+            format: options.format || false,
+            minify: options.minify || false,
+            includeComments: options.includeComments !== undefined
+                ? options.includeComments
+                : (options.pretty || false)
+        };
     }
 
     /**
@@ -199,16 +214,40 @@ class PugCompiler {
     /**
      * Compile a Pug template to HTML
      * @param {string} template - Pug template string
+     * @param {Object} options - Compilation options (overrides constructor options)
+     * @param {boolean} options.pretty - Enable pretty-print with indentation and comments
+     * @param {boolean} options.format - Enable pretty-print without comments
+     * @param {boolean} options.minify - Enable HTML minification
+     * @param {boolean} options.includeComments - Include HTML comments
      * @returns {string} - Compiled HTML
      */
-    compile(template) {
+    compile(template, options = {}) {
         if (typeof template !== 'string') {
             throw new TypeError('Template must be a string');
         }
 
-        const html = binding.compile(this.context, template);
+        let html = binding.compile(this.context, template);
         if (!html) {
             throw new Error('Failed to compile template');
+        }
+
+        // Merge default options with compile-time options
+        const finalOptions = { ...this.defaultOptions, ...options };
+
+        // Apply formatting based on options
+        if (finalOptions.minify) {
+            const minified = binding.minify(html);
+            if (minified) {
+                html = minified;
+            }
+        } else if (finalOptions.pretty || finalOptions.format) {
+            const includeComments = finalOptions.includeComments !== undefined
+                ? finalOptions.includeComments
+                : finalOptions.pretty;
+            const formatted = binding.prettyPrint(html, includeComments);
+            if (formatted) {
+                html = formatted;
+            }
         }
 
         return html;
@@ -218,11 +257,12 @@ class PugCompiler {
      * Compile a template with variables in one call
      * @param {string} template - Pug template string
      * @param {Object} variables - Variables to set before compiling
+     * @param {Object} options - Compilation options (overrides constructor options)
      * @returns {string} - Compiled HTML
      */
-    render(template, variables = {}) {
+    render(template, variables = {}, options = {}) {
         this.setVariables(variables);
-        return this.compile(template);
+        return this.compile(template, options);
     }
 }
 
@@ -230,10 +270,11 @@ class PugCompiler {
  * Convenience function to compile a template with variables
  * @param {string} template - Pug template string
  * @param {Object} variables - Variables for the template
+ * @param {Object} options - Compilation options
  * @returns {string} - Compiled HTML
  */
-function compile(template, variables = {}) {
-    const compiler = new PugCompiler();
+function compile(template, variables = {}, options = {}) {
+    const compiler = new PugCompiler(options);
     return compiler.render(template, variables);
 }
 
@@ -241,12 +282,13 @@ function compile(template, variables = {}) {
  * Convenience function to compile a template from a file
  * @param {string} filename - Path to the Pug template file
  * @param {Object} variables - Variables for the template
+ * @param {Object} options - Compilation options
  * @returns {string} - Compiled HTML
  */
-function compileFile(filename, variables = {}) {
+function compileFile(filename, variables = {}, options = {}) {
     const fs = require('fs');
     const template = fs.readFileSync(filename, 'utf8');
-    return compile(template, variables);
+    return compile(template, variables, options);
 }
 
 /**

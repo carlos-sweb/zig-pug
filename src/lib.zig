@@ -26,6 +26,134 @@ pub const jsValueFromFloat = runtime.jsValueFromFloat;
 pub const jsValueFromBool = runtime.jsValueFromBool;
 
 // ============================================================================
+// HTML Formatting Utilities
+// ============================================================================
+
+/// Check if a tag name is a void element (self-closing HTML element)
+fn isVoidElement(tag_name: []const u8) bool {
+    const void_elements = [_][]const u8{
+        "area",  "base", "br",   "col",   "embed",  "hr",    "img",
+        "input", "link", "meta", "param", "source", "track", "wbr",
+    };
+    for (void_elements) |void_elem| {
+        if (std.mem.eql(u8, tag_name, void_elem)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/// Minify HTML by removing unnecessary whitespace
+fn minifyHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
+    var result = std.ArrayList(u8){};
+    var in_tag = false;
+    var last_was_space = false;
+
+    for (html) |c| {
+        if (c == '<') {
+            in_tag = true;
+            try result.append(allocator, c);
+            last_was_space = false;
+        } else if (c == '>') {
+            in_tag = false;
+            try result.append(allocator, c);
+            last_was_space = false;
+        } else if (c == ' ' or c == '\n' or c == '\r' or c == '\t') {
+            if (!in_tag and !last_was_space) {
+                try result.append(allocator, ' ');
+                last_was_space = true;
+            } else if (in_tag and c == ' ') {
+                try result.append(allocator, ' ');
+            }
+        } else {
+            try result.append(allocator, c);
+            last_was_space = false;
+        }
+    }
+
+    return result.toOwnedSlice(allocator);
+}
+
+/// Pretty-print HTML with indentation (simplified version for lib)
+fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8, include_comments: bool) ![]const u8 {
+    var result = std.ArrayList(u8){};
+    var indent: usize = 0;
+    var i: usize = 0;
+
+    while (i < html.len) {
+        if (html[i] == '<') {
+            // Check if it's a comment
+            const is_comment = i + 3 < html.len and
+                html[i + 1] == '!' and
+                html[i + 2] == '-' and
+                html[i + 3] == '-';
+
+            // Skip comments if not including them
+            if (is_comment and !include_comments) {
+                // Find end of comment
+                while (i < html.len) : (i += 1) {
+                    if (i + 2 < html.len and html[i] == '-' and html[i + 1] == '-' and html[i + 2] == '>') {
+                        i += 3;
+                        break;
+                    }
+                }
+                continue;
+            }
+
+            // Check if it's DOCTYPE
+            const is_doctype = i + 8 < html.len and
+                html[i + 1] == '!' and
+                std.ascii.toUpper(html[i + 2]) == 'D' and
+                std.ascii.toUpper(html[i + 3]) == 'O' and
+                std.ascii.toUpper(html[i + 4]) == 'C' and
+                std.ascii.toUpper(html[i + 5]) == 'T' and
+                std.ascii.toUpper(html[i + 6]) == 'Y' and
+                std.ascii.toUpper(html[i + 7]) == 'P' and
+                std.ascii.toUpper(html[i + 8]) == 'E';
+
+            // Check if closing tag
+            const is_closing = i + 1 < html.len and html[i + 1] == '/';
+
+            if (is_closing and indent > 0) {
+                indent -= 1;
+            }
+
+            // Add newline and indentation
+            if (result.items.len > 0) {
+                try result.append(allocator, '\n');
+            }
+            var ind: usize = 0;
+            while (ind < indent) : (ind += 1) {
+                try result.appendSlice(allocator, "  ");
+            }
+
+            // Copy tag
+            const tag_start = i;
+            while (i < html.len and html[i] != '>') : (i += 1) {}
+            if (i < html.len) i += 1;
+            try result.appendSlice(allocator, html[tag_start..i]);
+
+            if (!is_closing and !is_doctype and !is_comment) {
+                indent += 1;
+            }
+        } else {
+            // Copy content between tags
+            const content_start = i;
+            while (i < html.len and html[i] != '<') : (i += 1) {}
+            const content = html[content_start..i];
+
+            // Only add non-whitespace content
+            const trimmed = std.mem.trim(u8, content, &std.ascii.whitespace);
+            if (trimmed.len > 0) {
+                try result.appendSlice(allocator, trimmed);
+            }
+        }
+    }
+
+    return result.toOwnedSlice(allocator);
+}
+
+// ============================================================================
 // C API - For FFI from other languages
 // ============================================================================
 
@@ -228,6 +356,45 @@ export fn zigpug_free_string(str: ?[*:0]u8) void {
 /// Get version string
 export fn zigpug_version() [*:0]const u8 {
     return "4.0.0";
+}
+
+/// Pretty-print HTML with indentation
+/// Parameters:
+///   - html: HTML string to format
+///   - include_comments: Whether to preserve HTML comments
+/// Returns: Formatted HTML string (must be freed with zigpug_free_string)
+export fn zigpug_pretty_print(html: [*:0]const u8, include_comments: bool) ?[*:0]u8 {
+    const allocator = std.heap.c_allocator;
+    const html_str = std.mem.span(html);
+
+    const formatted = prettyPrintHtml(allocator, html_str, include_comments) catch return null;
+
+    const result = allocator.dupeZ(u8, formatted) catch {
+        allocator.free(formatted);
+        return null;
+    };
+    allocator.free(formatted);
+
+    return result.ptr;
+}
+
+/// Minify HTML by removing unnecessary whitespace
+/// Parameters:
+///   - html: HTML string to minify
+/// Returns: Minified HTML string (must be freed with zigpug_free_string)
+export fn zigpug_minify(html: [*:0]const u8) ?[*:0]u8 {
+    const allocator = std.heap.c_allocator;
+    const html_str = std.mem.span(html);
+
+    const minified = minifyHtml(allocator, html_str) catch return null;
+
+    const result = allocator.dupeZ(u8, minified) catch {
+        allocator.free(minified);
+        return null;
+    };
+    allocator.free(minified);
+
+    return result.ptr;
 }
 
 // ============================================================================

@@ -66,6 +66,20 @@ export interface PugVariables {
 }
 
 /**
+ * Compilation options for formatting output
+ */
+export interface CompilationOptions {
+    /** Enable pretty-print with indentation and comments (development mode) */
+    pretty?: boolean;
+    /** Enable pretty-print without comments (readable mode) */
+    format?: boolean;
+    /** Enable HTML minification (production mode) */
+    minify?: boolean;
+    /** Include HTML comments in output (only with pretty/format) */
+    includeComments?: boolean;
+}
+
+/**
  * PugCompiler class for advanced usage with reusable context
  *
  * @example
@@ -79,9 +93,22 @@ export interface PugVariables {
 export class PugCompiler {
     /**
      * Create a new PugCompiler instance
+     * @param options - Default compilation options
      * @throws {Error} If context creation fails
+     *
+     * @example
+     * ```typescript
+     * // Development mode with pretty-printing
+     * const devCompiler = new PugCompiler({ pretty: true });
+     *
+     * // Production mode with minification
+     * const prodCompiler = new PugCompiler({ minify: true });
+     *
+     * // Readable mode without comments
+     * const readableCompiler = new PugCompiler({ format: true });
+     * ```
      */
-    constructor();
+    constructor(options?: CompilationOptions);
 
     /**
      * Set a variable (auto-detects type)
@@ -203,6 +230,7 @@ export class PugCompiler {
     /**
      * Compile a Pug template to HTML
      * @param template - Pug template string
+     * @param options - Compilation options (overrides constructor options)
      * @returns Compiled HTML string
      * @throws {TypeError} If template is not a string
      * @throws {ZigPugCompilationError} If compilation fails with structured error info
@@ -211,7 +239,12 @@ export class PugCompiler {
      * @example
      * ```typescript
      * try {
+     *     // Use default options from constructor
      *     const html = compiler.compile('h1= title');
+     *
+     *     // Override options for this compilation
+     *     const prettyHtml = compiler.compile('h1= title', { pretty: true });
+     *
      *     console.log(html);
      * } catch (error) {
      *     if ((error as ZigPugCompilationError).compilationErrors) {
@@ -223,12 +256,13 @@ export class PugCompiler {
      * }
      * ```
      */
-    compile(template: string): string;
+    compile(template: string, options?: CompilationOptions): string;
 
     /**
      * Compile a template with variables in one call
      * @param template - Pug template string
      * @param variables - Variables to set before compiling
+     * @param options - Compilation options (overrides constructor options)
      * @returns Compiled HTML string
      * @throws {TypeError} If template is not a string
      * @throws {ZigPugCompilationError} If compilation fails
@@ -236,15 +270,17 @@ export class PugCompiler {
      * @example
      * ```typescript
      * const html = compiler.render('h1= title', { title: 'Hello' });
+     * const prettyHtml = compiler.render('h1= title', { title: 'Hello' }, { pretty: true });
      * ```
      */
-    render(template: string, variables?: PugVariables): string;
+    render(template: string, variables?: PugVariables, options?: CompilationOptions): string;
 }
 
 /**
  * Compile a Pug template string to HTML (simple API)
  * @param template - Pug template string
  * @param variables - Optional variables for interpolation
+ * @param options - Optional compilation options
  * @returns Compiled HTML string
  * @throws {ZigPugCompilationError} If compilation fails
  *
@@ -252,14 +288,18 @@ export class PugCompiler {
  * ```typescript
  * const html = compile('p Hello #{name}!', { name: 'World' });
  * console.log(html); // <p>Hello World!</p>
+ *
+ * // With pretty-print
+ * const prettyHtml = compile('div\n  p Hello', {}, { pretty: true });
  * ```
  */
-export function compile(template: string, variables?: PugVariables): string;
+export function compile(template: string, variables?: PugVariables, options?: CompilationOptions): string;
 
 /**
  * Compile a Pug template from a file
  * @param filename - Path to .pug file
  * @param variables - Optional variables for interpolation
+ * @param options - Optional compilation options
  * @returns Compiled HTML string
  * @throws {Error} If file cannot be read
  * @throws {ZigPugCompilationError} If compilation fails
@@ -270,9 +310,12 @@ export function compile(template: string, variables?: PugVariables): string;
  *     title: 'Home',
  *     user: { name: 'John' }
  * });
+ *
+ * // Development mode with pretty-print
+ * const devHtml = compileFile('./views/index.pug', { title: 'Home' }, { pretty: true });
  * ```
  */
-export function compileFile(filename: string, variables?: PugVariables): string;
+export function compileFile(filename: string, variables?: PugVariables, options?: CompilationOptions): string;
 
 /**
  * Get zig-pug version string
