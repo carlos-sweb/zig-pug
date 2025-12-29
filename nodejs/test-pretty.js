@@ -57,7 +57,8 @@ console.log('');
 // Test 7: Render method with options
 console.log('=== Test 7: Render method with options ===');
 const compiler7 = new PugCompiler();
-const html7 = compiler7.render('div\n  h1= title', { title: 'Test' }, { format: true });
+const html7 = compiler7.render(`div
+  h1= title`, { title: 'Test' }, { format: true });
 console.log(html7);
 console.log('');
 
