@@ -8,8 +8,14 @@ const path = require('path');
 const os = require('os');
 
 // Detect platform and architecture
-const platform = os.platform(); // 'linux', 'darwin', 'win32'
+let platform = os.platform(); // 'linux', 'darwin', 'win32', 'android'
 const arch = os.arch(); // 'x64', 'arm64'
+
+// Termux/Android reports 'android' but uses Linux binaries
+if (platform === 'android') {
+    platform = 'linux';
+}
+
 const platformKey = `${platform}-${arch}`;
 
 // Try to load prebuilt binary first
