@@ -199,6 +199,27 @@ Each("each") → Ident("item") → Comma → Ident("i") → In("in") → Ident("
 While("while") → Ident("condition")
 ```
 
+## Text Scanning
+
+### Plain Text State
+
+When the tokenizer enters **Text** state (after a space following a tag), it scans all content until:
+- A newline is encountered
+- EOF (end of file) is reached
+- An interpolation (`#{...}` or `!{...}`) begins
+
+**State Transitions:**
+- `Text` → `Root` at **newline or EOF**
+
+**Important Note (v4.0.9+):**
+Previously, when a template ended without a final newline, the tokenizer would remain in `Text` state and return empty tokens. This has been fixed: the state now properly transitions to `Root` at EOF, preventing trailing spaces in compiled output.
+
+```pug
+p Hello World
+  └─ Tokenizes as: Ident("p"), Ident("Hello World")
+     Even without final newline, EOF correctly transitions state
+```
+
 ## Indentation Handling
 
 The tokenizer tracks indentation levels and generates `INDENT`/`DEDENT` tokens similar to Python:

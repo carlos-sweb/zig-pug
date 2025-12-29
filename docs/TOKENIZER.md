@@ -255,12 +255,15 @@ p Text with .period and #hash
 Scans plain text content.
 
 **Handles:**
-- Any text until newline
+- Any text until newline or EOF
 - Stops at interpolation `#{}`
 - Prevents `.class` and `#id` from being tokenized in text
 
 **State Transitions:**
-- `Text` → `Root` (at newline)
+- `Text` → `Root` (at newline or EOF)
+
+**Important Fix (v4.0.9+):**
+When EOF is reached without a final newline, the state now properly transitions to `Root` instead of remaining in `Text` state. This prevents empty tokens from being generated, which previously caused trailing spaces in text content.
 
 **Example:**
 ```pug

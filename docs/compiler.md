@@ -318,37 +318,77 @@ JavaScript code runs in isolated mujs context:
 
 ## Output Modes
 
-### Standard Mode (Minified)
+The compiler generates raw, unformatted HTML. Post-processing for formatting is handled by the **`formatter.zig`** module, which is used by both `cli.zig` and `lib.zig`.
 
-Minimal HTML, no whitespace:
+### Compilation Output
+
+The compiler produces **raw HTML** without formatting:
 
 ```html
 <div><p>Hello</p></div>
 ```
 
-- No indentation
-- No comments (`include_comments = false`)
-- Smallest file size
+This output can then be processed by `formatter.zig` for different presentation modes.
 
-### Pretty Mode
+### Post-Processing with formatter.zig
 
-Human-readable HTML with indentation:
+After compilation, the HTML can be formatted using the shared formatter module:
 
-```html
-<div>
-  <p>Hello</p>
-</div>
-```
+**Location:** `src/formatter.zig`
 
-- Indentation tracking
-- Comments included (`include_comments = true`)
-- Easier debugging
+**Functions:**
 
-Enable with:
+1. **`prettyPrintHtml(allocator, html)`** - Human-readable formatting
+   ```html
+   <div>
+     <p>Hello</p>
+   </div>
+   ```
+   - Adds indentation for nested elements
+   - Uses retrospective analysis to determine text-only vs nested content
+   - Handles void elements (br, img, input, etc.)
+
+2. **`minifyHtml(allocator, html)`** - Minimal size formatting
+   ```html
+   <div><p>Hello</p></div>
+   ```
+   - Removes unnecessary whitespace
+   - Collapses multiple spaces to single space
+   - Preserves text content spacing
+
+3. **`isVoidElement(tag_name)`** - Utility function
+   - Checks if a tag is self-closing (br, hr, img, input, etc.)
+
+**Usage in CLI and API:**
+
+Both `cli.zig` and `lib.zig` import and use formatter:
+
 ```zig
-compiler.pretty = true;
-compiler.include_comments = true;
+const formatter = @import("formatter.zig");
+
+// Apply formatting based on mode
+const final_html = if (options.minify)
+    try formatter.minifyHtml(allocator, raw_html)
+else if (options.pretty or options.format)
+    try formatter.prettyPrintHtml(allocator, raw_html)
+else
+    raw_html;
 ```
+
+**Benefits of Shared Module:**
+- Single canonical implementation ensures consistency
+- CLI and Node.js API produce identical formatted output
+- Easier to maintain and test formatting logic
+
+### Compiler Flags
+
+The compiler itself has flags that affect content generation (not formatting):
+
+```zig
+compiler.include_comments = true;  // Include HTML comments in output
+```
+
+**Note:** The `pretty` flag mentioned in older code has been superseded by the formatter module approach.
 
 ## Error Handling
 

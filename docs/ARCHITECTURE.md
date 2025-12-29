@@ -17,9 +17,12 @@ Template Source (.zpug)
         ↓
        AST
         ↓
-   [COMPILER] ← Code Generation
-        ↓ (uses runtime for #{...})
+   [COMPILER] ← Code Generation (uses runtime for #{...})
         ↓
+    Raw HTML
+        ↓
+   [FORMATTER] ← Post-Processing (optional)
+        ↓        (pretty/minify/format)
    HTML Output
 ```
 
@@ -33,6 +36,7 @@ Template Source (.zpug)
 | `parser.zig` | Syntactic analysis | Tokens | AST |
 | `ast.zig` | Data structures | - | AST definitions |
 | `compiler.zig` | HTML generation | AST | HTML string |
+| `formatter.zig` | HTML formatting | Raw HTML | Pretty/Minified HTML |
 | `runtime.zig` | JS execution | JS expressions | Values |
 | `mujs_wrapper.zig` | C bindings | - | mujs FFI |
 | `cache.zig` | Template caching | File paths | Cached ASTs |
@@ -476,6 +480,66 @@ compileAttribute(attr) {
     }
 }
 ```
+
+---
+
+### Phase 5.5: HTML Formatting (Post-Processing)
+
+**Files:** `formatter.zig`, `cli.zig`, `lib.zig`
+
+**Entry:** `formatter.prettyPrintHtml()` or `formatter.minifyHtml()`
+
+After the compiler generates raw HTML, both the CLI and library API use the shared formatter module for output formatting:
+
+```zig
+// In cli.zig and lib.zig
+const formatter = @import("formatter.zig");
+
+// Apply formatting based on mode
+const final_html = if (options.minify)
+    try formatter.minifyHtml(allocator, html)
+else if (options.pretty or options.format)
+    try formatter.prettyPrintHtml(allocator, html)
+else
+    html;
+```
+
+**Formatter Functions:**
+
+1. **`prettyPrintHtml(allocator, html)`**
+   - Adds indentation for nested elements
+   - Preserves inline text without extra newlines
+   - Uses retrospective analysis to determine if content is text-only
+   - Handles void elements (br, img, input, etc.) correctly
+   - Algorithm: Analyzes closing tags to check if they contain only text or nested elements
+
+2. **`minifyHtml(allocator, html)`**
+   - Removes unnecessary whitespace
+   - Collapses multiple spaces to single space
+   - Removes newlines between tags
+   - Preserves single spaces between text content
+
+3. **`isVoidElement(tag_name)`**
+   - Checks if tag is self-closing (br, img, input, hr, etc.)
+   - Used by prettyPrintHtml to avoid adding closing tags
+
+**Usage Modes:**
+
+- **CLI flags:**
+  - `--minify` / `-m`: Minified output (smallest size)
+  - `--pretty` / `-p`: Pretty with comments (development)
+  - `--format` / `-F`: Pretty without comments (readable)
+  - (no flag): Raw compiler output
+
+- **Node.js API options:**
+  ```javascript
+  { pretty: true }   // Pretty with comments
+  { format: true }   // Pretty without comments
+  { minify: true }   // Minified
+  ```
+
+**Architecture Note:**
+This consolidation ensures CLI and library API produce identical formatted output by using a single canonical implementation in `formatter.zig`.
 
 ---
 

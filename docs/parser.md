@@ -186,8 +186,23 @@ p !{rawHtml}
 ```
 
 **Functions**:
-- `parseText()`: Plain text until newline
+- `parseInlineText()`: Parse inline text with spacing between tokens
+- `parsePipeText()`: Parse piped text blocks (`| text`)
 - `parseInterpolation()`: `#{expr}` or `!{expr}`
+
+**Important Implementation Detail (v4.0.9+):**
+
+The `parseInlineText()` and `parsePipeText()` functions now skip empty tokens before adding spacing. This prevents trailing spaces in output when templates end without a final newline:
+
+```zig
+// Skip empty tokens (can occur when EOF is reached without newline)
+if (self.current.value.len == 0) {
+    try helpers.advance(self);
+    continue;
+}
+```
+
+This fix works in conjunction with the tokenizer's EOF state transition to ensure clean text output.
 
 ### 5. Code Blocks (`code.zig`)
 
