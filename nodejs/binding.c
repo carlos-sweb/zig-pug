@@ -23,6 +23,8 @@ extern void zigpug_free_string(char* str);
 extern const char* zigpug_version(void);
 extern size_t zigpug_get_error_count(ZigPugContext* ctx);
 extern int zigpug_get_error(ZigPugContext* ctx, size_t index, size_t* line_out, const char** message_out, const char** detail_out, const char** hint_out);
+extern char* zigpug_pretty_print(const char* html, int include_comments);
+extern char* zigpug_minify(const char* html);
 
 // Wrapper for ZigPugContext to store in JavaScript
 typedef struct {
@@ -601,6 +603,117 @@ static napi_value Version(napi_env env, napi_callback_info info) {
     return result;
 }
 
+// Pretty-print HTML with optional comments
+// JavaScript: const formatted = zigpug.prettyPrint(html, includeComments)
+static napi_value PrettyPrint(napi_env env, napi_callback_info info) {
+    napi_status status;
+    size_t argc = 2;
+    napi_value args[2];
+
+    status = napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+    if (status != napi_ok || argc < 2) {
+        napi_throw_error(env, NULL, "Expected 2 arguments: html, includeComments");
+        return NULL;
+    }
+
+    // Get HTML string
+    size_t html_len;
+    status = napi_get_value_string_utf8(env, args[0], NULL, 0, &html_len);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Invalid HTML string");
+        return NULL;
+    }
+
+    char* html = malloc(html_len + 1);
+    status = napi_get_value_string_utf8(env, args[0], html, html_len + 1, &html_len);
+    if (status != napi_ok) {
+        free(html);
+        napi_throw_error(env, NULL, "Failed to get HTML string");
+        return NULL;
+    }
+
+    // Get includeComments boolean
+    bool include_comments;
+    status = napi_get_value_bool(env, args[1], &include_comments);
+    if (status != napi_ok) {
+        free(html);
+        napi_throw_error(env, NULL, "Invalid includeComments boolean");
+        return NULL;
+    }
+
+    // Call zig-pug pretty print
+    char* formatted = zigpug_pretty_print(html, include_comments ? 1 : 0);
+    free(html);
+
+    if (!formatted) {
+        napi_throw_error(env, NULL, "Failed to format HTML");
+        return NULL;
+    }
+
+    // Create JavaScript string
+    napi_value result;
+    status = napi_create_string_utf8(env, formatted, NAPI_AUTO_LENGTH, &result);
+    zigpug_free_string(formatted);
+
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to create result string");
+        return NULL;
+    }
+
+    return result;
+}
+
+// Minify HTML
+// JavaScript: const minified = zigpug.minify(html)
+static napi_value Minify(napi_env env, napi_callback_info info) {
+    napi_status status;
+    size_t argc = 1;
+    napi_value args[1];
+
+    status = napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+    if (status != napi_ok || argc < 1) {
+        napi_throw_error(env, NULL, "Expected 1 argument: html");
+        return NULL;
+    }
+
+    // Get HTML string
+    size_t html_len;
+    status = napi_get_value_string_utf8(env, args[0], NULL, 0, &html_len);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Invalid HTML string");
+        return NULL;
+    }
+
+    char* html = malloc(html_len + 1);
+    status = napi_get_value_string_utf8(env, args[0], html, html_len + 1, &html_len);
+    if (status != napi_ok) {
+        free(html);
+        napi_throw_error(env, NULL, "Failed to get HTML string");
+        return NULL;
+    }
+
+    // Call zig-pug minify
+    char* minified = zigpug_minify(html);
+    free(html);
+
+    if (!minified) {
+        napi_throw_error(env, NULL, "Failed to minify HTML");
+        return NULL;
+    }
+
+    // Create JavaScript string
+    napi_value result;
+    status = napi_create_string_utf8(env, minified, NAPI_AUTO_LENGTH, &result);
+    zigpug_free_string(minified);
+
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to create result string");
+        return NULL;
+    }
+
+    return result;
+}
+
 // Initialize the N-API module
 static napi_value Init(napi_env env, napi_value exports) {
     napi_status status;
@@ -652,6 +765,18 @@ static napi_value Init(napi_env env, napi_value exports) {
     status = napi_create_function(env, NULL, 0, Version, NULL, &fn);
     if (status != napi_ok) return NULL;
     status = napi_set_named_property(env, exports, "version", fn);
+    if (status != napi_ok) return NULL;
+
+    // prettyPrint
+    status = napi_create_function(env, NULL, 0, PrettyPrint, NULL, &fn);
+    if (status != napi_ok) return NULL;
+    status = napi_set_named_property(env, exports, "prettyPrint", fn);
+    if (status != napi_ok) return NULL;
+
+    // minify
+    status = napi_create_function(env, NULL, 0, Minify, NULL, &fn);
+    if (status != napi_ok) return NULL;
+    status = napi_set_named_property(env, exports, "minify", fn);
     if (status != napi_ok) return NULL;
 
     return exports;

@@ -361,13 +361,13 @@ export fn zigpug_version() [*:0]const u8 {
 /// Pretty-print HTML with indentation
 /// Parameters:
 ///   - html: HTML string to format
-///   - include_comments: Whether to preserve HTML comments
+///   - include_comments: Whether to preserve HTML comments (0 = false, non-zero = true)
 /// Returns: Formatted HTML string (must be freed with zigpug_free_string)
-export fn zigpug_pretty_print(html: [*:0]const u8, include_comments: bool) ?[*:0]u8 {
+export fn zigpug_pretty_print(html: [*:0]const u8, include_comments: c_int) ?[*:0]u8 {
     const allocator = std.heap.c_allocator;
     const html_str = std.mem.span(html);
 
-    const formatted = prettyPrintHtml(allocator, html_str, include_comments) catch return null;
+    const formatted = prettyPrintHtml(allocator, html_str, include_comments != 0) catch return null;
 
     const result = allocator.dupeZ(u8, formatted) catch {
         allocator.free(formatted);
