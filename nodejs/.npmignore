@@ -2,6 +2,7 @@
 build/
 *.node
 !prebuilts/
+!prebuilts/**/*.node
 
 # Development files
 .git/
@@ -47,11 +48,12 @@ Thumbs.db
 # Documentation (users can read on GitHub/npm)
 docs/
 *.md
-!README.md
+!/README.md
+!/CHANGELOG.md
+!/LICENSE.md
+!/CONTRIBUTING.md
 
 # Zig cache and build artifacts
 .zig-cache/
 zig-cache/
 zig-out/
-
-# Only include what's needed for compilation
