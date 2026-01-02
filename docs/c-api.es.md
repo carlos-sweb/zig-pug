@@ -1339,7 +1339,7 @@ void print_errors(ZigPugContext* ctx) {
 
 - **[Ejemplos](../examples/c/)** - Ejemplos completos de trabajo
 - **[Guía pkg-config](PKGCONFIG.md)** - Instalación y uso
-- **[Sintaxis Pug](../README.md#pug-syntax)** - Referencia de sintaxis de plantilla
+- **[Sintaxis Pug](../README.md#supported-pug-syntax)** - Referencia de sintaxis de plantilla
 - **[Node.js API](../nodejs/README.md)** - Comparación de API de JavaScript
 
 ## Licencia

@@ -254,8 +254,8 @@ import { PugCompiler } from 'zig-pug';
 
 ## Related Documentation
 
-- **Main README:** [/root/zig-pug/README.md](../README.md)
-- **Node.js README:** [/root/zig-pug/nodejs/README.md](../nodejs/README.md)
+- **Main README:** [/root/zig-pug/README.md](./README.md)
+- **Node.js README:** [/root/zig-pug/nodejs/README.md](./nodejs/README.md)
 - **CLI Usage:** Run `zpug --help`
 - **GitHub Issues:** https://github.com/carlos-sweb/zig-pug/issues
 

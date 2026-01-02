@@ -380,5 +380,5 @@ Here's a comprehensive example using various ternary operator features:
 
 - [Attributes Documentation](attributes.md)
 - [Expressions and Interpolation](interpolation.md)
-- [Tokenizer Documentation](tokenizer.md)
-- [Parser Documentation](parser.md)
+- [Tokenizer Documentation](../tokenizer.md)
+- [Parser Documentation](../parser.md)

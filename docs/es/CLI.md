@@ -638,8 +638,8 @@ Planned for future releases:
 
 - [Getting Started Guide](./GETTING-STARTED.md) - Step-by-step tutorial
 - [Node.js Integration](./NODEJS-INTEGRATION.md) - Use zpug in Node.js
-- [Main README](../README.md) - Complete Pug syntax reference
-- [Examples](../examples/) - Template examples
+- [Main README](../../README.md) - Complete Pug syntax reference
+- [Examples](../../examples/) - Template examples
 
 ---
 

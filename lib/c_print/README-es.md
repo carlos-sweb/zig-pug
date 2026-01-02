@@ -3,8 +3,8 @@
 **Biblioteca C para imprimir texto coloreado y formateado en la consola usando códigos de escape ANSI**
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/carlos-sweb/c_print)
-[![C Standard](https://img.shields.io/badge/C-C99%20%7C%20C11-orange.svg)](https://en.wikipedia.org/wiki/C11_(C_standard_revision))
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![C Standard](https://img.shields.io/badge/C-C99%20%7C%20C11-orange.svg)](https://en.wikipedia.org/wiki/C11_%28C_standard_revision%29)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](../../LICENSE)
 
 [English](README.md) | Español
 

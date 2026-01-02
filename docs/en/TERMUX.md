@@ -312,7 +312,7 @@ GYPFLAGS="-DOS=linux"
 
 - **CLI Documentation**: [docs/CLI.md](CLI.md)
 - **Node.js Integration**: [docs/NODEJS-INTEGRATION.md](NODEJS-INTEGRATION.md)
-- **Bun Examples**: [examples/bun/](../examples/bun/)
+- **Bun Examples**: [examples/bun/](../../examples/bun/)
 - **Building Guide**: [docs/BUILDING-ADDON.md](BUILDING-ADDON.md)
 
 ## Support

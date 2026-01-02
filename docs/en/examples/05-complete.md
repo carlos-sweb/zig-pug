@@ -308,7 +308,7 @@ mixin notification-badge(count)
 
 **Continue Learning:**
 - [INDEX.md](INDEX.md) - Review all examples
-- [../../README.md](../../README.md) - Full documentation
+- [Main README](../../../README.md) - Full documentation
 - Build your own project using these patterns!
 
 **Previous Example:** [inheritance.md](inheritance.md) - Template Inheritance

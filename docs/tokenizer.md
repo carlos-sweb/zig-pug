@@ -151,7 +151,7 @@ The tokenizer handles all operators needed for ternary expressions:
 - **Comparison**: `Equal` (`==`), `Greater` (`>`), `Less` (`<`), `GreaterEqual` (`>=`), `LessEqual` (`<=`)
 - **Logical**: `And` (`&&`), `Or` (`||`)
 
-See [Ternary Operators Documentation](ternary-operators.md) for usage examples.
+See [Ternary Operators Documentation](en/ternary-operators.md) for usage examples.
 
 ## Loop Tokenization
 

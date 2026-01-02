@@ -30,7 +30,7 @@ Complete documentation for zig-pug template engine.
 ## 🧪 Testing
 
 - **[TESTS.md](TESTS.md)** - Test suite overview
-- **[TESTS/*.md](TESTS/)** - Individual test documentation
+- **[tests/*.md](../tests/)** - Individual test documentation
 
 ## 📖 Reference
 

@@ -839,9 +839,9 @@ for (let i = 0; i < 1000; i++) {
 
 ## Additional Resources
 
-- [Examples Directory](../examples/nodejs/) - 5 practical examples
+- [Examples Directory](../../examples/nodejs/) - 5 practical examples
 - [Getting Started Guide](./GETTING-STARTED.md) - Step-by-step tutorial
-- [Main README](../README.md) - Full Pug syntax reference
+- [Main README](../../README.md) - Full Pug syntax reference
 - [GitHub Issues](https://github.com/carlos-sweb/zig-pug/issues) - Report problems
 
 ---

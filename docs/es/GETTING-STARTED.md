@@ -399,7 +399,7 @@ Ahora que dominas lo básico, puedes:
    - [API-REFERENCE.md](API-REFERENCE.md) - API completa de zig-pug
 
 2. **Ver más ejemplos**:
-   - [examples/](../examples/) - Ejemplos prácticos
+   - [examples/](../../examples/) - Ejemplos prácticos
 
 3. **Explorar características avanzadas**:
    - Loops (cuando estén implementados)
@@ -435,7 +435,7 @@ try js_runtime.setString("name", "Alice"); // ¡Muy tarde!
 
 ## 📚 Recursos Adicionales
 
-- **[README.md](../README.md)** - Vista general del proyecto
+- **[README.md](../../README.md)** - Vista general del proyecto
 - **[MUJS-INTEGRATION.md](../MUJS-INTEGRATION.md)** - Detalles del motor JavaScript
 - **[Documentación de Pug](https://pugjs.org/)** - Referencia original de Pug
 - **[Documentación de Zig](https://ziglang.org/documentation/master/)** - Zig language guide
