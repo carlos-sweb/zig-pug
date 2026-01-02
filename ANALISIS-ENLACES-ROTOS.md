@@ -39,17 +39,17 @@ Los 5 enlaces reportados como "rotos" son en realidad enlaces de ancla completam
 
 ## 🔍 Análisis Detallado de Cada Enlace
 
-### 1️⃣ Enlace: `[Sintaxis Pug](../README.md#supported-pug-syntax)`
+### 1️⃣ Enlace: `[Sintaxis Pug](docs/SUPPORTED-PUG-SYNTAX.md)` ✅ CORREGIDO
 
 **📄 Archivo origen:** `docs/c-api.es.md` (línea 1342)
-**📂 Archivo destino:** `README.md`
-**⚓ Ancla:** `#supported-pug-syntax`
+**📂 Archivo destino:** `docs/SUPPORTED-PUG-SYNTAX.md`
+**⚓ Ancla:** Ninguna (archivo separado creado)
 
-**Verificación realizada:**
+**Acción realizada:**
 ```bash
-✅ Archivo existe: /root/zig-pug/README.md
-✅ Sección existe: ## Supported Pug Syntax (línea 200)
-✅ Formato de ancla correcto: "Supported Pug Syntax" → "supported-pug-syntax"
+✅ Creado archivo: docs/SUPPORTED-PUG-SYNTAX.md
+✅ Enlace actualizado: de ../README.md#supported-pug-syntax a SUPPORTED-PUG-SYNTAX.md
+✅ Contenido extraído: Sección completa del README
 ```
 
 **Importancia:** ⭐⭐⭐⭐⭐ **CRÍTICA**
@@ -57,21 +57,21 @@ Los 5 enlaces reportados como "rotos" son en realidad enlaces de ancla completam
 - Conecta la API con la referencia de sintaxis completa
 - Esencial para desarrolladores que usan la API de C
 
-**Propuesta:** **MANTENER** - El enlace es completamente funcional
+**Resolución:** **ARCHIVO CREADO** - Ahora el enlace apunta a un archivo dedicado sin anclas
 
 ---
 
-### 2️⃣ Enlace: `[Pug Syntax](../README.md#supported-pug-syntax)`
+### 2️⃣ Enlace: `[Pug Syntax](docs/SUPPORTED-PUG-SYNTAX.md)` ✅ CORREGIDO
 
 **📄 Archivo origen:** `docs/c-api.md` (línea 1342)
-**📂 Archivo destino:** `README.md`
-**⚓ Ancla:** `#supported-pug-syntax`
+**📂 Archivo destino:** `docs/SUPPORTED-PUG-SYNTAX.md`
+**⚓ Ancla:** Ninguna (archivo separado creado)
 
-**Verificación realizada:**
+**Acción realizada:**
 ```bash
-✅ Archivo existe: /root/zig-pug/README.md
-✅ Sección existe: ## Supported Pug Syntax (línea 200)
-✅ Formato de ancla correcto
+✅ Creado archivo: docs/SUPPORTED-PUG-SYNTAX.md
+✅ Enlace actualizado: de ../README.md#supported-pug-syntax a SUPPORTED-PUG-SYNTAX.md
+✅ Contenido extraído: Sección completa del README
 ```
 
 **Importancia:** ⭐⭐⭐⭐⭐ **CRÍTICA**
@@ -79,21 +79,21 @@ Los 5 enlaces reportados como "rotos" son en realidad enlaces de ancla completam
 - Mismo propósito: conectar API de C con sintaxis soportada
 - Referencia esencial en documentación técnica
 
-**Propuesta:** **MANTENER** - El enlace es completamente funcional
+**Resolución:** **ARCHIVO CREADO** - Ahora el enlace apunta a un archivo dedicado sin anclas
 
 ---
 
-### 3️⃣ Enlace: `[Conditional Syntax](PUG-SYNTAX.md#conditionals)`
+### 3️⃣ Enlace: `[Conditional Syntax](docs/en/CONDITIONALS.md)` ✅ CORREGIDO
 
 **📄 Archivo origen:** `docs/en/ARCHITECTURE.md`
-**📂 Archivo destino:** `docs/en/PUG-SYNTAX.md`
-**⚓ Ancla:** `#conditionals`
+**📂 Archivo destino:** `docs/en/CONDITIONALS.md`
+**⚓ Ancla:** Ninguna (archivo separado creado)
 
-**Verificación realizada:**
+**Acción realizada:**
 ```bash
-✅ Archivo existe: /root/zig-pug/docs/en/PUG-SYNTAX.md
-✅ Sección existe: ## Conditionals (línea 416)
-✅ Formato de ancla correcto: "Conditionals" → "conditionals"
+✅ Creado archivo: docs/en/CONDITIONALS.md
+✅ Enlace actualizado: de PUG-SYNTAX.md#conditionals a CONDITIONALS.md
+✅ Contenido extraído: Sección completa de condicionales de PUG-SYNTAX.md
 ```
 
 **Importancia:** ⭐⭐⭐⭐ **ALTA**
@@ -101,21 +101,21 @@ Los 5 enlaces reportados como "rotos" son en realidad enlaces de ancla completam
 - Ayuda a entender la implementación de condicionales en el compilador
 - Importante para contribuidores y desarrolladores avanzados
 
-**Propuesta:** **MANTENER** - El enlace es completamente funcional
+**Resolución:** **ARCHIVO CREADO** - Ahora el enlace apunta a un archivo dedicado sin anclas
 
 ---
 
-### 4️⃣ Enlace: `[Sintaxis Condicional](PUG-SYNTAX.md#condicionales)`
+### 4️⃣ Enlace: `[Sintaxis Condicional](docs/es/CONDICIONALES.md)` ✅ CORREGIDO
 
 **📄 Archivo origen:** `docs/es/ARCHITECTURE.md`
-**📂 Archivo destino:** `docs/es/PUG-SYNTAX.md`
-**⚓ Ancla:** `#condicionales`
+**📂 Archivo destino:** `docs/es/CONDICIONALES.md`
+**⚓ Ancla:** Ninguna (archivo separado creado)
 
-**Verificación realizada:**
+**Acción realizada:**
 ```bash
-✅ Archivo existe: /root/zig-pug/docs/es/PUG-SYNTAX.md
-✅ Sección existe: ## Condicionales (línea 416)
-✅ Formato de ancla correcto: "Condicionales" → "condicionales"
+✅ Creado archivo: docs/es/CONDICIONALES.md
+✅ Enlace actualizado: de PUG-SYNTAX.md#condicionales a CONDICIONALES.md
+✅ Contenido extraído: Sección completa de condicionales de PUG-SYNTAX.md
 ```
 
 **Importancia:** ⭐⭐⭐⭐ **ALTA**
@@ -123,21 +123,21 @@ Los 5 enlaces reportados como "rotos" son en realidad enlaces de ancla completam
 - Esencial para documentación en español
 - Mantiene consistencia entre idiomas
 
-**Propuesta:** **MANTENER** - El enlace es completamente funcional
+**Resolución:** **ARCHIVO CREADO** - Ahora el enlace apunta a un archivo dedicado sin anclas
 
 ---
 
-### 5️⃣ Enlace: `[Pug Syntax Reference](../../README.md#supported-pug-syntax)`
+### 5️⃣ Enlace: `[Pug Syntax Reference](docs/SUPPORTED-PUG-SYNTAX.md)` ✅ CORREGIDO
 
 **📄 Archivo origen:** `examples/nodejs/README.md` (línea 370)
-**📂 Archivo destino:** `README.md`
-**⚓ Ancla:** `#supported-pug-syntax`
+**📂 Archivo destino:** `docs/SUPPORTED-PUG-SYNTAX.md`
+**⚓ Ancla:** Ninguna (archivo separado creado)
 
-**Verificación realizada:**
+**Acción realizada:**
 ```bash
-✅ Archivo existe: /root/zig-pug/README.md
-✅ Sección existe: ## Supported Pug Syntax (línea 200)
-✅ Ruta relativa correcta: ../../ desde examples/nodejs/
+✅ Creado archivo: docs/SUPPORTED-PUG-SYNTAX.md
+✅ Enlace actualizado: de ../../README.md#supported-pug-syntax a ../../docs/SUPPORTED-PUG-SYNTAX.md
+✅ Contenido extraído: Sección completa del README
 ```
 
 **Importancia:** ⭐⭐⭐⭐⭐ **CRÍTICA**
@@ -145,7 +145,7 @@ Los 5 enlaces reportados como "rotos" son en realidad enlaces de ancla completam
 - Crucial para desarrolladores que siguen los ejemplos
 - Facilita el aprendizaje al conectar práctica con teoría
 
-**Propuesta:** **MANTENER** - El enlace es completamente funcional
+**Resolución:** **ARCHIVO CREADO** - Ahora el enlace apunta a un archivo dedicado sin anclas
 
 ---
 

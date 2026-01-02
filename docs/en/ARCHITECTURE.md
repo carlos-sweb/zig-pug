@@ -311,7 +311,7 @@ The pros **significantly outweigh** the cons. This is the correct architecture f
 
 ## Related Documentation
 
-- [Conditional Syntax](PUG-SYNTAX.md#conditionals) - User-facing conditional documentation
+- [Conditional Syntax](CONDITIONALS.md) - User-facing conditional documentation
 - [API Reference](API-REFERENCE.md) - How to set variables for conditionals
 - [Examples](../../examples/06-conditionals-advanced.zpug) - Real-world conditional examples
 

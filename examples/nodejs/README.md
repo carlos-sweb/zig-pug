@@ -367,7 +367,7 @@ npm install --global windows-build-tools
 - [Main README](../../README.md)
 - [Getting Started Guide](../../docs/GETTING-STARTED.md)
 - [Node.js Integration Docs](../../docs/NODEJS-INTEGRATION.md)
-- [Pug Syntax Reference](../../README.md#supported-pug-syntax)
+- [Pug Syntax Reference](../../docs/SUPPORTED-PUG-SYNTAX.md)
 
 ---
 

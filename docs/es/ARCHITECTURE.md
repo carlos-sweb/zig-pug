@@ -311,7 +311,7 @@ Los pros **superan significativamente** los contras. Esta es la arquitectura cor
 
 ## Documentación Relacionada
 
-- [Sintaxis Condicional](PUG-SYNTAX.md#condicionales) - Documentación de condicionales para usuarios
+- [Sintaxis Condicional](CONDICIONALES.md) - Documentación de condicionales para usuarios
 - [Referencia API](API-REFERENCE.md) - Cómo establecer variables para condicionales
 - [Ejemplos](../../examples/06-conditionals-advanced.zpug) - Ejemplos reales de condicionales
 
