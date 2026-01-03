@@ -1,0 +1,36 @@
+doctype html
+html
+  head
+    title Optional Chaining in Loops
+  body
+    h1 Products with Optional Tags
+
+    //- Caso 1: Producto con tags (debería mostrarlos)
+    h2 Product 1 (has tags)
+    ul.tags
+      each tag in product1?.tags
+        li.tag= tag
+
+    //- Caso 2: Producto sin tags (no debería mostrar nada)
+    h2 Product 2 (no tags)
+    ul.tags
+      each tag in product2?.tags
+        li.tag= tag
+
+    //- Caso 3: Producto undefined (no debería mostrar nada ni error)
+    h2 Product 3 (undefined)
+    ul.tags
+      each tag in product3?.tags
+        li.tag= tag
+
+    //- Caso 4: Array de productos con tags opcionales
+    h2 All Products
+    each product in products
+      div.product
+        h3= product.name
+        if product?.tags
+          ul.tags
+            each tag in product?.tags
+              li.tag= tag
+        else
+          p No tags available

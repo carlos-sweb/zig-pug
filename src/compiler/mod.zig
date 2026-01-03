@@ -56,6 +56,9 @@ pub const CompilerError = errors.CompilerError;
 // Import escaping functions
 const escaping = @import("escaping.zig");
 
+// Import optional chaining transformer
+const optional_chaining = @import("optional_chaining.zig");
+
 /// Child block information for template inheritance
 ///
 /// Stores the mode and body of a block from a child template.
@@ -697,8 +700,16 @@ pub const Compiler = struct {
     fn compileLoop(self: *Self, node: *ast.AstNode) !void {
         const loop = &node.data.Loop;
 
+        // Transform optional chaining (?.) syntax to ES5.1 compatible code
+        // Example: "item?.tags" -> "item && item.hasOwnProperty('tags') ? item.tags : []"
+        const transformed_iterable = try optional_chaining.transformOptionalChaining(
+            self.allocator,
+            loop.iterable,
+        );
+        defer self.allocator.free(transformed_iterable);
+
         // Get the iterable value from runtime
-        const iterable_result = self.runtime.eval(loop.iterable) catch {
+        const iterable_result = self.runtime.eval(transformed_iterable) catch {
             const detail = std.fmt.allocPrint(self.allocator, "Iterable: {s}", .{loop.iterable}) catch null;
             defer if (detail) |d| self.allocator.free(d);
 
@@ -715,7 +726,7 @@ pub const Compiler = struct {
 
         // Check if it's an array by looking for array notation or getting length
         // We'll use JavaScript to iterate
-        const length_expr = try std.fmt.allocPrint(self.allocator, "({s}).length", .{loop.iterable});
+        const length_expr = try std.fmt.allocPrint(self.allocator, "({s}).length", .{transformed_iterable});
         defer self.allocator.free(length_expr);
 
         const length_str = self.runtime.eval(length_expr) catch {
@@ -756,7 +767,7 @@ pub const Compiler = struct {
             const set_item_expr = try std.fmt.allocPrint(
                 self.allocator,
                 "var {s} = ({s})[{d}]",
-                .{ loop.iterator, loop.iterable, i },
+                .{ loop.iterator, transformed_iterable, i },
             );
             defer self.allocator.free(set_item_expr);
 
