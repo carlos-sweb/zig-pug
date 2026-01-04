@@ -1,0 +1,114 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title Optional Chaining Everywhere - Demo
+    style.
+      .card { border: 1px solid #ddd; padding: 15px; margin: 10px; background: #f9f9f9; }
+      .tag { background: #007bff; color: white; padding: 3px 8px; margin: 2px; display: inline-block; border-radius: 3px; font-size: 12px; }
+      .success { color: #28a745; }
+      .info { color: #17a2b8; }
+      .warning { color: #ffc107; }
+  body
+    h1 Optional Chaining - All Contexts Demo
+
+    //- Variable: user = {
+    //-   name: "Alice",
+    //-   profile: {
+    //-     bio: "Software Engineer",
+    //-     location: {city: "New York", country: "USA"},
+    //-     website: "https://alice.dev"
+    //-   },
+    //-   skills: ["JavaScript", "Zig", "Python"],
+    //-   social: {twitter: "@alice", github: "alice-dev"}
+    //- }
+    //-
+    //- Variable: guest = {name: "Bob"}
+
+    div.card
+      h2 User Profile
+
+      //- 1. INTERPOLATION with optional chaining
+      p.success Name: #{user?.name}
+      p.info Bio: #{user?.profile?.bio}
+      p.info Location: #{user?.profile?.location?.city}, #{user?.profile?.location?.country}
+
+      //- 2. BUFFERED CODE with optional chaining
+      h3= user?.name
+      p= user?.profile?.bio
+
+      //- 3. ATTRIBUTES with optional chaining
+      a(href=user?.profile?.website target="_blank") Visit Website
+      div(class=user?.profile?.theme id=user?.profile?.userId)
+
+      //- 4. LOOPS with optional chaining (already implemented)
+      if user?.skills
+        h3 Skills:
+        ul
+          each skill in user?.skills
+            li.tag= skill
+
+      //- 5. CONDITIONALS with optional chaining
+      if user?.social?.twitter
+        p Twitter: #{user.social.twitter}
+
+      if user?.social?.github
+        p.info GitHub: #{user.social.github}
+
+    hr
+
+    div.card
+      h2 Guest Profile (Missing Data)
+
+      //- All these should work without errors even though guest has no profile
+      p.warning Name: #{guest?.name}
+      p.warning Bio: #{guest?.profile?.bio || "No bio"}
+      p.warning Location: #{guest?.profile?.location?.city || "Unknown"}
+
+      h3= guest?.name || "Anonymous"
+      p= guest?.profile?.bio || "No bio available"
+
+      //- Attributes with missing data
+      a(href=guest?.profile?.website || "#") Website
+      div(class=guest?.profile?.theme || "default-theme")
+
+      //- Loop over non-existent array
+      each skill in guest?.skills
+        li.tag= skill
+      else
+        p.warning No skills listed
+
+    hr
+
+    div.card
+      h2 Mixed Context Examples
+
+      //- Nested optional chaining in different contexts
+      each post in posts?.recent
+        article
+          //- Interpolation
+          h3 #{post?.title}
+          p By #{post?.author?.name}
+
+          //- Buffered code
+          h4= post?.category?.name
+          p= post?.excerpt
+
+          //- Attributes
+          a(href=post?.url class=post?.category?.slug)
+            | Read more
+
+          //- Nested loops
+          each tag in post?.tags
+            span.tag= tag
+
+    div.card
+      h3 Summary
+
+      p ✅ Optional chaining works in:
+      ul
+        li Interpolations: #{'{'}user?.name{'}'}
+        li Buffered code: p= user?.name
+        li Attributes: div(class=user?.theme)
+        li Loops: each skill in user?.skills
+        li Nested: #{'{'}user?.profile?.location?.city{'}'}

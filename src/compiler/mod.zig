@@ -491,7 +491,14 @@ pub const Compiler = struct {
 
                 // Evaluate expression if needed
                 if (attr.is_expression) {
-                    const result = self.runtime.eval(value) catch {
+                    // Transform optional chaining (?.) to ES5.1 compatible code
+                    const transformed_value = try optional_chaining.transformOptionalChaining(
+                        self.allocator,
+                        value,
+                    );
+                    defer self.allocator.free(transformed_value);
+
+                    const result = self.runtime.eval(transformed_value) catch {
                         // Build detail and hint strings
                         const detail = std.fmt.allocPrint(self.allocator, "Attribute: {s}={s}", .{ attr.name, value }) catch null;
                         defer if (detail) |d| self.allocator.free(d);
@@ -559,8 +566,15 @@ pub const Compiler = struct {
     fn compileInterpolation(self: *Self, node: *ast.AstNode) !void {
         const interp = &node.data.Interpolation;
 
+        // Transform optional chaining (?.) to ES5.1 compatible code
+        const transformed_expr = try optional_chaining.transformOptionalChaining(
+            self.allocator,
+            interp.expression,
+        );
+        defer self.allocator.free(transformed_expr);
+
         // Evaluate the JavaScript expression using runtime
-        const result = self.runtime.eval(interp.expression) catch {
+        const result = self.runtime.eval(transformed_expr) catch {
             const detail = std.fmt.allocPrint(self.allocator, "Expression: #{{{s}}}", .{interp.expression}) catch null;
             defer if (detail) |d| self.allocator.free(d);
 
@@ -595,8 +609,15 @@ pub const Compiler = struct {
     fn compileCode(self: *Self, node: *ast.AstNode) !void {
         const code = &node.data.Code;
 
+        // Transform optional chaining (?.) to ES5.1 compatible code
+        const transformed_code = try optional_chaining.transformOptionalChaining(
+            self.allocator,
+            code.code,
+        );
+        defer self.allocator.free(transformed_code);
+
         // Evaluate the code
-        const result = self.runtime.eval(code.code) catch {
+        const result = self.runtime.eval(transformed_code) catch {
             const detail = std.fmt.allocPrint(self.allocator, "Code: {s}", .{code.code}) catch null;
             defer if (detail) |d| self.allocator.free(d);
 

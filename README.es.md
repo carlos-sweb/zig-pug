@@ -435,8 +435,22 @@ each item in items
 each item, i in items
   li #{i}: #{item}
 
-// Optional chaining en loops (¡NUEVO!)
-// Itera de forma segura sobre propiedades que pueden no existir
+// Optional chaining (¡NUEVO!) - Funciona en todos los contextos
+// Accede de forma segura a propiedades que pueden no existir
+
+// En interpolaciones
+p #{user?.name}
+p #{user?.profile?.bio}
+
+// En código buffered
+h1= user?.name
+p= product?.description
+
+// En atributos
+a(href=user?.website)
+div(class=item?.theme)
+
+// En loops
 each tag in product?.tags
   span.tag= tag
 
@@ -451,7 +465,7 @@ while count < 5
   - count = count + 1
 ```
 
-**Optional Chaining (`?.`):** Elimina la necesidad de verificar manualmente con `hasOwnProperty`. Si la propiedad no existe, el loop simplemente no se ejecuta—sin errores.
+**Optional Chaining (`?.`):** Funciona en **todos los contextos** (interpolaciones, código buffered, atributos, loops). Elimina verificaciones manuales con `hasOwnProperty`. Si la propiedad no existe, retorna valor vacío—sin errores.
 
 ### Mixins con Argumentos
 

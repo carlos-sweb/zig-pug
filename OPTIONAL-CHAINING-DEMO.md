@@ -1,14 +1,31 @@
-# ✨ Optional Chaining en Loops - IMPLEMENTADO
+# ✨ Optional Chaining en TODO zig-pug - IMPLEMENTADO
 
 ## 🎯 Feature Implementada
 
-Ahora puedes usar **optional chaining (`?.`)** en loops para iterar sobre propiedades que pueden no existir.
+Ahora puedes usar **optional chaining (`?.`)** en **TODOS LOS CONTEXTOS** de zig-pug:
+- ✅ Interpolaciones: `#{user?.name}`
+- ✅ Código buffered: `p= user?.name`
+- ✅ Atributos: `div(class=user?.theme)`
+- ✅ Loops: `each item in user?.items`
 
 ## 📝 Sintaxis
 
 ```pug
+//- En loops
 each item in obj?.property
   li= item
+
+//- En interpolaciones
+p #{user?.name}
+p #{user?.profile?.bio}
+
+//- En código buffered
+h1= user?.name
+p= product?.description
+
+//- En atributos
+a(href=user?.website)
+div(class=item?.className)
 ```
 
 ## 🔧 Cómo Funciona
@@ -41,7 +58,57 @@ Esta transformación ocurre **antes** de enviar el código a mujs, por lo que:
 
 ## 📊 Ejemplos
 
-### Ejemplo 1: Producto con tags opcionales
+### Ejemplo 1: Interpolaciones
+
+**Template:**
+```pug
+p Usuario: #{user?.name}
+p Bio: #{user?.profile?.bio}
+p Ciudad: #{user?.profile?.location?.city}
+```
+
+**JavaScript Context:**
+```javascript
+var user = {
+  name: "Alice",
+  profile: {bio: "Engineer", location: {city: "NYC"}}
+};
+```
+
+**HTML Generado:**
+```html
+<p>Usuario: Alice</p>
+<p>Bio: Engineer</p>
+<p>Ciudad: NYC</p>
+```
+
+Si `user` no tiene `profile`:
+```html
+<p>Usuario: Alice</p>
+<p>Bio: </p>
+<p>Ciudad: </p>
+```
+**Sin errores** ✅
+
+### Ejemplo 2: Código Buffered
+
+**Template:**
+```pug
+h1= user?.name
+p= product?.description
+div= item?.details?.summary
+```
+
+### Ejemplo 3: Atributos
+
+**Template:**
+```pug
+a(href=user?.website target="_blank") Website
+div(class=product?.category?.slug)
+img(src=item?.image?.url alt=item?.image?.alt)
+```
+
+### Ejemplo 4: Producto con tags opcionales (Loops)
 
 **Template:**
 ```pug

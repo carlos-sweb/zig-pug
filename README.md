@@ -435,8 +435,22 @@ each item in items
 each item, i in items
   li #{i}: #{item}
 
-// Optional chaining in loops (NEW!)
-// Safely iterate over properties that may not exist
+// Optional chaining (NEW!) - Works everywhere
+// Safely access properties that may not exist
+
+// In interpolations
+p #{user?.name}
+p #{user?.profile?.bio}
+
+// In buffered code
+h1= user?.name
+p= product?.description
+
+// In attributes
+a(href=user?.website)
+div(class=item?.theme)
+
+// In loops
 each tag in product?.tags
   span.tag= tag
 
@@ -451,7 +465,7 @@ while count < 5
   - count = count + 1
 ```
 
-**Optional Chaining (`?.`):** Eliminates the need for manual `hasOwnProperty` checks. If the property doesn't exist, the loop simply doesn't execute—no errors thrown.
+**Optional Chaining (`?.`):** Works in **all contexts** (interpolations, buffered code, attributes, loops). Eliminates manual `hasOwnProperty` checks. If the property doesn't exist, returns empty value—no errors thrown.
 
 ### Mixins with Arguments
 
