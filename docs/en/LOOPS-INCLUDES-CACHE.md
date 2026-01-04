@@ -46,6 +46,65 @@ else
 <p>No items available</p>
 ```
 
+### Optional Chaining in Loops (NEW!)
+
+Use `?.` to safely iterate over properties that may not exist. This eliminates the need for manual `hasOwnProperty` checks.
+
+**Before (verbose):**
+```zpug
+each product in products
+  h3= product.name
+  if product.hasOwnProperty('tags')
+    each tag in product.tags
+      span.tag= tag
+```
+
+**Now (clean):**
+```zpug
+each product in products
+  h3= product.name
+  each tag in product?.tags
+    span.tag= tag
+```
+
+**How it works:**
+When you write `product?.tags`, zig-pug automatically transforms it to:
+```javascript
+product && product.hasOwnProperty('tags') ? product.tags : []
+```
+
+This transformation happens at compile-time, before sending to mujs.
+
+**Nested optional chaining:**
+```zpug
+each item in data?.products?.featured
+  li= item
+```
+
+Transforms to:
+```javascript
+data && data.hasOwnProperty('products') &&
+data.products.hasOwnProperty('featured') ?
+data.products.featured : []
+```
+
+**Real-world example:**
+```zpug
+//- E-commerce products with variable schemas
+each product in products
+  div.product
+    h3= product.name
+    p $#{product.price}
+
+    //- Not all products have images
+    each img in product?.images
+      img(src=img)
+
+    //- Not all have reviews
+    each review in product?.reviews
+      p.review= review.text
+```
+
 ### Configuring Arrays in the Runtime
 
 **In Zig:**

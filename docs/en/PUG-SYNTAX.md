@@ -677,6 +677,49 @@ Output:
 </ul>
 ```
 
+### Optional Chaining in Loops
+
+Use `?.` to safely iterate over properties that may not exist. If the property is missing, the loop simply doesn't execute—no errors thrown.
+
+```pug
+//- Variables:
+//- product1 = {name: "Laptop", tags: ["electronics", "tech"]}
+//- product2 = {name: "Book"}
+each product in products
+  h3= product.name
+  //- Only iterates if product has tags property
+  each tag in product?.tags
+    span.tag= tag
+```
+
+Output:
+```html
+<h3>Laptop</h3>
+<span class="tag">electronics</span>
+<span class="tag">tech</span>
+<h3>Book</h3>
+```
+
+**Nested Optional Chaining:**
+```pug
+//- Variable: data = {products: {featured: ["Item1", "Item2"]}}
+each item in data?.products?.featured
+  li= item
+```
+
+**Before optional chaining** (verbose):
+```pug
+if product.hasOwnProperty('tags')
+  each tag in product.tags
+    span= tag
+```
+
+**With optional chaining** (clean):
+```pug
+each tag in product?.tags
+  span= tag
+```
+
 ### While Loop
 
 ```pug

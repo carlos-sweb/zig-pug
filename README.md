@@ -435,12 +435,23 @@ each item in items
 each item, i in items
   li #{i}: #{item}
 
+// Optional chaining in loops (NEW!)
+// Safely iterate over properties that may not exist
+each tag in product?.tags
+  span.tag= tag
+
+// Nested optional chaining
+each item in data?.products?.featured
+  li= item
+
 // While loops
 - var count = 0
 while count < 5
   p Count: #{count}
   - count = count + 1
 ```
+
+**Optional Chaining (`?.`):** Eliminates the need for manual `hasOwnProperty` checks. If the property doesn't exist, the loop simply doesn't execute—no errors thrown.
 
 ### Mixins with Arguments
 

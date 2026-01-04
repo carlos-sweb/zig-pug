@@ -677,6 +677,49 @@ Salida:
 </ul>
 ```
 
+### Optional Chaining en Bucles
+
+Usa `?.` para iterar de forma segura sobre propiedades que pueden no existir. Si la propiedad falta, el bucle simplemente no se ejecuta—sin errores.
+
+```pug
+//- Variables:
+//- product1 = {name: "Laptop", tags: ["electronics", "tech"]}
+//- product2 = {name: "Book"}
+each product in products
+  h3= product.name
+  //- Solo itera si el producto tiene la propiedad tags
+  each tag in product?.tags
+    span.tag= tag
+```
+
+Salida:
+```html
+<h3>Laptop</h3>
+<span class="tag">electronics</span>
+<span class="tag">tech</span>
+<h3>Book</h3>
+```
+
+**Optional Chaining Anidado:**
+```pug
+//- Variable: data = {products: {featured: ["Item1", "Item2"]}}
+each item in data?.products?.featured
+  li= item
+```
+
+**Antes del optional chaining** (verboso):
+```pug
+if product.hasOwnProperty('tags')
+  each tag in product.tags
+    span= tag
+```
+
+**Con optional chaining** (limpio):
+```pug
+each tag in product?.tags
+  span= tag
+```
+
 ### Bucle While
 
 ```pug
