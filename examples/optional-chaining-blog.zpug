@@ -1,0 +1,79 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title Blog with Optional Chaining
+    style.
+      .post { border-bottom: 2px solid #eee; padding: 20px 0; }
+      .tag { background: #17a2b8; color: white; padding: 3px 8px; margin: 2px; display: inline-block; border-radius: 3px; font-size: 12px; }
+      .category { background: #6c757d; color: white; padding: 3px 8px; margin: 2px; display: inline-block; border-radius: 3px; }
+      .author-info { color: #6c757d; font-size: 14px; }
+      .related { background: #f8f9fa; padding: 10px; margin: 10px 0; }
+  body
+    h1 Blog Posts - Optional Chaining Demo
+
+    //- Variable: posts = [
+    //-   {
+    //-     title: "Introduction to Zig",
+    //-     author: {name: "Alice", bio: "Software Engineer", social: {twitter: "@alice"}},
+    //-     tags: ["programming", "zig", "tutorial"],
+    //-     categories: ["Tech", "Programming"],
+    //-     relatedPosts: [{title: "Advanced Zig"}, {title: "Zig vs Rust"}]
+    //-   },
+    //-   {
+    //-     title: "Quick Note",
+    //-     author: {name: "Bob"}
+    //-   },
+    //-   {
+    //-     title: "Travel Guide",
+    //-     tags: ["travel", "guide"],
+    //-     relatedPosts: [{title: "Best Destinations"}]
+    //-   }
+    //- ]
+
+    each post in posts
+      article.post
+        h2= post.title
+
+        //- Author info (may have bio and social)
+        if post?.author
+          div.author-info
+            strong Author: #{post.author.name}
+            //- Optional: Author bio
+            if post.author?.bio
+              span  - #{post.author.bio}
+            //- Optional: Social links (nested optional chaining)
+            each social, platform in post.author?.social
+              a(href=social) #{platform}
+
+        //- Optional: Tags
+        if post?.tags
+          div.tags
+            strong Tags:
+            each tag in post?.tags
+              span.tag= tag
+
+        //- Optional: Categories
+        if post?.categories
+          div.categories
+            strong Categories:
+            each category in post?.categories
+              span.category= category
+
+        //- Optional: Related posts
+        if post?.relatedPosts
+          div.related
+            strong Related Posts:
+            ul
+              each related in post?.relatedPosts
+                li= related.title
+
+        //- Optional: Comments (deeply nested)
+        each comment in post?.comments
+          div.comment
+            strong= comment.author
+            p= comment.text
+            //- Optional: Comment replies
+            each reply in comment?.replies
+              div.reply
+                em Reply by #{reply.author}: #{reply.text}

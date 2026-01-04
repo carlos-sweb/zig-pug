@@ -1,0 +1,95 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title API Response with Optional Chaining
+    style.
+      .user { border: 1px solid #ddd; padding: 15px; margin: 10px; background: #f8f9fa; }
+      .skill { background: #28a745; color: white; padding: 3px 8px; margin: 2px; display: inline-block; border-radius: 3px; font-size: 12px; }
+      .project { background: #fff; border-left: 3px solid #007bff; padding: 10px; margin: 5px 0; }
+      .warning { color: #dc3545; }
+      .success { color: #28a745; }
+  body
+    h1 API Response Handler - Optional Chaining Demo
+
+    //- Variable: apiResponse = {
+    //-   users: [
+    //-     {
+    //-       id: 1,
+    //-       name: "Alice",
+    //-       profile: {
+    //-         email: "alice@example.com",
+    //-         phone: "+1234567890",
+    //-         address: {city: "New York", country: "USA"}
+    //-       },
+    //-       skills: ["JavaScript", "Python", "Zig"],
+    //-       projects: [
+    //-         {name: "zig-pug", stars: 100, tags: ["template", "zig"]},
+    //-         {name: "web-app", stars: 50}
+    //-       ]
+    //-     },
+    //-     {
+    //-       id: 2,
+    //-       name: "Bob",
+    //-       profile: {email: "bob@example.com"}
+    //-     },
+    //-     {
+    //-       id: 3,
+    //-       name: "Charlie",
+    //-       skills: ["Rust"],
+    //-       projects: [{name: "cli-tool"}]
+    //-     }
+    //-   ]
+    //- }
+
+    //- Safe iteration even if apiResponse or users might be null
+    each user in apiResponse?.users
+      div.user
+        h2= user.name
+        p.success ✓ User ID: #{user.id}
+
+        //- Profile information (optional)
+        if user?.profile
+          div.profile
+            strong Contact:
+            br
+            //- Optional: Email
+            if user.profile?.email
+              span Email: #{user.profile.email}
+              br
+            //- Optional: Phone
+            if user.profile?.phone
+              span Phone: #{user.profile.phone}
+              br
+            //- Optional: Nested address (deep optional chaining)
+            if user.profile?.address
+              span Location: #{user.profile.address.city}, #{user.profile.address.country}
+
+        //- Skills array (optional)
+        if user?.skills
+          div.skills
+            strong Skills:
+            each skill in user?.skills
+              span.skill= skill
+        else
+          p.warning ⚠ No skills listed
+
+        //- Projects with optional tags
+        if user?.projects
+          div.projects
+            strong Projects:
+            each project in user?.projects
+              div.project
+                strong= project.name
+                if project?.stars
+                  span  (⭐ #{project.stars})
+                br
+                //- Optional: Project tags
+                each tag in project?.tags
+                  span.skill= tag
+        else
+          p No projects
+
+    //- Handle empty API response
+    if !apiResponse?.users || apiResponse.users.length === 0
+      p.warning No users found in API response

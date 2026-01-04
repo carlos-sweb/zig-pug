@@ -16,6 +16,7 @@ Practical examples of zig-pug templates for common use cases.
 6. [Dashboard](#dashboard)
 7. [Email Template](#email-template)
 8. [404 Page](#404-page)
+9. [Optional Chaining (NEW!)](#optional-chaining)
 
 ---
 
@@ -448,6 +449,149 @@ html(lang="en")
   ]
 }
 ```
+
+---
+
+## Optional Chaining
+
+**NEW!** Safely iterate over properties that may not exist using the `?.` operator.
+
+### Example 1: E-commerce Product Catalog
+
+Handle products with variable properties (tags, images, reviews).
+
+**Template:** `examples/optional-chaining-ecommerce.zpug`
+
+```pug
+each product in products
+  div.product
+    h2= product.name
+    p Price: $#{product.price}
+
+    //- Optional: Tags (not all products have tags)
+    each tag in product?.tags
+      span.tag= tag
+
+    //- Optional: Images (not all products have images)
+    each img in product?.images
+      img(src=img)
+
+    //- Optional: Reviews (not all products have reviews)
+    each review in product?.reviews
+      div.review
+        span ⭐ #{review.rating}/5
+        p= review.text
+```
+
+**Variables:**
+
+```javascript
+{
+  products: [
+    {
+      name: "Laptop",
+      price: 999,
+      tags: ["electronics", "computers"],
+      images: ["laptop1.jpg", "laptop2.jpg"],
+      reviews: [{text: "Great!", rating: 5}]
+    },
+    {
+      name: "Book",
+      price: 15,
+      tags: ["education"]
+      // No images, no reviews
+    },
+    {
+      name: "Pen",
+      price: 2
+      // No tags, images, or reviews
+    }
+  ]
+}
+```
+
+**Without optional chaining** (verbose):
+```pug
+each product in products
+  h2= product.name
+  if product.hasOwnProperty('tags')
+    each tag in product.tags
+      span.tag= tag
+  if product.hasOwnProperty('images')
+    each img in product.images
+      img(src=img)
+```
+
+**With optional chaining** (clean):
+```pug
+each product in products
+  h2= product.name
+  each tag in product?.tags
+    span.tag= tag
+  each img in product?.images
+    img(src=img)
+```
+
+### Example 2: Blog with Optional Metadata
+
+**Template:** `examples/optional-chaining-blog.zpug`
+
+```pug
+each post in posts
+  article
+    h2= post.title
+
+    //- Optional: Author bio
+    if post.author?.bio
+      p= post.author.bio
+
+    //- Optional: Tags
+    each tag in post?.tags
+      span.tag= tag
+
+    //- Optional: Categories
+    each category in post?.categories
+      span.category= category
+
+    //- Optional: Related posts
+    each related in post?.relatedPosts
+      a(href=related.url)= related.title
+```
+
+### Example 3: API Response Handler
+
+Handle variable API responses safely.
+
+**Template:** `examples/optional-chaining-api.zpug`
+
+```pug
+//- Safely iterate even if API response is incomplete
+each user in apiResponse?.users
+  div.user
+    h3= user.name
+
+    //- Nested optional chaining
+    if user.profile?.address?.city
+      p Location: #{user.profile.address.city}
+
+    //- Optional: Skills array
+    each skill in user?.skills
+      span.skill= skill
+
+    //- Optional: Projects with optional tags
+    each project in user?.projects
+      div.project
+        strong= project.name
+        each tag in project?.tags
+          span= tag
+```
+
+**Benefits:**
+
+- ✅ **No errors** if property doesn't exist
+- ✅ **Cleaner code** - no manual `hasOwnProperty` checks
+- ✅ **Works with nested properties** - `obj?.prop?.nested`
+- ✅ **Perfect for variable schemas** - APIs, user data, e-commerce
 
 ---
 

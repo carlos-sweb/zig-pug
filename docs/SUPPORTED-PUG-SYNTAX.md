@@ -252,12 +252,49 @@ each item in items
 each item, i in items
   li #{i}: #{item}
 
+// Optional chaining in loops (NEW!)
+// Safely iterate over properties that may not exist
+each tag in product?.tags
+  span.tag= tag
+
+// Nested optional chaining
+each item in data?.products?.featured
+  li= item
+
 // While loops
 - var count = 0
 while count < 5
   p Count: #{count}
   - count = count + 1
 ```
+
+**Optional Chaining (`?.`) Features:**
+- ✅ **Safe iteration** - No errors if property doesn't exist
+- ✅ **Cleaner code** - Eliminates `if hasOwnProperty` checks
+- ✅ **Nested support** - Works with `obj?.prop?.nested`
+- ✅ **Compile-time transformation** - Converted to ES5.1 for mujs
+- ✅ **Perfect for variable schemas** - APIs, e-commerce, user data
+
+**Example - Before vs After:**
+
+```zpug
+// Before (verbose)
+if product.hasOwnProperty('tags')
+  each tag in product.tags
+    span= tag
+
+// After (clean)
+each tag in product?.tags
+  span= tag
+```
+
+**How it works:**
+When you write `product?.tags`, zig-pug automatically transforms it to:
+```javascript
+product && product.hasOwnProperty('tags') ? product.tags : []
+```
+
+This transformation happens at compile-time, so mujs receives ES5.1-compatible code.
 
 ---
 

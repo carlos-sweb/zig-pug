@@ -1,0 +1,54 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title E-commerce with Optional Chaining
+    style.
+      .product { border: 1px solid #ddd; padding: 15px; margin: 10px; }
+      .tag { background: #007bff; color: white; padding: 3px 8px; margin: 2px; display: inline-block; border-radius: 3px; }
+      .review { background: #f8f9fa; padding: 10px; margin: 5px 0; }
+      .rating { color: #ffc107; }
+      .image { width: 100px; height: 100px; object-fit: cover; margin: 5px; }
+      .badge { background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+  body
+    h1 Product Catalog - Optional Chaining Demo
+
+    //- Variable: products = [
+    //-   {name: "Laptop", price: 999, tags: ["electronics", "computers"], images: ["laptop1.jpg", "laptop2.jpg"], reviews: [{text: "Great!", rating: 5}]},
+    //-   {name: "Book", price: 15, tags: ["education"]},
+    //-   {name: "Desk", price: 299, images: ["desk.jpg"]},
+    //-   {name: "Pen", price: 2}
+    //- ]
+
+    each product in products
+      div.product
+        h2= product.name
+        p.price Price: $#{product.price}
+
+        //- Optional: Tags (not all products have tags)
+        if product?.tags
+          div.tags
+            strong Tags:
+            each tag in product?.tags
+              span.tag= tag
+
+        //- Optional: Images gallery (not all products have images)
+        if product?.images
+          div.gallery
+            strong Images:
+            br
+            each img in product?.images
+              img.image(src=img alt=product.name)
+
+        //- Optional: Reviews (not all products have reviews)
+        if product?.reviews
+          div.reviews
+            strong Reviews:
+            each review in product?.reviews
+              div.review
+                span.rating ⭐ #{review.rating}/5
+                p= review.text
+
+        //- Optional: Badges (promotional, featured, etc.)
+        each badge in product?.badges
+          span.badge= badge

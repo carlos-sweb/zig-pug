@@ -16,6 +16,7 @@ Ejemplos prácticos de plantillas zig-pug para casos de uso comunes.
 6. [Panel de Control](#panel-de-control)
 7. [Plantilla de Correo Electrónico](#plantilla-de-correo-electrónico)
 8. [Página 404](#página-404)
+9. [Optional Chaining (¡NUEVO!)](#optional-chaining)
 
 ---
 
@@ -448,6 +449,149 @@ html(lang="en")
   ]
 }
 ```
+
+---
+
+## Optional Chaining
+
+**¡NUEVO!** Itera de forma segura sobre propiedades que pueden no existir usando el operador `?.`.
+
+### Ejemplo 1: Catálogo de Productos E-commerce
+
+Maneja productos con propiedades variables (tags, imágenes, reseñas).
+
+**Plantilla:** `examples/optional-chaining-ecommerce.zpug`
+
+```pug
+each product in products
+  div.product
+    h2= product.name
+    p Precio: $#{product.price}
+
+    //- Opcional: Tags (no todos los productos tienen tags)
+    each tag in product?.tags
+      span.tag= tag
+
+    //- Opcional: Imágenes (no todos los productos tienen imágenes)
+    each img in product?.images
+      img(src=img)
+
+    //- Opcional: Reseñas (no todos los productos tienen reseñas)
+    each review in product?.reviews
+      div.review
+        span ⭐ #{review.rating}/5
+        p= review.text
+```
+
+**Variables:**
+
+```javascript
+{
+  products: [
+    {
+      name: "Laptop",
+      price: 999,
+      tags: ["electrónica", "computadoras"],
+      images: ["laptop1.jpg", "laptop2.jpg"],
+      reviews: [{text: "¡Excelente!", rating: 5}]
+    },
+    {
+      name: "Libro",
+      price: 15,
+      tags: ["educación"]
+      // Sin imágenes, sin reseñas
+    },
+    {
+      name: "Bolígrafo",
+      price: 2
+      // Sin tags, imágenes ni reseñas
+    }
+  ]
+}
+```
+
+**Sin optional chaining** (verboso):
+```pug
+each product in products
+  h2= product.name
+  if product.hasOwnProperty('tags')
+    each tag in product.tags
+      span.tag= tag
+  if product.hasOwnProperty('images')
+    each img in product.images
+      img(src=img)
+```
+
+**Con optional chaining** (limpio):
+```pug
+each product in products
+  h2= product.name
+  each tag in product?.tags
+    span.tag= tag
+  each img in product?.images
+    img(src=img)
+```
+
+### Ejemplo 2: Blog con Metadatos Opcionales
+
+**Plantilla:** `examples/optional-chaining-blog.zpug`
+
+```pug
+each post in posts
+  article
+    h2= post.title
+
+    //- Opcional: Biografía del autor
+    if post.author?.bio
+      p= post.author.bio
+
+    //- Opcional: Tags
+    each tag in post?.tags
+      span.tag= tag
+
+    //- Opcional: Categorías
+    each category in post?.categories
+      span.category= category
+
+    //- Opcional: Posts relacionados
+    each related in post?.relatedPosts
+      a(href=related.url)= related.title
+```
+
+### Ejemplo 3: Manejador de Respuestas API
+
+Maneja respuestas de API variables de forma segura.
+
+**Plantilla:** `examples/optional-chaining-api.zpug`
+
+```pug
+//- Itera de forma segura incluso si la respuesta API está incompleta
+each user in apiResponse?.users
+  div.user
+    h3= user.name
+
+    //- Optional chaining anidado
+    if user.profile?.address?.city
+      p Ubicación: #{user.profile.address.city}
+
+    //- Opcional: Array de habilidades
+    each skill in user?.skills
+      span.skill= skill
+
+    //- Opcional: Proyectos con tags opcionales
+    each project in user?.projects
+      div.project
+        strong= project.name
+        each tag in project?.tags
+          span= tag
+```
+
+**Beneficios:**
+
+- ✅ **Sin errores** si la propiedad no existe
+- ✅ **Código más limpio** - sin verificaciones manuales con `hasOwnProperty`
+- ✅ **Funciona con propiedades anidadas** - `obj?.prop?.nested`
+- ✅ **Perfecto para schemas variables** - APIs, datos de usuario, e-commerce
 
 ---
 
