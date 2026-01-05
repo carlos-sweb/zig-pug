@@ -1,0 +1,126 @@
+doctype html
+html(lang="es")
+  head
+    meta(charset="UTF-8")
+    title Blog con Optional Chaining en Condicionales
+    style.
+      body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 0 20px; }
+      .post { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+      .meta { color: #666; font-size: 14px; margin: 10px 0; }
+      .tags { margin: 10px 0; }
+      .tag { background: #007bff; color: white; padding: 4px 10px; margin: 3px; display: inline-block; border-radius: 4px; font-size: 12px; }
+      .comments { background: #f5f5f5; padding: 15px; margin-top: 15px; border-radius: 4px; }
+      .comment { border-left: 3px solid #007bff; padding-left: 10px; margin: 10px 0; }
+      .author-bio { background: #e8f4f8; padding: 15px; border-radius: 4px; margin-top: 10px; }
+      .verified { color: #28a745; font-weight: bold; }
+      .draft { color: #ffc107; font-style: italic; }
+  body
+    h1 Blog Posts - Optional Chaining en Condicionales
+
+    //- Variable: posts = [
+    //-   {
+    //-     title: "Introducción a Zig",
+    //-     content: "Zig es un lenguaje...",
+    //-     author: {
+    //-       name: "Alice",
+    //-       verified: true,
+    //-       bio: "Desarrolladora de sistemas",
+    //-       social: { twitter: "@alice" }
+    //-     },
+    //-     tags: ["zig", "programming"],
+    //-     comments: [
+    //-       { user: "Bob", text: "Gran artículo!" },
+    //-       { user: "Carol", text: "Muy útil" }
+    //-     ],
+    //-     published: true
+    //-   },
+    //-   {
+    //-     title: "Post en borrador",
+    //-     content: "Este post está en borrador...",
+    //-     author: { name: "Bob" },
+    //-     published: false
+    //-   }
+    //- ]
+
+    each post in posts
+      div.post
+        //- Título siempre presente
+        h2= post.title
+
+        //- 1. Verificar si el post está publicado
+        if post?.published
+          p ✅ Publicado
+        else
+          p.draft 📝 Borrador
+
+        //- 2. Mostrar contenido solo si está publicado
+        if post?.published
+          p= post.content
+
+        //- 3. Verificar autor y sus propiedades anidadas
+        if post?.author?.name
+          div.meta
+            strong Autor:
+            span= post.author.name
+
+            //- 4. Mostrar verificación si existe
+            if post?.author?.verified
+              span.verified  ✓ Verificado
+
+        //- 5. Mostrar bio del autor si existe
+        if post?.author?.bio
+          div.author-bio
+            h4 Sobre el autor
+            p= post.author.bio
+
+        //- 6. Mostrar redes sociales si existen
+        if post?.author?.social?.twitter
+          p Twitter: #{post.author.social.twitter}
+
+        //- 7. Mostrar tags solo si el array existe
+        if post?.tags
+          div.tags
+            strong Tags:
+            each tag in post.tags
+              span.tag= tag
+
+        //- 8. Mostrar comentarios si existen
+        if post?.comments
+          div.comments
+            h4 Comentarios (#{post.comments.length})
+            each comment in post.comments
+              div.comment
+                strong= comment.user
+                | :
+                span= comment.text
+
+        //- 9. Unless - mostrar advertencia si NO tiene comentarios
+        unless post?.comments
+          p.meta 💬 Sé el primero en comentar
+
+        //- 10. Unless - mostrar si NO está verificado
+        unless post?.author?.verified
+          p.meta ⚠️ Autor no verificado
+
+    hr
+
+    div.post
+      h2 Ventajas del Optional Chaining en Condicionales
+
+      h3 ❌ Antes (sin optional chaining):
+      pre.
+        if post && post.hasOwnProperty('author') && post.author.hasOwnProperty('verified')
+          if post.author.verified
+            span.verified Verificado
+
+      h3 ✅ Ahora (con optional chaining):
+      pre.
+        if post?.author?.verified
+          span.verified Verificado
+
+      p Beneficios:
+      ul
+        li Código más limpio y legible
+        li Menos propenso a errores
+        li No necesita múltiples verificaciones hasOwnProperty
+        li Sintaxis moderna (ES2020) que funciona en ES5.1

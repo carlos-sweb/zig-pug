@@ -1,0 +1,220 @@
+doctype html
+html(lang="es")
+  head
+    meta(charset="UTF-8")
+    title Dashboard con Optional Chaining en Condicionales
+    style.
+      body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+      .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+      .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      .card h3 { margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+      .stat { font-size: 32px; font-weight: bold; color: #007bff; }
+      .alert { padding: 10px; margin: 10px 0; border-radius: 4px; }
+      .alert-success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+      .alert-warning { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
+      .alert-danger { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+      .alert-info { background: #d1ecf1; color: #0c5460; border-left: 4px solid #17a2b8; }
+      .progress { background: #e9ecef; height: 20px; border-radius: 10px; overflow: hidden; }
+      .progress-bar { height: 100%; background: #28a745; text-align: center; color: white; line-height: 20px; }
+      .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+      .badge-success { background: #28a745; color: white; }
+      .badge-warning { background: #ffc107; color: #000; }
+      .badge-danger { background: #dc3545; color: white; }
+      .list { list-style: none; padding: 0; }
+      .list li { padding: 8px 0; border-bottom: 1px solid #eee; }
+      .list li:last-child { border-bottom: none; }
+  body
+    h1 Panel de Control - Optional Chaining en Condicionales
+
+    //- Variable: dashboard = {
+    //-   user: {
+    //-     name: "Carlos",
+    //-     role: "admin",
+    //-     permissions: { canEdit: true, canDelete: true },
+    //-     notifications: { unread: 5, important: 2 }
+    //-   },
+    //-   stats: {
+    //-     sales: { today: 1250, goal: 2000 },
+    //-     visitors: { online: 42 },
+    //-     orders: { pending: 8, processing: 3, completed: 156 }
+    //-   },
+    //-   system: {
+    //-     status: "operational",
+    //-     health: { cpu: 45, memory: 62, disk: 78 },
+    //-     backup: { lastBackup: "2024-01-05", nextBackup: "2024-01-06" }
+    //-   },
+    //-   alerts: [
+    //-     { type: "warning", message: "Disco al 78% de capacidad" },
+    //-     { type: "info", message: "Actualización disponible" }
+    //-   ]
+    //- }
+
+    div.dashboard
+      //- Card 1: User Info
+      div.card
+        h3 👤 Usuario
+
+        if dashboard?.user?.name
+          p Bienvenido,
+            strong= dashboard.user.name
+
+        //- 1. Mostrar rol si existe
+        if dashboard?.user?.role
+          p Rol:
+            span.badge.badge-success= dashboard.user.role
+
+        //- 2. Mostrar permisos si existen
+        if dashboard?.user?.permissions
+          div
+            p Permisos:
+            ul.list
+              if dashboard?.user?.permissions?.canEdit
+                li ✓ Puede editar
+
+              if dashboard?.user?.permissions?.canDelete
+                li ✓ Puede eliminar
+
+              unless dashboard?.user?.permissions?.canEdit
+                li ✗ No puede editar
+
+        //- 3. Notificaciones
+        if dashboard?.user?.notifications?.unread
+          div.alert.alert-info
+            strong #{dashboard.user.notifications.unread} notificaciones no leídas
+
+            //- 4. Notificaciones importantes (anidado)
+            if dashboard?.user?.notifications?.important
+              br
+              | #{dashboard.user.notifications.important} importantes
+
+      //- Card 2: Sales Stats
+      div.card
+        h3 💰 Ventas
+
+        if dashboard?.stats?.sales
+          div
+            p.stat $#{dashboard.stats.sales.today}
+
+            //- 5. Verificar meta si existe
+            if dashboard?.stats?.sales?.goal
+              p Meta del día: $#{dashboard.stats.sales.goal}
+
+              //- 6. Calcular progreso
+              - var progress = (dashboard.stats.sales.today / dashboard.stats.sales.goal * 100).toFixed(0)
+              div.progress
+                div.progress-bar(style=`width: ${progress}%`)= progress + '%'
+
+              //- 7. Alert según progreso
+              if progress >= 100
+                div.alert.alert-success ✓ Meta alcanzada!
+              else if progress >= 75
+                div.alert.alert-info Cerca de la meta
+              else
+                div.alert.alert-warning Falta para la meta
+
+      //- Card 3: Visitors
+      div.card
+        h3 👥 Visitantes
+
+        //- 8. Mostrar visitantes online si existe
+        if dashboard?.stats?.visitors?.online
+          p.stat= dashboard.stats.visitors.online
+          p Usuarios en línea
+
+        unless dashboard?.stats?.visitors?.online
+          p.alert.alert-warning No hay visitantes en línea
+
+      //- Card 4: Orders
+      div.card
+        h3 📦 Pedidos
+
+        if dashboard?.stats?.orders
+          ul.list
+            //- 9. Pedidos pendientes
+            if dashboard?.stats?.orders?.pending
+              li
+                span.badge.badge-warning= dashboard.stats.orders.pending
+                |  Pendientes
+
+            //- 10. Pedidos en proceso
+            if dashboard?.stats?.orders?.processing
+              li
+                span.badge.badge-info= dashboard.stats.orders.processing
+                |  En proceso
+
+            //- 11. Pedidos completados
+            if dashboard?.stats?.orders?.completed
+              li
+                span.badge.badge-success= dashboard.stats.orders.completed
+                |  Completados
+
+      //- Card 5: System Health
+      div.card
+        h3 🖥️ Sistema
+
+        //- 12. Estado del sistema
+        if dashboard?.system?.status
+          if dashboard.system.status === 'operational'
+            div.alert.alert-success ✓ Sistema operacional
+          else
+            div.alert.alert-danger ✗ Sistema con problemas
+
+        //- 13. Salud del sistema
+        if dashboard?.system?.health
+          div
+            if dashboard?.system?.health?.cpu
+              p CPU: #{dashboard.system.health.cpu}%
+              if dashboard.system.health.cpu > 80
+                span.alert.alert-danger  ⚠️ Alto
+
+            if dashboard?.system?.health?.memory
+              p Memoria: #{dashboard.system.health.memory}%
+
+            if dashboard?.system?.health?.disk
+              p Disco: #{dashboard.system.health.disk}%
+              if dashboard.system.health.disk > 75
+                span.alert.alert-warning  ⚠️ Revisar
+
+        //- 14. Información de backup
+        if dashboard?.system?.backup?.lastBackup
+          p Último backup: #{dashboard.system.backup.lastBackup}
+
+      //- Card 6: Alerts
+      div.card
+        h3 🔔 Alertas
+
+        //- 15. Mostrar alertas si existen
+        if dashboard?.alerts
+          each alert in dashboard.alerts
+            //- 16. Tipo de alerta condicional
+            if alert?.type === 'warning'
+              div.alert.alert-warning= alert.message
+            else if alert?.type === 'danger'
+              div.alert.alert-danger= alert.message
+            else if alert?.type === 'info'
+              div.alert.alert-info= alert.message
+            else
+              div.alert.alert-success= alert.message
+        else
+          p.alert.alert-success ✓ No hay alertas
+
+    hr
+
+    div.card(style="margin-top: 20px;")
+      h2 Ejemplos de Uso
+
+      h3 Condicionales Anidados:
+      pre.
+        if dashboard?.stats?.orders?.pending
+          span.badge= dashboard.stats.orders.pending
+          | Pendientes
+
+      h3 Combinación con Unless:
+      pre.
+        unless dashboard?.stats?.visitors?.online
+          p No hay visitantes en línea
+
+      h3 Condicionales Múltiples:
+      pre.
+        if dashboard?.system?.health?.cpu > 80
+          span.alert Alto uso de CPU

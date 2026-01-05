@@ -1,0 +1,152 @@
+doctype html
+html(lang="es")
+  head
+    meta(charset="UTF-8")
+    title E-commerce con Optional Chaining en Condicionales
+    style.
+      body { font-family: Arial, sans-serif; max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+      .product { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+      .price { font-size: 24px; font-weight: bold; color: #28a745; }
+      .old-price { text-decoration: line-through; color: #999; margin-left: 10px; }
+      .discount { background: #dc3545; color: white; padding: 5px 10px; border-radius: 4px; font-size: 14px; }
+      .stock-ok { color: #28a745; }
+      .stock-low { color: #ffc107; }
+      .stock-out { color: #dc3545; }
+      .shipping { background: #e8f4f8; padding: 10px; margin: 10px 0; border-radius: 4px; }
+      .features { list-style: none; padding: 0; }
+      .features li:before { content: "✓ "; color: #28a745; font-weight: bold; }
+      .reviews { background: #f9f9f9; padding: 15px; margin-top: 15px; border-radius: 4px; }
+      .rating { color: #ffc107; }
+      .seller-badge { background: #007bff; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+  body
+    h1 Catálogo de Productos - Optional Chaining en Condicionales
+
+    //- Variable: products = [
+    //-   {
+    //-     name: "Laptop Gaming",
+    //-     price: 1299.99,
+    //-     discount: { percentage: 20, original_price: 1599.99 },
+    //-     stock: { available: true, quantity: 15, warehouse: "Central" },
+    //-     shipping: { free: true, days: 2, express: true },
+    //-     features: ["16GB RAM", "RTX 4060", "1TB SSD"],
+    //-     reviews: { count: 156, average: 4.5 },
+    //-     seller: { name: "TechStore", verified: true, premium: true }
+    //-   },
+    //-   {
+    //-     name: "Mouse Inalámbrico",
+    //-     price: 29.99,
+    //-     stock: { available: true, quantity: 3 },
+    //-     shipping: { free: false, days: 5 },
+    //-     seller: { name: "BasicStore" }
+    //-   },
+    //-   {
+    //-     name: "Teclado Mecánico",
+    //-     price: 89.99,
+    //-     stock: { available: false },
+    //-     seller: { name: "KeyboardPro", verified: true }
+    //-   }
+    //- ]
+
+    each product in products
+      div.product
+        h2= product.name
+
+        //- 1. Mostrar precio con descuento si existe
+        div
+          if product?.discount?.percentage
+            span.price $#{product.price}
+            span.old-price $#{product.discount.original_price}
+            span.discount  -#{product.discount.percentage}% OFF
+          else
+            span.price $#{product.price}
+
+        //- 2. Verificar disponibilidad en stock
+        div
+          if product?.stock?.available
+            //- 3. Verificar cantidad en stock (anidado)
+            if product?.stock?.quantity
+              if product.stock.quantity > 10
+                p.stock-ok ✓ En stock (#{product.stock.quantity} unidades)
+              else if product.stock.quantity > 0
+                p.stock-low ⚠️ Pocas unidades (#{product.stock.quantity} disponibles)
+          else
+            p.stock-out ✗ Agotado
+
+        //- 4. Mostrar almacén si existe
+        if product?.stock?.warehouse
+          p 📦 Almacén: #{product.stock.warehouse}
+
+        //- 5. Información de envío
+        if product?.shipping?.free
+          div.shipping
+            strong 🚚 Envío GRATIS
+            if product?.shipping?.days
+              |  - Llega en #{product.shipping.days} días
+
+            //- 6. Verificar envío express
+            if product?.shipping?.express
+              |  ⚡ Express disponible
+        else
+          if product?.shipping?.days
+            p 🚚 Envío: #{product.shipping.days} días
+
+        //- 7. Mostrar características si existen
+        if product?.features
+          div
+            h4 Características:
+            ul.features
+              each feature in product.features
+                li= feature
+
+        //- 8. Mostrar reseñas si existen
+        if product?.reviews?.count
+          div.reviews
+            strong ⭐ Reseñas:
+            span.rating #{product.reviews.average}/5
+            |  (#{product.reviews.count} opiniones)
+
+        //- 9. Unless - avisar si NO hay reseñas
+        unless product?.reviews
+          p.reviews Sé el primero en opinar sobre este producto
+
+        //- 10. Información del vendedor
+        div
+          strong Vendedor:
+          span= product.seller.name
+
+          //- 11. Badge de verificado
+          if product?.seller?.verified
+            span.seller-badge  ✓ Verificado
+
+          //- 12. Badge de premium
+          if product?.seller?.premium
+            span.seller-badge  ⭐ Premium
+
+        //- 13. Unless - advertencia si vendedor NO está verificado
+        unless product?.seller?.verified
+          p ⚠️ Compra con precaución - Vendedor no verificado
+
+        //- 14. Botón de compra solo si hay stock
+        if product?.stock?.available
+          button(style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") Comprar Ahora
+        else
+          button(disabled style="background: #ccc; color: #666; padding: 10px 20px; border: none; border-radius: 4px; font-size: 16px;") No Disponible
+
+    hr
+
+    div.product
+      h2 Comparación: Antes vs Después
+
+      h3 ❌ Antes (código verbose):
+      pre.
+        if product && product.hasOwnProperty('shipping')
+          if product.shipping.hasOwnProperty('free')
+            if product.shipping.free
+              if product.shipping.hasOwnProperty('days')
+                p Envío gratis en #{product.shipping.days} días
+
+      h3 ✅ Después (con optional chaining):
+      pre.
+        if product?.shipping?.free
+          if product?.shipping?.days
+            p Envío gratis en #{product.shipping.days} días
