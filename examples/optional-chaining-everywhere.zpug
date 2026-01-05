@@ -107,6 +107,7 @@ html(lang="en")
 
       p ✅ Optional chaining works in:
       ul
+        li Conditionals: if user?.profile?.bio
         li Interpolations: #{'{'}user?.name{'}'}
         li Buffered code: p= user?.name
         li Attributes: div(class=user?.theme)

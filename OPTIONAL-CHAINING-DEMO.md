@@ -7,10 +7,18 @@ Ahora puedes usar **optional chaining (`?.`)** en **TODOS LOS CONTEXTOS** de zig
 - ✅ Código buffered: `p= user?.name`
 - ✅ Atributos: `div(class=user?.theme)`
 - ✅ Loops: `each item in user?.items`
+- ✅ Condicionales: `if user?.profile?.bio`
 
 ## 📝 Sintaxis
 
 ```pug
+//- En condicionales (if/unless)
+if user?.profile?.bio
+  p= user.profile.bio
+
+unless user?.suspended
+  p Welcome!
+
 //- En loops
 each item in obj?.property
   li= item
@@ -183,7 +191,12 @@ All 5 tests passed.
 
 2. **`src/compiler/mod.zig`** (MODIFICADO)
    - Línea 60: Import del transformer
-   - Líneas 703-709: Aplicación de transformación en `compileLoop()`
+   - Aplicación de transformación en 5 contextos:
+     - `compileConditional()`: Condicionales if/unless
+     - `compileLoop()`: Loops each/while
+     - `compileInterpolation()`: Interpolaciones #{}
+     - `compileCode()`: Código buffered (p=)
+     - `compileTag()`: Atributos (div(class=))
 
 ## 🎨 Casos de Uso Reales
 
@@ -211,6 +224,33 @@ each post in posts
     //- No todos tienen categorías
     each cat in post?.categories
       span.category= cat
+```
+
+### Condicionales con datos opcionales
+```pug
+//- Mostrar bio solo si existe
+if user?.profile?.bio
+  div.bio
+    h3 Biografía
+    p= user.profile.bio
+
+//- Mostrar notificaciones si están habilitadas
+if user?.settings?.notifications
+  div.notifications
+    p 🔔 Tienes notificaciones habilitadas
+
+//- Unless para verificar que NO existe algo
+unless user?.suspended
+  div.welcome
+    p Bienvenido, #{user.name}!
+
+//- Antes (verbose)
+if user && user.hasOwnProperty('profile') && user.profile.hasOwnProperty('bio')
+  p= user.profile.bio
+
+//- Después (limpio)
+if user?.profile?.bio
+  p= user.profile.bio
 ```
 
 ## 💡 Ventajas

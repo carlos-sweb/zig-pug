@@ -676,8 +676,15 @@ pub const Compiler = struct {
     fn compileConditional(self: *Self, node: *ast.AstNode) !void {
         const cond = &node.data.Conditional;
 
+        // Transform optional chaining (?.) to ES5.1 compatible code
+        const transformed_condition = try optional_chaining.transformOptionalChaining(
+            self.allocator,
+            cond.condition,
+        );
+        defer self.allocator.free(transformed_condition);
+
         // Evaluate condition using runtime
-        const result = self.runtime.eval(cond.condition) catch {
+        const result = self.runtime.eval(transformed_condition) catch {
             const detail = std.fmt.allocPrint(self.allocator, "Condition: {s}", .{cond.condition}) catch null;
             defer if (detail) |d| self.allocator.free(d);
 

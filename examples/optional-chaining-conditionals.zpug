@@ -1,0 +1,121 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title Optional Chaining in Conditionals - Demo
+    style.
+      .card { border: 1px solid #ddd; padding: 15px; margin: 10px; background: #f9f9f9; }
+      .success { color: #28a745; }
+      .warning { color: #ffc107; }
+      .info { color: #17a2b8; }
+  body
+    h1 Optional Chaining in Conditionals (if/else/unless)
+
+    //- Variable: user = {
+    //-   name: "Alice",
+    //-   profile: {
+    //-     bio: "Software Engineer",
+    //-     verified: true,
+    //-     settings: {
+    //-       notifications: true,
+    //-       darkMode: false
+    //-     }
+    //-   }
+    //- }
+    //-
+    //- Variable: guest = {name: "Bob"}
+
+    div.card
+      h2 User with Complete Profile
+
+      //- 1. Simple optional chaining in if
+      if user?.name
+        p.success ✓ User has a name: #{user.name}
+
+      //- 2. Nested optional chaining in if
+      if user?.profile?.bio
+        p.success ✓ User has a bio: #{user.profile.bio}
+
+      //- 3. Deep nested optional chaining
+      if user?.profile?.settings?.notifications
+        p.info ✓ Notifications are enabled
+
+      //- 4. Optional chaining in if-else
+      if user?.profile?.settings?.darkMode
+        p Dark mode is ON
+      else
+        p.info Dark mode is OFF
+
+      //- 5. Optional chaining with unless
+      unless user?.profile?.suspended
+        p.success ✓ Account is active (not suspended)
+
+    hr
+
+    div.card
+      h2 Guest with Missing Properties
+
+      //- 6. If with missing property (won't throw error)
+      if guest?.name
+        p.success ✓ Guest has a name: #{guest.name}
+
+      //- 7. If with deeply missing property (safe, returns false)
+      if guest?.profile?.bio
+        p Guest has a bio
+      else
+        p.warning ✗ Guest has no bio
+
+      //- 8. Deep nested missing property
+      if guest?.profile?.settings?.notifications
+        p Notifications enabled
+      else
+        p.warning ✗ No notification settings found
+
+      //- 9. Unless with missing property
+      unless guest?.profile?.verified
+        p.warning Guest is not verified
+
+    hr
+
+    div.card
+      h2 Complex Conditions
+
+      //- 10. Optional chaining in complex expressions
+      if user?.profile?.verified
+        div.success
+          h3 Verified User
+          p Welcome, #{user.name}!
+
+          //- Nested conditionals with optional chaining
+          if user?.profile?.settings?.notifications
+            p 🔔 You have notifications enabled
+
+          if user?.profile?.settings?.darkMode
+            p 🌙 Dark mode active
+          else
+            p ☀️ Light mode active
+
+    div.card
+      h2 Before vs After
+
+      h3 ❌ Before (verbose):
+      pre.
+        if user && user.hasOwnProperty('profile') && user.profile.hasOwnProperty('bio')
+          p= user.profile.bio
+
+      h3 ✅ After (with optional chaining):
+      pre.
+        if user?.profile?.bio
+          p= user.profile.bio
+
+    div.card
+      h3 Summary
+
+      p ✅ Optional chaining now works in:
+      ul
+        li Conditionals: if user?.profile?.bio
+        li Unless: unless user?.suspended
+        li Interpolations: #{'{'}user?.name{'}'}
+        li Buffered code: p= user?.name
+        li Attributes: div(class=user?.theme)
+        li Loops: each skill in user?.skills
