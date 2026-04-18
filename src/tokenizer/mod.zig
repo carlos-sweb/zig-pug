@@ -402,20 +402,7 @@ pub const Tokenizer = struct {
         // State-based tokenization using labeled-switch
         return switch (self.state) {
             .Root, .Indent => {
-                // Special doctype handling at document start
-                if (self.pos == 0 or (self.pos == 1 and self.source[0] == '\n')) {
-                    if (std.mem.startsWith(u8, self.source[self.pos..], "doctype html")) {
-                        self.pos += 12; // length of "doctype html"
-                        self.column += 12;
-                        return Token.init(.Doctype, "doctype html", self.line, 1);
-                    }
-                    if (std.mem.startsWith(u8, self.source[self.pos..], "doctype xml")) {
-                        self.pos += 11; // length of "doctype xml"
-                        self.column += 11;
-                        return Token.init(.Doctype, "doctype xml", self.line, 1);
-                    }
-                }
-
+                
                 // Strings (can appear at root level in tests or expressions)
                 if (ch == '"' or ch == '\'') {
                     return scanString(self, ch);
