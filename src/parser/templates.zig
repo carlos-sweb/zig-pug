@@ -20,7 +20,7 @@ pub fn parseInclude(self: *Parser) anyerror!*ast.AstNode {
     try helpers.advance(self); // consume 'include'
 
     // Parse file path
-    var path: std.ArrayList(u8) = .{};
+    var path: std.ArrayList(u8) = .empty;
     var filter: ?[]const u8 = null;
 
     // Check for filter (e.g., include:markdown file.md)
@@ -34,7 +34,9 @@ pub fn parseInclude(self: *Parser) anyerror!*ast.AstNode {
 
     // Parse path (rest of the line)
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
-        if (path.items.len > 0) {
+        if (self.current.type == .Class) {
+            try path.append(arena_allocator, '.');
+        } else if (path.items.len > 0) {
             try path.append(arena_allocator, ' ');
         }
         try path.appendSlice(arena_allocator, self.current.value);
@@ -65,7 +67,7 @@ pub fn parseExtends(self: *Parser) anyerror!*ast.AstNode {
 
     // Parse parent template path
     // Can be either a quoted string or unquoted identifier with dots
-    var path: std.ArrayList(u8) = .{};
+    var path: std.ArrayList(u8) = .empty;
 
     // Handle quoted string
     if (helpers.match(self, &.{.String})) {
@@ -124,7 +126,7 @@ pub fn parseBlock(self: *Parser) anyerror!*ast.AstNode {
 
     // Parse block body
     try helpers.skipNewlines(self);
-    var body = std.ArrayListUnmanaged(*ast.AstNode){};
+    var body: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
     if (helpers.match(self, &.{.Indent})) {
         try helpers.advance(self);
         try self.parseChildren(&body);

@@ -301,7 +301,7 @@ pub const JsRuntime = struct {
         // Estimate: "var " + key + " = [" + values + "]"
         const estimated_size = 10 + key.len + values.len * 20; // ~20 bytes per value estimate
 
-        var js_code = std.ArrayList(u8){};
+        var js_code: std.ArrayList(u8) = .empty;
         defer js_code.deinit(self.allocator);
         try js_code.ensureTotalCapacity(self.allocator, estimated_size);
 
@@ -323,10 +323,11 @@ pub const JsRuntime = struct {
         const code = try js_code.toOwnedSlice(self.allocator);
         defer self.allocator.free(code);
 
-        _ = self.eval(code) catch |err| {
+        const _result = self.eval(code) catch |err| {
             std.debug.print("Error setting array '{s}': {}\n", .{ key, err });
             return err;
         };
+        self.allocator.free(_result);
     }
 
     /// Set an object variable from JSON object
@@ -335,7 +336,7 @@ pub const JsRuntime = struct {
         // Estimate: "var " + key + " = {" + properties + "}"
         const estimated_size = 10 + key.len + obj.count() * 30; // ~30 bytes per property estimate
 
-        var js_code = std.ArrayList(u8){};
+        var js_code: std.ArrayList(u8) = .empty;
         defer js_code.deinit(self.allocator);
         try js_code.ensureTotalCapacity(self.allocator, estimated_size);
 
@@ -366,10 +367,11 @@ pub const JsRuntime = struct {
         const code = try js_code.toOwnedSlice(self.allocator);
         defer self.allocator.free(code);
 
-        _ = self.eval(code) catch |err| {
+        const _result = self.eval(code) catch |err| {
             std.debug.print("Error setting object '{s}': {}\n", .{ key, err });
             return err;
         };
+        self.allocator.free(_result);
     }
 
     /// Run garbage collection
@@ -445,7 +447,8 @@ test "mujs wrapper - object properties" {
     defer runtime.deinit();
 
     // Set object using JavaScript
-    _ = try runtime.eval("var user = {name: 'Bob', age: 30}");
+    const _r = try runtime.eval("var user = {name: 'Bob', age: 30}");
+    allocator.free(_r);        
 
     const name = try runtime.eval("user.name");
     defer allocator.free(name);

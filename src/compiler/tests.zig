@@ -17,7 +17,11 @@ test "compiler - simple tag" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -40,7 +44,11 @@ test "compiler - nested tags" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -59,7 +67,11 @@ test "compiler - attributes" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);

@@ -29,7 +29,7 @@ pub fn parseConditional(self: *Parser) anyerror!*ast.AstNode {
     // Parse condition expression (everything until newline)
     // Concatenate tokens WITHOUT spaces to preserve property access (array.length)
     // and operators (>=, <=, etc). JavaScript expressions don't require spaces.
-    var condition: std.ArrayList(u8) = .{};
+    var condition: std.ArrayList(u8) = .empty;
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
         // Special handling for .Class and .Id tokens - prepend the dot
         // because tokenizer removes it from the value
@@ -51,7 +51,7 @@ pub fn parseConditional(self: *Parser) anyerror!*ast.AstNode {
 
     // Parse 'then' block
     try helpers.skipNewlines(self);
-    var consequence = std.ArrayListUnmanaged(*ast.AstNode){};
+    var consequence: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
     if (helpers.match(self, &.{.Indent})) {
         try helpers.advance(self);
         try self.parseChildren(&consequence);
@@ -70,13 +70,13 @@ pub fn parseConditional(self: *Parser) anyerror!*ast.AstNode {
         if (helpers.match(self, &.{.If})) {
             // Parse as a nested if statement
             const else_if_node = try parseConditional(self);
-            var alt_list = std.ArrayListUnmanaged(*ast.AstNode){};
+            var alt_list: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
             try alt_list.append(arena_allocator, else_if_node);
             alternative = alt_list;
         } else {
             // Parse regular else block
             try helpers.skipNewlines(self);
-            var alt_list = std.ArrayListUnmanaged(*ast.AstNode){};
+            var alt_list: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
             if (helpers.match(self, &.{.Indent})) {
                 try helpers.advance(self);
                 try self.parseChildren(&alt_list);

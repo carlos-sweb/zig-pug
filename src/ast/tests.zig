@@ -14,7 +14,7 @@ test "ast - create document node" {
         1,
         1,
         .{ .Document = .{
-            .children = .{},
+            .children = .empty,
             .doctype = null,
         } },
     );
@@ -35,8 +35,8 @@ test "ast - create tag node" {
         1,
         .{ .Tag = .{
             .name = "div",
-            .attributes = .{},
-            .children = .{},
+            .attributes = .empty,
+            .children = .empty,
             .is_self_closing = false,
         } },
     );
@@ -86,7 +86,7 @@ test "ast - visitor pattern" {
         1,
         1,
         .{ .Document = .{
-            .children = .{},
+            .children = .empty,
             .doctype = null,
         } },
     );

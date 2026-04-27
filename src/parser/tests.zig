@@ -469,7 +469,7 @@ test "parser - interpolation as separate node" {
     // First child should be Text
     const text_node = tag.data.Tag.children.items[0];
     try std.testing.expectEqual(ast.NodeType.Text, text_node.type);
-    try std.testing.expectEqualStrings("Hello", text_node.data.Text.content);
+    try std.testing.expectEqualStrings("Hello ", text_node.data.Text.content);
 
     // Second child should be Interpolation
     const interp_node = tag.data.Tag.children.items[1];
@@ -486,7 +486,7 @@ test "parser - multiple interpolations" {
     const tree = try parser.parse();
     const tag = tree.data.Document.children.items[0];
 
-    try std.testing.expectEqual(@as(usize, 3), tag.data.Tag.children.items.len);
+    try std.testing.expectEqual(@as(usize, 4), tag.data.Tag.children.items.len);
 
     // First: Interpolation
     try std.testing.expectEqual(ast.NodeType.Interpolation, tag.data.Tag.children.items[0].type);
@@ -552,7 +552,7 @@ test "parser - pipe text with interpolation" {
 
     // First: Text "Hello"
     try std.testing.expectEqual(ast.NodeType.Text, pipe_container.data.Tag.children.items[0].type);
-    try std.testing.expectEqualStrings("Hello", pipe_container.data.Tag.children.items[0].data.Text.content);
+    try std.testing.expectEqualStrings("Hello ", pipe_container.data.Tag.children.items[0].data.Text.content);
 
     // Second: Interpolation "name"
     try std.testing.expectEqual(ast.NodeType.Interpolation, pipe_container.data.Tag.children.items[1].type);
@@ -560,5 +560,5 @@ test "parser - pipe text with interpolation" {
 
     // Third: Text "!" (note: has trailing space due to token processing)
     try std.testing.expectEqual(ast.NodeType.Text, pipe_container.data.Tag.children.items[2].type);
-    try std.testing.expectEqualStrings("! ", pipe_container.data.Tag.children.items[2].data.Text.content);
+    try std.testing.expectEqualStrings("!", pipe_container.data.Tag.children.items[2].data.Text.content);
 }

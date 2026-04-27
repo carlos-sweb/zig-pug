@@ -621,7 +621,8 @@ test "runtime - object property access" {
     defer runtime.deinit();
 
     // Create object using JavaScript
-    _ = try runtime.eval("var user = {name: 'Bob', age: 30}");
+    const _r = try runtime.eval("var user = {name: 'Bob', age: 30}");
+    allocator.free(_r);
 
     const name = try runtime.eval("user.name");
     defer allocator.free(name);
@@ -655,8 +656,8 @@ test "runtime - array indexing" {
     const runtime = try JsRuntime.init(allocator);
     defer runtime.deinit();
 
-    _ = try runtime.eval("var items = ['first', 'second', 'third']");
-
+    const _r = try runtime.eval("var items = ['first', 'second', 'third']");
+    allocator.free(_r);
     const result = try runtime.eval("items[1]");
     defer allocator.free(result);
     try std.testing.expectEqualStrings("second", result);

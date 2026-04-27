@@ -163,7 +163,7 @@ pub const Parser = struct {
     pub fn parse(self: *Parser) anyerror!*ast.AstNode {
         const arena_allocator = self.arena.allocator();
 
-        var children = std.ArrayListUnmanaged(*ast.AstNode){};
+        var children: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
         var doctype: ?[]const u8 = null;
 
         try helpers.skipNewlines(self);
@@ -173,7 +173,7 @@ pub const Parser = struct {
             try helpers.advance(self); // consume 'doctype'
 
             // Collect the rest of the line as doctype value
-            var doctype_value = std.ArrayList(u8){};
+            var doctype_value: std.ArrayList(u8) = .empty;
             while (!helpers.match(self, &.{ .Newline, .Eof })) {
                 if (doctype_value.items.len > 0) {
                     try doctype_value.append(arena_allocator, ' ');

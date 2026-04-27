@@ -57,7 +57,7 @@ pub fn escapeHtml(allocator: std.mem.Allocator, input: []const u8) ![]const u8 {
     }
 
     // Allocate exact size needed (no reallocations)
-    var result = std.ArrayList(u8){};
+    var result: std.ArrayList(u8) = .empty;
     errdefer result.deinit(allocator);
     try result.ensureTotalCapacity(allocator, final_size);
 
@@ -109,7 +109,7 @@ pub fn escapeComment(allocator: std.mem.Allocator, input: []const u8) ![]const u
     }
 
     // Escape "--" sequences
-    var result = std.ArrayList(u8){};
+    var result: std.ArrayList(u8) = .empty;
     errdefer result.deinit(allocator);
 
     i = 0;

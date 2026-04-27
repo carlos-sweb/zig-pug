@@ -32,7 +32,6 @@
 //! - Template inheritance (extends/block)
 //! - Mixin definitions and calls
 //! - Include directive support
-//! - Pretty-print mode with indentation
 //! - Comment inclusion control
 //! - Template caching
 //!
@@ -77,13 +76,10 @@ const ChildBlockInfo = struct {
 /// - allocator: Memory allocator
 /// - runtime: JavaScript runtime for expression evaluation
 /// - output: HTML output buffer
-/// - indent_level: Current indentation depth (for pretty mode)
-/// - pretty: Enable indentation and formatting
 /// - mixins: Map of mixin name → definition node
 /// - base_path: Directory path for resolving relative includes
 /// - template_cache: Optional cache for compiled includes
 /// - child_blocks: Blocks defined in child template (for extends)
-/// - include_comments: Whether to emit HTML comments
 /// - has_errors: Whether any errors occurred (strict mode)
 ///
 /// Usage:
@@ -97,17 +93,14 @@ const ChildBlockInfo = struct {
 /// ```
 pub const Compiler = struct {
     const Self = @This();
-
+    io: std.Io,
     allocator: std.mem.Allocator,
     runtime: *runtime.JsRuntime,
     output: std.ArrayList(u8),
-    indent_level: usize,
-    pretty: bool, // Enable pretty printing with indentation
     mixins: std.StringHashMap(*ast.AstNode), // Store mixin definitions
     base_path: ?[]const u8, // Base path for resolving includes
     template_cache: ?*cache.TemplateCache, // Optional template cache
     child_blocks: std.StringHashMap(ChildBlockInfo), // Blocks from child template
-    include_comments: bool, // Include HTML comments in output (true for --pretty, false for production)
     has_errors: bool, // Track if any compilation errors occurred (for strict mode)
     errors: std.ArrayList(CompilationError), // Accumulated compilation errors
 
@@ -147,21 +140,19 @@ pub const Compiler = struct {
     /// var compiler = try Compiler.init(allocator, js_runtime);
     /// defer compiler.deinit();
     /// ```
-    pub fn init(allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime) !*Self {
+    pub fn init(io: std.Io, allocator: std.mem.Allocator, js_runtime: *runtime.JsRuntime) !*Self {
         const compiler = try allocator.create(Self);
         compiler.* = .{
+            .io = io,
             .allocator = allocator,
             .runtime = js_runtime,
-            .output = .{},
-            .indent_level = 0,
-            .pretty = false,
-            .include_comments = false, // Production default: no comments
+            .output = .empty,
             .has_errors = false, // Start with no errors
             .mixins = std.StringHashMap(*ast.AstNode).init(allocator),
             .base_path = null,
             .template_cache = null,
             .child_blocks = std.StringHashMap(ChildBlockInfo).init(allocator),
-            .errors = .{},
+            .errors = .empty,
         };
         return compiler;
     }
@@ -247,7 +238,8 @@ pub const Compiler = struct {
             .Text => try self.compileText(node),
             .Interpolation => try self.compileInterpolation(node),
             .Code => try self.compileCode(node),
-            .Comment => try self.compileComment(node),
+            //.Comment => try self.compileComment(node),
+            .Comment => {},
             .Conditional => try self.compileConditional(node),
             .Loop => try self.compileLoop(node),
             .MixinDef => try self.registerMixin(node),
@@ -334,11 +326,7 @@ pub const Compiler = struct {
         defer self.allocator.free(full_path);
 
         // Read parent file
-        const file_content = std.fs.cwd().readFileAlloc(
-            self.allocator,
-            full_path,
-            1024 * 1024, // 1MB max
-        ) catch {
+        const file_content = std.Io.Dir.cwd().readFileAlloc(self.io, full_path, self.allocator, .limited(1024 * 1024)) catch {
             const detail = std.fmt.allocPrint(self.allocator, "File: {s}", .{full_path}) catch null;
             defer if (detail) |d| self.allocator.free(d);
 
@@ -537,7 +525,7 @@ pub const Compiler = struct {
 
     fn isVoidElement(tag_name: []const u8) bool {
         const void_elements = [_][]const u8{
-            "area", "base", "br", "col", "embed", "hr", "img", "input",
+            "area", "base", "br",    "col",    "embed", "hr",  "img", "input",
             "link", "meta", "param", "source", "track", "wbr",
         };
 
@@ -644,29 +632,6 @@ pub const Compiler = struct {
             }
         }
         // If unbuffered, we just executed it but don't output
-    }
-
-
-    // ========================================================================
-    // Comment Compilation
-    // ========================================================================
-
-    fn compileComment(self: *Self, node: *ast.AstNode) !void {
-        const comment = &node.data.Comment;
-
-        // Only include buffered comments if include_comments is true
-        // Unbuffered comments (//-) are never included
-        if (comment.is_buffered and self.include_comments) {
-            try self.output.appendSlice(self.allocator, "<!--");
-            // Escape comment content to prevent injection attacks
-            // Replace "--" with "- -" to prevent premature comment closing
-            const escaped = try escaping.escapeComment(self.allocator, comment.content);
-            defer self.allocator.free(escaped);
-            try self.output.appendSlice(self.allocator, escaped);
-            try self.output.appendSlice(self.allocator, "-->");
-        }
-        // Production mode (include_comments=false): comments are stripped
-        // Development mode (include_comments=true): comments are included
     }
 
     // ========================================================================
@@ -841,11 +806,8 @@ pub const Compiler = struct {
         defer self.allocator.free(full_path);
 
         // Read file content
-        const file_content = std.fs.cwd().readFileAlloc(
-            self.allocator,
-            full_path,
-            1024 * 1024, // 1MB max
-        ) catch {
+        //const file_content = std.fs.cwd().readFileAlloc(
+        const file_content = std.Io.Dir.cwd().readFileAlloc(self.io, full_path, self.allocator, .limited(1024 * 1024)) catch {
             const detail = std.fmt.allocPrint(self.allocator, "File: {s}", .{full_path}) catch null;
             defer if (detail) |d| self.allocator.free(d);
 
@@ -1006,9 +968,11 @@ pub const Compiler = struct {
                 );
                 defer self.allocator.free(set_var_expr);
 
-                _ = self.runtime.eval(set_var_expr) catch {
+                if (self.runtime.eval(set_var_expr)) |r| {
+                    self.allocator.free(r);
+                } else |_| {
                     // Silently skip parameter if setting fails
-                };
+                }
             } else {
                 // Set undefined for missing arguments
                 const set_undefined_expr = try std.fmt.allocPrint(
@@ -1017,15 +981,16 @@ pub const Compiler = struct {
                     .{param},
                 );
                 defer self.allocator.free(set_undefined_expr);
-
-                _ = self.runtime.eval(set_undefined_expr) catch {};
+                if (self.runtime.eval(set_undefined_expr)) |r| {
+                    self.allocator.free(r);
+                } else |_| {}
             }
         }
 
         // Handle rest parameter if present
         if (mixin_def.rest_param) |rest_param| {
             // Create array from remaining arguments
-            var rest_args = std.ArrayList(u8){};
+            var rest_args: std.ArrayList(u8) = .empty;
             defer rest_args.deinit(self.allocator);
 
             try rest_args.appendSlice(self.allocator, "var ");
@@ -1045,9 +1010,11 @@ pub const Compiler = struct {
             const rest_expr = try rest_args.toOwnedSlice(self.allocator);
             defer self.allocator.free(rest_expr);
 
-            _ = self.runtime.eval(rest_expr) catch {
+            if (self.runtime.eval(rest_expr)) |r| {
+                self.allocator.free(r);
+            } else |_| {
                 // Silently skip rest parameter if setting fails
-            };
+            }
         }
 
         // Compile the mixin body
@@ -1093,7 +1060,11 @@ test "compiler - simple tag" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1112,7 +1083,11 @@ test "compiler - tag with attributes" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1138,19 +1113,23 @@ test "compiler - interpolation" {
     var name_copy = name_val;
     name_copy.deinit(std.testing.allocator);
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
     defer std.testing.allocator.free(html);
 
-    try std.testing.expectEqualStrings("<p>HelloJohn</p>", html);
+    try std.testing.expectEqualStrings("<p>Hello John</p>", html);
 }
 
 test "compiler - conditional true" {
     const source =
         \\if loggedIn
-        \\  p Welcome back!
+        \\  p Welcome back !
     ;
     var parser = try Parser.init(std.testing.allocator, source);
     defer parser.deinit();
@@ -1160,15 +1139,21 @@ test "compiler - conditional true" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    try js_runtime.setContext("loggedIn", runtime.jsValueFromBool(true));
+    var loggedIn_val = try runtime.jsValueFromBool(std.testing.allocator, true);
+    defer loggedIn_val.deinit(std.testing.allocator);
+    try js_runtime.setContext("loggedIn", loggedIn_val);
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
     defer std.testing.allocator.free(html);
 
-    try std.testing.expectEqualStrings("<p>Welcome back ! </p>", html);
+    try std.testing.expectEqualStrings("<p>Welcome back !</p>", html);
 }
 
 test "compiler - conditional false" {
@@ -1186,21 +1171,27 @@ test "compiler - conditional false" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    try js_runtime.setContext("loggedIn", runtime.jsValueFromBool(false));
+    var loggedIn_val = try runtime.jsValueFromBool(std.testing.allocator, false);
+    defer loggedIn_val.deinit(std.testing.allocator);
+    try js_runtime.setContext("loggedIn", loggedIn_val);
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
     defer std.testing.allocator.free(html);
 
-    try std.testing.expectEqualStrings("<p>Please log in </p>", html);
+    try std.testing.expectEqualStrings("<p>Please log in</p>", html);
 }
 
 test "compiler - mixin call" {
     const source =
         \\mixin greeting
-        \\  p Hello!
+        \\  p Hello !
         \\+greeting
     ;
     var parser = try Parser.init(std.testing.allocator, source);
@@ -1211,7 +1202,11 @@ test "compiler - mixin call" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1236,7 +1231,11 @@ test "compiler - html escaping" {
     var content_copy = content_val;
     content_copy.deinit(std.testing.allocator);
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1262,7 +1261,11 @@ test "compiler - html escaping special chars" {
     var text_copy = text_val;
     text_copy.deinit(std.testing.allocator);
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1287,7 +1290,11 @@ test "compiler - unescaped interpolation" {
     var html_copy = html_val;
     html_copy.deinit(std.testing.allocator);
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const result = try compiler.compile(tree);
@@ -1310,7 +1317,11 @@ test "compiler - tag= buffered code" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1332,7 +1343,11 @@ test "compiler - tag!= unescaped code" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1354,7 +1369,11 @@ test "compiler - attribute expressions" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1377,13 +1396,17 @@ test "compiler - unbuffered code" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
     defer std.testing.allocator.free(html);
 
-    try std.testing.expectEqualStrings("<p>Sum :30</p>", html);
+    try std.testing.expectEqualStrings("<p>Sum: 30</p>", html);
 }
 
 test "compiler - multiple classes" {
@@ -1396,7 +1419,11 @@ test "compiler - multiple classes" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1419,13 +1446,17 @@ test "compiler - mixin with arguments" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
     defer std.testing.allocator.free(html);
 
-    try std.testing.expectEqualStrings("<p>Hello ,World</p>", html);
+    try std.testing.expectEqualStrings("<p>Hello, World</p>", html);
 }
 
 test "compiler - comment escaping" {
@@ -1438,7 +1469,11 @@ test "compiler - comment escaping" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);
@@ -1465,7 +1500,11 @@ test "compiler - doctype html" {
     var js_runtime = try runtime.JsRuntime.init(std.testing.allocator);
     defer js_runtime.deinit();
 
-    var compiler = try Compiler.init(std.testing.allocator, js_runtime);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var compiler = try Compiler.init(io, std.testing.allocator, js_runtime);
     defer compiler.deinit();
 
     const html = try compiler.compile(tree);

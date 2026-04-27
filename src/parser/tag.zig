@@ -39,11 +39,11 @@ pub fn parseTag(self: *Parser) anyerror!*ast.AstNode {
     const token = try helpers.expect(self, .Ident);
     const arena_allocator = self.arena.allocator();
 
-    var attributes = std.ArrayListUnmanaged(ast.Attribute){};
-    var children = std.ArrayListUnmanaged(*ast.AstNode){};
+    var attributes: std.ArrayListUnmanaged(ast.Attribute) = .empty;
+    var children: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
 
     // Collect classes to concatenate them into a single attribute
-    var classes = std.ArrayListUnmanaged([]const u8){};
+    var classes: std.ArrayListUnmanaged([]const u8) = .empty;
 
     // Parse classes and ids (.class, #id)
     while (helpers.match(self, &.{ .Class, .Id })) {
@@ -140,9 +140,9 @@ pub fn parseImplicitDiv(self: *Parser) anyerror!*ast.AstNode {
     // Use "div" as default tag name
     const tag_name = "div";
 
-    var attributes = std.ArrayListUnmanaged(ast.Attribute){};
-    var children = std.ArrayListUnmanaged(*ast.AstNode){};
-    var classes = std.ArrayListUnmanaged([]const u8){};
+    var attributes: std.ArrayListUnmanaged(ast.Attribute) = .empty;
+    var children: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
+    var classes: std.ArrayListUnmanaged([]const u8) = .empty;
 
     // Parse classes and ids (.class, #id)
     while (helpers.match(self, &.{ .Class, .Id })) {

@@ -30,7 +30,7 @@ pub fn parseMixinDefinition(self: *Parser) anyerror!*ast.AstNode {
     const name = name_token.value;
 
     // Parse parameters (optional)
-    var params = std.ArrayListUnmanaged([]const u8){};
+    var params: std.ArrayListUnmanaged([]const u8) = .empty;
     var rest_param: ?[]const u8 = null;
 
     if (helpers.match(self, &.{.LParen})) {
@@ -67,7 +67,7 @@ pub fn parseMixinDefinition(self: *Parser) anyerror!*ast.AstNode {
 
     // Parse mixin body
     try helpers.skipNewlines(self);
-    var body = std.ArrayListUnmanaged(*ast.AstNode){};
+    var body: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
     if (helpers.match(self, &.{.Indent})) {
         try helpers.advance(self);
         try self.parseChildren(&body);
@@ -105,8 +105,8 @@ pub fn parseMixinCall(self: *Parser) anyerror!*ast.AstNode {
     const name = name_token.value;
 
     // Parse arguments (optional)
-    var args = std.ArrayListUnmanaged([]const u8){};
-    const attributes = std.ArrayListUnmanaged(ast.Attribute){};
+    var args: std.ArrayListUnmanaged([]const u8) = .empty;
+    const attributes: std.ArrayListUnmanaged(ast.Attribute) = .empty;
 
     if (helpers.match(self, &.{.LParen})) {
         // Could be arguments or attributes
@@ -115,7 +115,7 @@ pub fn parseMixinCall(self: *Parser) anyerror!*ast.AstNode {
 
         while (!helpers.match(self, &.{ .RParen, .Eof })) {
             // Collect argument as string
-            var arg: std.ArrayList(u8) = .{};
+            var arg: std.ArrayList(u8) = .empty;
 
             while (!helpers.match(self, &.{ .Comma, .RParen, .Eof })) {
                 if (arg.items.len > 0) {
@@ -150,7 +150,7 @@ pub fn parseMixinCall(self: *Parser) anyerror!*ast.AstNode {
     var body: ?std.ArrayListUnmanaged(*ast.AstNode) = null;
     if (helpers.match(self, &.{.Indent})) {
         try helpers.advance(self);
-        var block_body = std.ArrayListUnmanaged(*ast.AstNode){};
+        var block_body: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
         try self.parseChildren(&block_body);
         if (helpers.match(self, &.{.Dedent})) {
             try helpers.advance(self);

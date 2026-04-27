@@ -20,7 +20,7 @@ pub fn isVoidElement(tag_name: []const u8) bool {
 /// Pretty-print HTML with indentation
 /// This is the canonical implementation used by both CLI and API
 pub fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
-    var result = std.ArrayList(u8){};
+    var result: std.ArrayList(u8) = .empty;
     var indent: usize = 0;
     var i: usize = 0;
 
@@ -159,7 +159,7 @@ pub fn prettyPrintHtml(allocator: std.mem.Allocator, html: []const u8) ![]const 
 
 /// Minify HTML by removing unnecessary whitespace
 pub fn minifyHtml(allocator: std.mem.Allocator, html: []const u8) ![]const u8 {
-    var result = std.ArrayList(u8){};
+    var result: std.ArrayList(u8) = .empty;
     var in_tag = false;
     var last_was_space = false;
 

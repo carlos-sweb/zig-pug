@@ -301,10 +301,7 @@ const ArrayBuilderImpl = struct {
 
     fn init(allocator: std.mem.Allocator) !*ArrayBuilderImpl {
         const builder = try allocator.create(ArrayBuilderImpl);
-        builder.* = .{
-            .allocator = allocator,
-            .items = std.ArrayList(std.json.Value){},
-        };
+        builder.* = .{ .allocator = allocator, .items = .empty };
         return builder;
     }
 
@@ -356,7 +353,8 @@ const ObjectBuilderImpl = struct {
         const builder = try allocator.create(ObjectBuilderImpl);
         builder.* = .{
             .allocator = allocator,
-            .map = std.json.ObjectMap.init(allocator),
+            //.map = std.json.ObjectMap.init(allocator),
+            .map = .empty,
         };
         return builder;
     }
@@ -371,34 +369,34 @@ const ObjectBuilderImpl = struct {
                 else => {},
             }
         }
-        self.map.deinit();
+        self.map.deinit(self.allocator);
         self.allocator.destroy(self);
     }
 
     fn setString(self: *ObjectBuilderImpl, key: []const u8, value: []const u8) !void {
         const owned_key = try self.allocator.dupe(u8, key);
         const owned_value = try self.allocator.dupe(u8, value);
-        try self.map.put(owned_key, std.json.Value{ .string = owned_value });
+        try self.map.put(self.allocator, owned_key, std.json.Value{ .string = owned_value });
     }
 
     fn setInt(self: *ObjectBuilderImpl, key: []const u8, value: i64) !void {
         const owned_key = try self.allocator.dupe(u8, key);
-        try self.map.put(owned_key, std.json.Value{ .integer = value });
+        try self.map.put(self.allocator, owned_key, std.json.Value{ .integer = value });
     }
 
     fn setFloat(self: *ObjectBuilderImpl, key: []const u8, value: f64) !void {
         const owned_key = try self.allocator.dupe(u8, key);
-        try self.map.put(owned_key, std.json.Value{ .float = value });
+        try self.map.put(self.allocator, owned_key, std.json.Value{ .float = value });
     }
 
     fn setBool(self: *ObjectBuilderImpl, key: []const u8, value: bool) !void {
         const owned_key = try self.allocator.dupe(u8, key);
-        try self.map.put(owned_key, std.json.Value{ .bool = value });
+        try self.map.put(self.allocator, owned_key, std.json.Value{ .bool = value });
     }
 
     fn setNull(self: *ObjectBuilderImpl, key: []const u8) !void {
         const owned_key = try self.allocator.dupe(u8, key);
-        try self.map.put(owned_key, std.json.Value.null);
+        try self.map.put(self.allocator, owned_key, std.json.Value.null);
     }
 };
 
@@ -551,6 +549,7 @@ const Context = struct {
     allocator: std.mem.Allocator,
     runtime: *runtime.JsRuntime,
     last_compiler: ?*compiler.Compiler, // Store compiler to access errors
+    io_threaded: std.Io.Threaded,
 
     fn init(allocator: std.mem.Allocator) !Context {
         const rt = try runtime.JsRuntime.init(allocator);
@@ -558,23 +557,26 @@ const Context = struct {
             .allocator = allocator,
             .runtime = rt,
             .last_compiler = null,
+            .io_threaded = .init(allocator, .{}),
         };
     }
 
     fn deinit(self: *Context) void {
         self.runtime.deinit();
+        self.io_threaded.deinit();
         // Note: last_compiler is not owned, it's just a reference
     }
 
     fn compile(self: *Context, source: []const u8) ![]const u8 {
         // Parse
+        const io = self.io_threaded.io();
         var pars = try parser.Parser.init(self.allocator, source);
         defer pars.deinit();
 
         const tree = try pars.parse();
 
         // Compile
-        var comp = try compiler.Compiler.init(self.allocator, self.runtime);
+        var comp = try compiler.Compiler.init(io, self.allocator, self.runtime);
         defer comp.deinit();
 
         // Store compiler reference for error access
@@ -605,12 +607,12 @@ test "lib - C API basic usage" {
 
     if (html) |h| {
         const result = std.mem.span(h);
-        try std.testing.expectEqualStrings("<p>HelloWorld</p>", result);
+        try std.testing.expectEqualStrings("<p>Hello World</p>", result);
     }
 }
 
 test "lib - version" {
     const version = zigpug_version();
     const ver_str = std.mem.span(version);
-    try std.testing.expectEqualStrings("0.1.0", ver_str);
+    try std.testing.expectEqualStrings("4.0.0", ver_str);
 }

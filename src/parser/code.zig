@@ -83,14 +83,14 @@ pub fn parseCode(self: *Parser) anyerror!*ast.AstNode {
     const is_unescaped = token.type == .UnescapedCode;
 
     // Collect code until newline
-    var code: std.ArrayList(u8) = .{};
+    var code: std.ArrayList(u8) = .empty;
     var last_token_type: ?TokenType = null;
 
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
         // Smart spacing: only add space if needed between tokens
         if (code.items.len > 0 and last_token_type != null) {
             const needs_space = needsSpaceAfter(last_token_type.?) and
-                               needsSpaceBefore(self.current.type);
+                needsSpaceBefore(self.current.type);
             if (needs_space) {
                 try code.append(arena_allocator, ' ');
             }

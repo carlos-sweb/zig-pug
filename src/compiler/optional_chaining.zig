@@ -67,7 +67,7 @@ pub fn transformOptionalChaining(
     }
 
     // Build the transformed expression
-    var result: std.ArrayList(u8) = .{};
+    var result: std.ArrayList(u8) = .empty;
 
     // Build condition part: "obj && obj.hasOwnProperty('prop') && obj.prop.hasOwnProperty('nested')"
     // Build value part: "obj.prop.nested"
@@ -79,7 +79,7 @@ pub fn transformOptionalChaining(
     try result.appendSlice(allocator, base);
 
     // Build the chain of hasOwnProperty checks
-    var current_path: std.ArrayList(u8) = .{};
+    var current_path: std.ArrayList(u8) = .empty;
     defer current_path.deinit(allocator);
     try current_path.appendSlice(allocator, base);
 

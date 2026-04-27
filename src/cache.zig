@@ -41,6 +41,7 @@ const std = @import("std");
 ///
 /// Thread-safety: Not thread-safe. Caller must synchronize access.
 pub const TemplateCache = struct {
+    io: std.Io,
     allocator: std.mem.Allocator,
     entries: std.StringHashMap(CacheEntry),
     max_size: usize,
@@ -68,8 +69,9 @@ pub const TemplateCache = struct {
     /// var cache = TemplateCache.init(allocator, 100);
     /// defer cache.deinit();
     /// ```
-    pub fn init(allocator: std.mem.Allocator, max_size: usize) Self {
+    pub fn init(io: std.Io, allocator: std.mem.Allocator, max_size: usize) Self {
         return .{
+            .io = io,
             .allocator = allocator,
             .entries = std.StringHashMap(CacheEntry).init(allocator),
             .max_size = max_size,
@@ -175,9 +177,12 @@ pub const TemplateCache = struct {
         const html_copy = try self.allocator.dupe(u8, html);
         errdefer self.allocator.free(html_copy);
 
+        const now = std.Io.Clock.now(.real, self.io);
+
         try self.entries.put(key_copy, .{
             .html = html_copy,
-            .timestamp = std.time.timestamp(),
+            //.timestamp = std.time.timestamp(),
+            .timestamp = @intCast(now.toSeconds()),
             .source_hash = source_hash,
         });
     }
@@ -294,7 +299,10 @@ pub fn hashSource(source: []const u8) u64 {
 // ============================================================================
 
 test "cache - basic put and get" {
-    var cache = TemplateCache.init(std.testing.allocator, 0);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+    var cache = TemplateCache.init(io, std.testing.allocator, 0);
     defer cache.deinit();
 
     const key = "test.zpug";
@@ -309,7 +317,10 @@ test "cache - basic put and get" {
 }
 
 test "cache - hash validation" {
-    var cache = TemplateCache.init(std.testing.allocator, 0);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+    var cache = TemplateCache.init(io, std.testing.allocator, 0);
     defer cache.deinit();
 
     const key = "test.zpug";
@@ -329,7 +340,10 @@ test "cache - hash validation" {
 }
 
 test "cache - max size eviction" {
-    var cache = TemplateCache.init(std.testing.allocator, 2);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+    var cache = TemplateCache.init(io, std.testing.allocator, 2);
     defer cache.deinit();
 
     try cache.put("a.zpug", "<a>", hashSource("a"));
@@ -340,7 +354,10 @@ test "cache - max size eviction" {
 }
 
 test "cache - stats" {
-    var cache = TemplateCache.init(std.testing.allocator, 0);
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+    var cache = TemplateCache.init(io, std.testing.allocator, 0);
     defer cache.deinit();
 
     try cache.put("test.zpug", "<div>", hashSource("div"));

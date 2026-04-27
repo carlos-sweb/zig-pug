@@ -29,7 +29,7 @@ pub fn parseCase(self: *Parser) anyerror!*ast.AstNode {
     // Parse case expression (everything until newline)
     // Concatenate tokens WITHOUT spaces to preserve property access (object.property)
     // and operators (>=, <=, etc). JavaScript expressions don't require spaces.
-    var expression: std.ArrayList(u8) = .{};
+    var expression: std.ArrayList(u8) = .empty;
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
         // Special handling for .Class and .Id tokens - prepend the dot
         // because tokenizer removes it from the value
@@ -51,7 +51,7 @@ pub fn parseCase(self: *Parser) anyerror!*ast.AstNode {
 
     // Parse when blocks
     try helpers.skipNewlines(self);
-    var cases = std.ArrayListUnmanaged(*ast.AstNode){}; // List of WhenNodes
+    var cases: std.ArrayListUnmanaged(*ast.AstNode) = .empty; // List of WhenNodes
     var default_block: ?std.ArrayListUnmanaged(*ast.AstNode) = null;
 
     if (helpers.match(self, &.{.Indent})) {
@@ -68,13 +68,13 @@ pub fn parseCase(self: *Parser) anyerror!*ast.AstNode {
                 try helpers.advance(self); // consume 'when'
 
                 // Parse when values (comma separated)
-                var values = std.ArrayListUnmanaged([]const u8){};
-                var current_value: std.ArrayList(u8) = .{};
+                var values: std.ArrayListUnmanaged([]const u8) = .empty;
+                var current_value: std.ArrayList(u8) = .empty;
 
                 while (!helpers.match(self, &.{ .Newline, .Eof })) {
                     if (helpers.match(self, &.{.Comma})) {
                         try values.append(arena_allocator, try current_value.toOwnedSlice(arena_allocator));
-                        current_value = .{};
+                        current_value = .empty;
                         try helpers.advance(self);
                     } else {
                         if (current_value.items.len > 0) {
@@ -90,7 +90,7 @@ pub fn parseCase(self: *Parser) anyerror!*ast.AstNode {
 
                 // Parse when block
                 try helpers.skipNewlines(self);
-                var block = std.ArrayListUnmanaged(*ast.AstNode){};
+                var block: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
                 if (helpers.match(self, &.{.Indent})) {
                     try helpers.advance(self);
                     try self.parseChildren(&block);
@@ -116,7 +116,7 @@ pub fn parseCase(self: *Parser) anyerror!*ast.AstNode {
                 try helpers.skipNewlines(self);
 
                 // Parse default block
-                var block = std.ArrayListUnmanaged(*ast.AstNode){};
+                var block: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
                 if (helpers.match(self, &.{.Indent})) {
                     try helpers.advance(self);
                     try self.parseChildren(&block);

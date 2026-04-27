@@ -11,8 +11,8 @@ pub const Parser = @import("mod.zig").Parser;
 
 pub fn parseInlineText(self: *Parser) anyerror!std.ArrayListUnmanaged(*ast.AstNode) {
     const arena_allocator = self.arena.allocator();
-    var nodes = std.ArrayListUnmanaged(*ast.AstNode){};
-    var text_buffer: std.ArrayList(u8) = .{};
+    var nodes: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
+    var text_buffer: std.ArrayList(u8) = .empty;
     const start_line = self.current.line;
     var last_token_end_col: usize = 0;
     var has_content = false; // Track if we've processed any content
@@ -20,15 +20,15 @@ pub fn parseInlineText(self: *Parser) anyerror!std.ArrayListUnmanaged(*ast.AstNo
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
         if (helpers.match(self, &.{ .EscapedInterpol, .UnescapedInterpol })) {
             // Add space before interpolation if there was previous content
-            if (has_content and text_buffer.items.len == 0) {
-                // Previous content was an interpolation, add space
-                try text_buffer.append(arena_allocator, ' ');
-            }
+            //if (has_content and text_buffer.items.len == 0) {
+            // Previous content was an interpolation, add space
+            //try text_buffer.append(arena_allocator, ' ');
+            //}
 
             // Flush accumulated text as a Text node
             if (text_buffer.items.len > 0) {
                 // Add trailing space before interpolation
-                try text_buffer.append(arena_allocator, ' ');
+                //try text_buffer.append(arena_allocator, ' ');
 
                 const text_node = try ast.AstNode.create(
                     arena_allocator,
@@ -41,7 +41,7 @@ pub fn parseInlineText(self: *Parser) anyerror!std.ArrayListUnmanaged(*ast.AstNo
                     } },
                 );
                 try nodes.append(arena_allocator, text_node);
-                text_buffer = .{};
+                text_buffer = .empty;
             }
 
             // Create Interpolation node
@@ -73,9 +73,9 @@ pub fn parseInlineText(self: *Parser) anyerror!std.ArrayListUnmanaged(*ast.AstNo
 
             // Add space before token if we've already processed content
             // This preserves spacing between words/interpolations
-            if (has_content) {
-                try text_buffer.append(arena_allocator, ' ');
-            }
+            //if (has_content) {
+            //try text_buffer.append(arena_allocator, ' ');
+            //}
 
             // Accumulate text
             try text_buffer.appendSlice(arena_allocator, self.current.value);
@@ -120,8 +120,8 @@ pub fn parsePipeText(self: *Parser) anyerror!*ast.AstNode {
     const arena_allocator = self.arena.allocator();
     _ = try helpers.expect(self, .Pipe);
 
-    var nodes = std.ArrayListUnmanaged(*ast.AstNode){};
-    var text_buffer: std.ArrayList(u8) = .{};
+    var nodes: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
+    var text_buffer: std.ArrayList(u8) = .empty;
     const start_line = self.current.line;
     var last_token_end_col: usize = 0;
     var has_content = false; // Track if we've processed any content
@@ -150,7 +150,7 @@ pub fn parsePipeText(self: *Parser) anyerror!*ast.AstNode {
                     } },
                 );
                 try nodes.append(arena_allocator, text_node);
-                text_buffer = .{};
+                text_buffer = .empty;
             }
 
             // Create Interpolation node
@@ -222,7 +222,7 @@ pub fn parsePipeText(self: *Parser) anyerror!*ast.AstNode {
         1,
         .{ .Tag = .{
             .name = "",
-            .attributes = .{},
+            .attributes = .empty,
             .children = nodes,
             .is_self_closing = false,
         } },

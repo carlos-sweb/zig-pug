@@ -126,8 +126,8 @@ pub const Tokenizer = struct {
             .line = 1,
             .column = 1,
             .allocator = allocator,
-            .indent_stack = .{},
-            .pending_tokens = .{},
+            .indent_stack = .empty,
+            .pending_tokens = .empty,
             .at_line_start = true,
             .state = TokenizerState.Root,
         };
@@ -328,7 +328,6 @@ pub const Tokenizer = struct {
         self.at_line_start = false;
     }
 
-
     /// Get the next token from the source
     ///
     /// Uses labeled-switch pattern for efficient state machine transitions.
@@ -365,6 +364,7 @@ pub const Tokenizer = struct {
         }
 
         // Skip whitespace (except newlines which are significant)
+
         self.skipWhitespaceExceptNewline();
 
         const ch = self.peekChar() orelse {
@@ -402,7 +402,7 @@ pub const Tokenizer = struct {
         // State-based tokenization using labeled-switch
         return switch (self.state) {
             .Root, .Indent => {
-                
+
                 // Strings (can appear at root level in tests or expressions)
                 if (ch == '"' or ch == '\'') {
                     return scanString(self, ch);

@@ -32,13 +32,15 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("src/lib.zig"),
                 .target = target,
                 .optimize = optimize,
-                .pic = true, // Position Independent Code for Node.js addons
+                .pic = true, // Position Independent Code for Node.js addons,
+                .link_libc = true, // 0.16 version zig
             }),
         });
-        lib_static.linkLibC();
+        //lib_static.linkLibC(); 0.15 version zig
         // Include mujs
-        lib_static.addIncludePath(b.path("vendor/mujs"));
-        lib_static.addCSourceFile(.{
+        //lib_static.addIncludePath(b.path("vendor/mujs"));
+        lib_static.root_module.addIncludePath(b.path("vendor/mujs"));
+        lib_static.root_module.addCSourceFile(.{
             .file = b.path("vendor/mujs/one.c"),
             .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
         });
@@ -59,16 +61,17 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("src/lib.zig"),
                 .target = target,
                 .optimize = optimize,
+                .link_libc = true, // 0.16 version zig
             }),
         });
 
         // Compile mujs from source (same as executable)
-        lib_shared.addIncludePath(b.path("vendor/mujs"));
-        lib_shared.addCSourceFile(.{
+        lib_shared.root_module.addIncludePath(b.path("vendor/mujs"));
+        lib_shared.root_module.addCSourceFile(.{
             .file = b.path("vendor/mujs/one.c"),
             .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
         });
-        lib_shared.linkLibC();
+        //lib_shared.linkLibC();
 
         const install_lib_shared = b.addInstallArtifact(lib_shared, .{});
         lib_shared_step.dependOn(&install_lib_shared.step);
@@ -101,29 +104,30 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/cli.zig"),
             .target = exe_target,
             .optimize = optimize,
+            .link_libc = true, // 0.16 version zig
         }),
     });
 
     // Compile mujs from source (enables cross-compilation)
     // Note: mujs requires optimization (-O2) to work correctly
-    exe.addIncludePath(b.path("vendor/mujs"));
-    exe.addCSourceFile(.{
+    exe.root_module.addIncludePath(b.path("vendor/mujs"));
+    exe.root_module.addCSourceFile(.{
         .file = b.path("vendor/mujs/one.c"),
         .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
 
     // Add c_print library for colored terminal output
-    exe.addIncludePath(b.path("lib/c_print/include"));
+    exe.root_module.addIncludePath(b.path("lib/c_print/include"));
     const c_print_flags = &[_][]const u8{ "-std=c99", "-O2", "-D_POSIX_C_SOURCE=200809L" };
-    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/c_print.c"), .flags = c_print_flags });
-    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/ansi_codes.c"), .flags = c_print_flags });
-    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/color_parser.c"), .flags = c_print_flags });
-    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/pattern_parser.c"), .flags = c_print_flags });
-    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/number_formatter.c"), .flags = c_print_flags });
-    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/string_utils.c"), .flags = c_print_flags });
-    exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/text_alignment.c"), .flags = c_print_flags });
+    exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/c_print.c"), .flags = c_print_flags });
+    exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/ansi_codes.c"), .flags = c_print_flags });
+    exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/color_parser.c"), .flags = c_print_flags });
+    exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/pattern_parser.c"), .flags = c_print_flags });
+    exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/number_formatter.c"), .flags = c_print_flags });
+    exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/string_utils.c"), .flags = c_print_flags });
+    exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/text_alignment.c"), .flags = c_print_flags });
 
-    exe.linkLibC();
+    //exe.linkLibC();
 
     b.installArtifact(exe);
 
@@ -135,6 +139,30 @@ pub fn build(b: *std.Build) void {
     }
     const run_step = b.step("run", "Run the CLI app");
     run_step.dependOn(&run_cmd.step);
+
+    // ========================================================================
+    // Example
+    // ========================================================================
+    const example = b.addExecutable(.{
+        .name = "example",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("example.zig"),
+            .target = exe_target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+
+    example.root_module.addIncludePath(b.path("vendor/mujs"));
+    example.root_module.addCSourceFile(.{
+        .file = b.path("vendor/mujs/one.c"),
+        .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
+    });
+
+    const run_example_cmd = b.addRunArtifact(example);
+    run_example_cmd.step.dependOn(b.getInstallStep());
+    const run_example_step = b.step("example", "Run the example");
+    run_example_step.dependOn(&run_example_cmd.step);
 
     // ========================================================================
     // Global Installation
@@ -174,28 +202,29 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("src/cli.zig"),
                 .target = b.resolveTargetQuery(cross_target),
                 .optimize = .ReleaseFast,
+                .link_libc = true, // 0.16 version zig
             }),
         });
 
         // Compile mujs from source for cross-compilation
-        cross_exe.addIncludePath(b.path("vendor/mujs"));
-        cross_exe.addCSourceFile(.{
+        cross_exe.root_module.addIncludePath(b.path("vendor/mujs"));
+        cross_exe.root_module.addCSourceFile(.{
             .file = b.path("vendor/mujs/one.c"),
             .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
         });
 
         // Add c_print library for colored terminal output
-        cross_exe.addIncludePath(b.path("lib/c_print/include"));
+        cross_exe.root_module.addIncludePath(b.path("lib/c_print/include"));
         const cross_c_print_flags = &[_][]const u8{ "-std=c99", "-O2", "-D_POSIX_C_SOURCE=200809L" };
-        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/c_print.c"), .flags = cross_c_print_flags });
-        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/ansi_codes.c"), .flags = cross_c_print_flags });
-        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/color_parser.c"), .flags = cross_c_print_flags });
-        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/pattern_parser.c"), .flags = cross_c_print_flags });
-        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/number_formatter.c"), .flags = cross_c_print_flags });
-        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/string_utils.c"), .flags = cross_c_print_flags });
-        cross_exe.addCSourceFile(.{ .file = b.path("lib/c_print/src/text_alignment.c"), .flags = cross_c_print_flags });
+        cross_exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/c_print.c"), .flags = cross_c_print_flags });
+        cross_exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/ansi_codes.c"), .flags = cross_c_print_flags });
+        cross_exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/color_parser.c"), .flags = cross_c_print_flags });
+        cross_exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/pattern_parser.c"), .flags = cross_c_print_flags });
+        cross_exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/number_formatter.c"), .flags = cross_c_print_flags });
+        cross_exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/string_utils.c"), .flags = cross_c_print_flags });
+        cross_exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/text_alignment.c"), .flags = cross_c_print_flags });
 
-        cross_exe.linkLibC();
+        //cross_exe.linkLibC();
 
         const install_artifact = b.addInstallArtifact(cross_exe, .{
             .dest_dir = .{
@@ -218,19 +247,20 @@ pub fn build(b: *std.Build) void {
     // ========================================================================
     const tests = b.addTest(.{
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
+            .root_source_file = b.path("src/lib.zig"),
             .target = exe_target,
             .optimize = optimize,
+            .link_libc = true, // 0.16 version zig
         }),
     });
 
     // Compile mujs from source for tests
-    tests.addIncludePath(b.path("vendor/mujs"));
-    tests.addCSourceFile(.{
+    tests.root_module.addIncludePath(b.path("vendor/mujs"));
+    tests.root_module.addCSourceFile(.{
         .file = b.path("vendor/mujs/one.c"),
         .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
-    tests.linkLibC();
+    //tests.linkLibC();
 
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");

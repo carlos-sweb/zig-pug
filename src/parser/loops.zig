@@ -57,7 +57,7 @@ pub fn parseLoop(self: *Parser) anyerror!*ast.AstNode {
         // Parse iterable expression (rest of the line)
         // Concatenate tokens WITHOUT spaces to preserve property access (object.items)
         // and operators. JavaScript expressions don't require spaces.
-        var iterable_expr: std.ArrayList(u8) = .{};
+        var iterable_expr: std.ArrayList(u8) = .empty;
         while (!helpers.match(self, &.{ .Newline, .Eof })) {
             // Special handling for .Class and .Id tokens - prepend the dot
             // because tokenizer removes it from the value
@@ -80,7 +80,7 @@ pub fn parseLoop(self: *Parser) anyerror!*ast.AstNode {
     } else {
         // While loop - just collect the condition
         // Concatenate tokens WITHOUT spaces to preserve property access and operators
-        var expression: std.ArrayList(u8) = .{};
+        var expression: std.ArrayList(u8) = .empty;
         while (!helpers.match(self, &.{ .Newline, .Eof })) {
             // Special handling for .Class and .Id tokens - prepend the dot
             // because tokenizer removes it from the value
@@ -104,7 +104,7 @@ pub fn parseLoop(self: *Parser) anyerror!*ast.AstNode {
 
     // Parse loop body
     try helpers.skipNewlines(self);
-    var body = std.ArrayListUnmanaged(*ast.AstNode){};
+    var body: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
     if (helpers.match(self, &.{.Indent})) {
         try helpers.advance(self);
         try self.parseChildren(&body);

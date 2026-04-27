@@ -6,7 +6,7 @@ This guide will take you step by step from installation to creating your first t
 
 Before you begin, make sure you have:
 
-- **Zig 0.15.2** installed ([download here](https://ziglang.org/download/))
+- **Zig 0.16.0** installed ([download here](https://ziglang.org/download/))
 - Terminal/command line
 - Text editor (VS Code, Vim, etc.)
 
@@ -14,7 +14,7 @@ Before you begin, make sure you have:
 
 ```bash
 zig version
-# Expected output: 0.15.2
+# Expected output: 0.16.0
 ```
 
 ## Step 1: Clone and Install
@@ -28,15 +28,11 @@ cd zig-pug
 zig build
 
 # Verify it compiled correctly
-./zig-out/bin/zig-pug
+./zig-out/bin/zig-pug -v
 ```
 
 **Expected output:**
-```
-zig-pug v0.1.0
-Template engine inspired by Pug
-Built with Zig 0.15.2
-...
+```4.0.0
 ```
 
 ## Step 2: Your First Template
@@ -59,39 +55,42 @@ Create a file `example.zig` in the root directory:
 
 ```zig
 const std = @import("std");
-const parser = @import("src/parser.zig");
-const compiler = @import("src/compiler.zig");
+const parser = @import("src/parser/mod.zig");
+const compiler = @import("src/compiler/mod.zig");
 const runtime = @import("src/runtime.zig");
+const formatter = @import("src/formatter.zig"); // ← agregar esto
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main(int: std.process.Init) !void {
+    const io = int.io;
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // Your Pug template
     const template =
         \\div.greeting
         \\  h1 Hello World!
         \\  p This is my first zig-pug template
     ;
 
-    // 1. Create the JavaScript runtime
     var js_runtime = try runtime.JsRuntime.init(allocator);
     defer js_runtime.deinit();
 
-    // 2. Parse the template
     var pars = try parser.Parser.init(allocator, template);
     defer pars.deinit();
     const ast = try pars.parse();
 
-    // 3. Compile to HTML
-    var comp = try compiler.Compiler.init(allocator, js_runtime);
+    var comp = try compiler.Compiler.init(io, allocator, js_runtime);
     defer comp.deinit();
+
     const html = try comp.compile(ast);
     defer allocator.free(html);
 
-    // 4. Display the result
-    std.debug.print("HTML Output:\n{s}\n", .{html});
+    // pretty
+    const pretty_html = try formatter.prettyPrintHtml(allocator, html);
+    defer allocator.free(pretty_html);
+
+    std.debug.print("HTML Output:\n{s}\n\n", .{html});
+    std.debug.print("HTML Output:\n{s}\n", .{pretty_html});
 }
 ```
 
@@ -99,7 +98,6 @@ pub fn main() !void {
 
 ```bash
 zig build-exe example.zig -I src
-
 ./example
 ```
 
