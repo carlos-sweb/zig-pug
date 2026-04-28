@@ -10,8 +10,7 @@ OPTIONS:
   -v, --version           Show version information
   -i, --input <file>      Input .zpug file (can be used multiple times)
   -o, --output <path>     Output file or directory
-  -w, --watch             Watch files for changes and recompile
-  -p, --pretty            Pretty-print with comments (development mode)
+  -w, --watch             Watch files for changes and recompile  
   -F, --format            Pretty-print without comments (readable mode)
   -m, --minify            Minify HTML output (production mode)
   --stdin                 Read input from stdin

@@ -62,7 +62,6 @@ const CliOptions = struct {
     json_variables: std.StringHashMap([]const u8),
     array_variables: std.StringHashMap([]const u8),
     watch: bool,
-    pretty: bool,
     format: bool,
     minify: bool,
     verbose: bool,
@@ -81,7 +80,6 @@ const CliOptions = struct {
             .json_variables = std.StringHashMap([]const u8).init(allocator),
             .array_variables = std.StringHashMap([]const u8).init(allocator),
             .watch = false,
-            .pretty = false,
             .format = false,
             .minify = false,
             .verbose = false,
@@ -189,8 +187,6 @@ fn parseArguments(
             try options.json_variables.put(key, json_value);
         } else if (eql(u8, arg, "-w") or eql(u8, arg, "--watch")) {
             options.watch = true;
-        } else if (eql(u8, arg, "-p") or eql(u8, arg, "--pretty")) {
-            options.pretty = true;
         } else if (eql(u8, arg, "-F") or eql(u8, arg, "--format")) {
             options.format = true;
         } else if (eql(u8, arg, "-m") or eql(u8, arg, "--minify")) {
@@ -440,11 +436,11 @@ fn compileFile(
 
     const final_html = if (options.minify)
         try formatter.minifyHtml(allocator, html)
-    else if (options.pretty or options.format)
+    else if (options.format)
         try formatter.prettyPrintHtml(allocator, html)
     else
         html;
-    defer if (options.minify or options.pretty or options.format) allocator.free(final_html);
+    defer if (options.minify or options.format) allocator.free(final_html);
 
     if (options.verbose) print("Output size: {} bytes\n", .{final_html.len});
 
@@ -522,11 +518,11 @@ fn compileFromStdin(
 
     const final_html = if (options.minify)
         try formatter.minifyHtml(allocator, html)
-    else if (options.pretty or options.format)
+    else if (options.format)
         try formatter.prettyPrintHtml(allocator, html)
     else
         html;
-    defer if (options.minify or options.pretty or options.format) allocator.free(final_html);
+    defer if (options.minify or options.format) allocator.free(final_html);
 
     //try File.stdout().writeAll(io, final_html);
     try File.stdout().writeStreamingAll(io, final_html);
