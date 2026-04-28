@@ -648,12 +648,14 @@ html(lang="es")
 
 ```zig
 const std = @import("std");
-const parser = @import("parser.zig");
-const compiler = @import("compiler.zig");
-const runtime = @import("runtime.zig");
+const parser = @import("src/parser/mod.zig");
+const compiler = @import("src/compiler/mod.zig");
+const runtime = @import("src/runtime.zig");
+const formatter = @import("src/formatter.zig");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -680,12 +682,16 @@ pub fn main() !void {
     const tree = try pars.parse();
 
     // Compile to HTML
-    var comp = try compiler.Compiler.init(allocator, js_runtime);
+    var comp = try compiler.Compiler.init(io, allocator, js_runtime);
     defer comp.deinit();
     const html = try comp.compile(tree);
     defer allocator.free(html);
 
+    const pretty_html = try formatter.prettyPrintHtml(allocator, html);
+    defer allocator.free(pretty_html);
+
     std.debug.print("{s}\n", .{html});
+    std.debug.print("{s}\n", .{pretty_html});
 }
 ```
 

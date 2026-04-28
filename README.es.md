@@ -648,25 +648,27 @@ html(lang="es")
 
 ```zig
 const std = @import("std");
-const parser = @import("parser.zig");
-const compiler = @import("compiler.zig");
-const runtime = @import("runtime.zig");
+const parser = @import("src/parser/mod.zig");
+const compiler = @import("src/compiler/mod.zig");
+const runtime = @import("src/runtime.zig");
+const formatter = @import("src/formatter.zig");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // Crear runtime JavaScript
+    // Create JavaScript runtime
     var js_runtime = try runtime.JsRuntime.init(allocator);
     defer js_runtime.deinit();
 
-    // Establecer variables
+    // Set variables
     try js_runtime.setString("name", "Alice");
     try js_runtime.setNumber("age", 25);
     try js_runtime.setBool("active", true);
 
-    // Parsear template
+    // Parse template
     const source =
         \\doctype html
         \\html
@@ -679,13 +681,17 @@ pub fn main() !void {
     defer pars.deinit();
     const tree = try pars.parse();
 
-    // Compilar a HTML
-    var comp = try compiler.Compiler.init(allocator, js_runtime);
+    // Compile to HTML
+    var comp = try compiler.Compiler.init(io, allocator, js_runtime);
     defer comp.deinit();
     const html = try comp.compile(tree);
     defer allocator.free(html);
 
+    const pretty_html = try formatter.prettyPrintHtml(allocator, html);
+    defer allocator.free(pretty_html);
+
     std.debug.print("{s}\n", .{html});
+    std.debug.print("{s}\n", .{pretty_html});
 }
 ```
 
