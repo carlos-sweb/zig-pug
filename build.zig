@@ -36,7 +36,6 @@ pub fn build(b: *std.Build) void {
                 .link_libc = true, // 0.16 version zig
             }),
         });
-        //lib_static.linkLibC(); 0.15 version zig
         // Include mujs
         //lib_static.addIncludePath(b.path("vendor/mujs"));
         lib_static.root_module.addIncludePath(b.path("vendor/mujs"));
@@ -126,8 +125,6 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/number_formatter.c"), .flags = c_print_flags });
     exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/string_utils.c"), .flags = c_print_flags });
     exe.root_module.addCSourceFile(.{ .file = b.path("lib/c_print/src/text_alignment.c"), .flags = c_print_flags });
-
-    //exe.linkLibC();
 
     b.installArtifact(exe);
 
