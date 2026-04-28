@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // Add mujs include path for the module
-    zigpug_module.addIncludePath(b.path("vendor/mujs"));
+    zigpug_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
 
     // ========================================================================
     // Static Library (.a) - Optional, requires libc
@@ -37,10 +37,10 @@ pub fn build(b: *std.Build) void {
             }),
         });
         // Include mujs
-        //lib_static.addIncludePath(b.path("vendor/mujs"));
-        lib_static.root_module.addIncludePath(b.path("vendor/mujs"));
+        //lib_static.addIncludePath(b.path("vendor/mujs-1.3.9"));
+        lib_static.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
         lib_static.root_module.addCSourceFile(.{
-            .file = b.path("vendor/mujs/one.c"),
+            .file = b.path("vendor/mujs-1.3.9/one.c"),
             .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
         });
         const install_lib_static = b.addInstallArtifact(lib_static, .{});
@@ -65,9 +65,9 @@ pub fn build(b: *std.Build) void {
         });
 
         // Compile mujs from source (same as executable)
-        lib_shared.root_module.addIncludePath(b.path("vendor/mujs"));
+        lib_shared.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
         lib_shared.root_module.addCSourceFile(.{
-            .file = b.path("vendor/mujs/one.c"),
+            .file = b.path("vendor/mujs-1.3.9/one.c"),
             .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
         });
         //lib_shared.linkLibC();
@@ -109,9 +109,9 @@ pub fn build(b: *std.Build) void {
 
     // Compile mujs from source (enables cross-compilation)
     // Note: mujs requires optimization (-O2) to work correctly
-    exe.root_module.addIncludePath(b.path("vendor/mujs"));
+    exe.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
     exe.root_module.addCSourceFile(.{
-        .file = b.path("vendor/mujs/one.c"),
+        .file = b.path("vendor/mujs-1.3.9/one.c"),
         .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
 
@@ -150,9 +150,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    example.root_module.addIncludePath(b.path("vendor/mujs"));
+    example.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
     example.root_module.addCSourceFile(.{
-        .file = b.path("vendor/mujs/one.c"),
+        .file = b.path("vendor/mujs-1.3.9/one.c"),
         .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
 
@@ -204,9 +204,9 @@ pub fn build(b: *std.Build) void {
         });
 
         // Compile mujs from source for cross-compilation
-        cross_exe.root_module.addIncludePath(b.path("vendor/mujs"));
+        cross_exe.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
         cross_exe.root_module.addCSourceFile(.{
-            .file = b.path("vendor/mujs/one.c"),
+            .file = b.path("vendor/mujs-1.3.9/one.c"),
             .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
         });
 
@@ -252,9 +252,9 @@ pub fn build(b: *std.Build) void {
     });
 
     // Compile mujs from source for tests
-    tests.root_module.addIncludePath(b.path("vendor/mujs"));
+    tests.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
     tests.root_module.addCSourceFile(.{
-        .file = b.path("vendor/mujs/one.c"),
+        .file = b.path("vendor/mujs-1.3.9/one.c"),
         .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
     //tests.linkLibC();
