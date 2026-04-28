@@ -37,7 +37,7 @@ html(lang="en")
 - ✅ **API de C** - API completa compatible con C para integración FFI
 - ✅ **API de C++** - Wrapper moderno de C++ con RAII, excepciones, STL (C++11/17)
 - ✅ **Soporte de editores** - VS Code, Sublime Text, CodeMirror
-- ✅ **Sin dependencias** - Solo Zig 0.15.2 y mujs embebido
+- ✅ **Sin dependencias** - Solo Zig 0.16.0 y mujs embebido
 - ⚡ **Rápido** - Compilación nativa en Zig con optimizaciones
 - **Seguro** - Escapado HTML y prevención XSS
 - **Funciona en Termux/Android** (binario CLI)
@@ -54,7 +54,7 @@ html(lang="en")
 
 ### Requisitos
 
-- **Zig 0.15.2** ([descargar](https://ziglang.org/download/))
+- **Zig 0.16.0** ([descargar](https://ziglang.org/download/))
 
 ### Clonar y compilar
 
@@ -139,7 +139,7 @@ zpug template.zpug \
   --var title="Dashboard" \
   --array tags=prod,stable \
   --json user='{"name":"Alice","role":"admin"}' \
-  --pretty
+  --format
 ```
 
 **Ejemplo de archivo JSON de variables:**
@@ -574,9 +574,6 @@ extends "../layouts/base.zpug"
 //! Comentario de documentación (completamente ignorado)
 //! Puede aparecer antes de declaraciones doctype
 
-// Comentario buffered (visible en HTML con --pretty)
-// Este aparece solo en modo desarrollo
-
 //- Comentario unbuffered (nunca en HTML)
 //- Esto está solo en el código fuente, nunca compilado
 
@@ -590,23 +587,18 @@ extends "../layouts/base.zpug"
 | Sintaxis | Nombre | ¿Procesado? | ¿En HTML? | Caso de Uso |
 |----------|--------|-------------|-----------|-------------|
 | `//!` | Documentación | ❌ No | ❌ No | Metadata de archivo, notas del autor |
-| `//` | Buffered | ✅ Sí | ✅ Sí (solo --pretty) | Depuración en desarrollo |
 | `//-` | Unbuffered | ✅ Sí | ❌ No | Comentarios de código |
 
 **Comportamiento de Comentarios:**
 
 - **Comentarios de documentación (`//!`)**: Completamente ignorados por el tokenizer (pueden aparecer antes de `doctype`)
 - **Modo producción (por defecto)**: Todos los comentarios buffered (`//`) se **eliminan** para tamaño mínimo de archivo
-- **Modo desarrollo (`--pretty`)**: Los comentarios buffered (`//`) se **incluyen** para depuración
 - **Modo legible (`--format`)**: Pretty-print sin comentarios
 - **Comentarios unbuffered (`//-`)**: Siempre eliminados en todos los modos
 
 ```bash
 # Producción: sin comentarios, minificado
 zpug template.zpug -o output.html
-
-# Desarrollo: con comentarios e indentación
-zpug --pretty template.zpug -o output.html
 
 # Legible: indentación sin comentarios
 zpug --format template.zpug -o output.html
@@ -921,6 +913,6 @@ MIT License - ver [LICENSE](LICENSE) para detalles
 
 ---
 
-**Hecho con ❤️ usando Zig 0.15.2 y mujs**
+**Hecho con ❤️ usando Zig 0.16.0 y mujs**
 
 *Last Updated: 2025-12-16*

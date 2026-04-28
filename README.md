@@ -37,7 +37,7 @@ html(lang="en")
 - ✅ **C API** - Full C-compatible API for FFI integration
 - ✅ **C++ API** - Modern C++ wrapper with RAII, exceptions, STL (C++11/17)
 - ✅ **Editor support** - VS Code, Sublime Text, CodeMirror
-- ✅ **No dependencies** - Only Zig 0.15.2 and embedded mujs
+- ✅ **No dependencies** - Only Zig 0.16.0 and embedded mujs
 - ⚡ **Fast** - Native compilation in Zig with optimizations
 - **Secure** - HTML escaping and XSS prevention
 - **Works on Termux/Android** (CLI binary)
@@ -54,7 +54,7 @@ html(lang="en")
 
 ### Requirements
 
-- **Zig 0.15.2** ([download](https://ziglang.org/download/))
+- **Zig 0.16.0** ([download](https://ziglang.org/download/))
 
 ### Clone and build
 
@@ -139,7 +139,7 @@ zpug template.zpug \
   --var title="Dashboard" \
   --array tags=prod,stable \
   --json user='{"name":"Alice","role":"admin"}' \
-  --pretty
+  --format
 ```
 
 **Example JSON variables file:**
@@ -574,9 +574,6 @@ extends "../layouts/base.zpug"
 //! Documentation comment (completely ignored)
 //! Can appear before doctype declarations
 
-// Buffered comment (visible in HTML with --pretty)
-// This appears only in development mode
-
 //- Unbuffered comment (never in HTML)
 //- This is only in source, never compiled
 
@@ -590,23 +587,18 @@ extends "../layouts/base.zpug"
 | Syntax | Name | Processed? | In HTML? | Use Case |
 |--------|------|------------|----------|----------|
 | `//!` | Documentation | ❌ No | ❌ No | File metadata, author notes |
-| `//` | Buffered | ✅ Yes | ✅ Yes (--pretty only) | Development debugging |
 | `//-` | Unbuffered | ✅ Yes | ❌ No | Code comments |
 
 **Comment Behavior:**
 
 - **Documentation comments (`//!`)**: Completely ignored by tokenizer (can appear before `doctype`)
 - **Production mode (default)**: All buffered comments (`//`) are **stripped** for minimal file size
-- **Development mode (`--pretty`)**: Buffered comments (`//`) are **included** for debugging
 - **Readable mode (`--format`)**: Pretty-print without comments
 - **Unbuffered comments (`//-`)**: Always stripped in all modes
 
 ```bash
 # Production: no comments, minified
 zpug template.zpug -o output.html
-
-# Development: with comments and indentation
-zpug --pretty template.zpug -o output.html
 
 # Readable: indentation without comments
 zpug --format template.zpug -o output.html
@@ -921,4 +913,4 @@ MIT License - see [LICENSE](LICENSE) for details
 
 ---
 
-**Made with ❤️ using Zig 0.15.2 and mujs**
+**Made with ❤️ using Zig 0.16.0 and mujs**
