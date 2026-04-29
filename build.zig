@@ -162,6 +162,26 @@ pub fn build(b: *std.Build) void {
     run_example_step.dependOn(&run_example_cmd.step);
 
     // ========================================================================
+    // Example: ScanNumber inspection
+    // Usage: zig build exampleScanNumber
+    // No mujs needed — tokenizer only
+    // ========================================================================
+    const example_scan_number = b.addExecutable(.{
+        .name = "exampleScanNumber",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("exampleScanNumber.zig"),
+            .target = exe_target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+
+    const run_scan_number_cmd = b.addRunArtifact(example_scan_number);
+    run_scan_number_cmd.step.dependOn(b.getInstallStep());
+    const run_scan_number_step = b.step("exampleScanNumber", "Inspect scanNumber token output");
+    run_scan_number_step.dependOn(&run_scan_number_cmd.step);
+
+    // ========================================================================
     // Global Installation
     // Usage: sudo zig build -p /usr/local install
     // Or on Windows: zig build -p "C:\Program Files\zig-pug" install
