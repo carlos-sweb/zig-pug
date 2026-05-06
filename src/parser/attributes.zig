@@ -1,692 +1,258 @@
 //! Attribute Parsing
 //!
-//! This module handles parsing of HTML attributes within parentheses.
+//! Parses HTML attribute lists within parentheses:
+//!   (name=value, name2=value2, ...)
+//!
+//! Attribute value types:
+//!   - Static string:    href="/"          → value = "/", is_expression = false
+//!   - Expression:       class=myClass      → value = "myClass", is_expression = true
+//!   - Interpolation:    value=#{age + 1}   → value = "age + 1", is_expression = true
+//!   - Boolean:          disabled           → value = null
+//!   - Unescaped:        content!=rawHtml   → is_unescaped = true
+//!
+//! The key insight: after `=` (BufferedCode), we call a single `parseExprValue`
+//! function regardless of what follows. It accumulates tokens until a natural
+//! boundary (Comma, RParen, Newline, Eof) while tracking paren depth.
 
 const std = @import("std");
 const ast = @import("../ast/mod.zig");
 const helpers = @import("helpers.zig");
+const tokenizer = @import("../tokenizer/mod.zig");
 
-/// Parser forward declaration
 pub const Parser = @import("mod.zig").Parser;
 
-/// Parse attribute list (key="value", class=myClass)
+// ---------------------------------------------------------------------------
+// Expression accumulator
+// ---------------------------------------------------------------------------
+
+/// Token types that terminate an attribute value expression.
+/// A RParen only terminates when paren_depth == 0 (checked separately).
+const EXPR_TERMINATORS = &[_]tokenizer.TokenType{ .Comma, .Newline, .Eof };
+
+/// Accumulate tokens into a JS expression string until a boundary is reached.
 ///
-/// Parses attributes within parentheses, handling:
-/// - Static attributes: href="/", title="Home"
-/// - Expression attributes: class=myClass, data=userData
-/// - Boolean attributes: disabled, checked
+/// Handles:
+///   - Nested parentheses (method calls): name.toLowerCase()
+///   - Operators: +, -, *, /, >, <, >=, <=, ==, &&, ||, ?, :
+///   - Strings: adds quotes back for JS  →  "hello"
+///   - Identifiers, numbers, booleans
+///   - EscapedInterpol / UnescapedInterpol passthrough
 ///
-/// Syntax: (name=value, name2=value2, ...)
-pub fn parseAttributes(self: *Parser, attributes: *std.ArrayListUnmanaged(ast.Attribute)) !void {
-    const arena_allocator = self.arena.allocator();
+/// Stops at: Comma, Newline, Eof, or unmatched RParen (paren_depth == 0).
+fn parseExprValue(self: *Parser, initial: []const u8) ![]const u8 {
+    const alloc = self.arena.allocator();
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
+    try buf.appendSlice(alloc, initial);
+
+    var paren_depth: i32 = 0;
+
+    while (true) {
+        // Terminate at boundary tokens
+        if (helpers.match(self, EXPR_TERMINATORS)) break;
+
+        // RParen closes the attribute list unless we are inside nested parens
+        if (self.current.type == .RParen and paren_depth == 0) break;
+
+        switch (self.current.type) {
+            // Grouping
+            .LParen => {
+                try buf.append(alloc, '(');
+                paren_depth += 1;
+                try helpers.advance(self);
+            },
+            .RParen => {
+                // paren_depth > 0 here (checked above)
+                try buf.append(alloc, ')');
+                paren_depth -= 1;
+                try helpers.advance(self);
+            },
+            .LBracket => {
+                try buf.append(alloc, '[');
+                try helpers.advance(self);
+            },
+            .RBracket => {
+                try buf.append(alloc, ']');
+                try helpers.advance(self);
+            },
+            .LBrace => {
+                try buf.append(alloc, '{');
+                try helpers.advance(self);
+            },
+            .RBrace => {
+                try buf.append(alloc, '}');
+                try helpers.advance(self);
+            },
+
+            // Arithmetic
+            .Plus => {
+                try buf.append(alloc, '+');
+                try helpers.advance(self);
+            },
+            .Minus => {
+                try buf.append(alloc, '-');
+                try helpers.advance(self);
+            },
+
+            // Property access
+            .Dot => {
+                try buf.append(alloc, '.');
+                try helpers.advance(self);
+            },
+
+            // Comparison
+            .Greater => {
+                try buf.appendSlice(alloc, ">");
+                try helpers.advance(self);
+            },
+            .Less => {
+                try buf.appendSlice(alloc, "<");
+                try helpers.advance(self);
+            },
+            .GreaterEqual => {
+                try buf.appendSlice(alloc, ">=");
+                try helpers.advance(self);
+            },
+            .LessEqual => {
+                try buf.appendSlice(alloc, "<=");
+                try helpers.advance(self);
+            },
+            .Equal => {
+                try buf.appendSlice(alloc, "==");
+                try helpers.advance(self);
+            },
+            .NotEqual => {
+                try buf.appendSlice(alloc, "!=");
+                try helpers.advance(self);
+            },
+
+            // Logical
+            .And => {
+                try buf.appendSlice(alloc, "&&");
+                try helpers.advance(self);
+            },
+            .Or => {
+                try buf.appendSlice(alloc, "||");
+                try helpers.advance(self);
+            },
+
+            // Ternary
+            .Question => {
+                try buf.append(alloc, '?');
+                try helpers.advance(self);
+            },
+            .Colon => {
+                try buf.append(alloc, ':');
+                try helpers.advance(self);
+            },
+
+            // Literals
+            .String => {
+                // Tokenizer strips quotes — add them back for JS
+                const s = try std.fmt.allocPrint(alloc, "\"{s}\"", .{self.current.value});
+                try buf.appendSlice(alloc, s);
+                try helpers.advance(self);
+            },
+            .Ident => {
+                try buf.appendSlice(alloc, self.current.value);
+                try helpers.advance(self);
+            },
+
+            // Interpolation — pass raw expression, wrap in mujs call site
+            .EscapedInterpol => {
+                const s = try std.fmt.allocPrint(alloc, "#{{{s}}}", .{self.current.value});
+                try buf.appendSlice(alloc, s);
+                try helpers.advance(self);
+            },
+            .UnescapedInterpol => {
+                const s = try std.fmt.allocPrint(alloc, "!{{{s}}}", .{self.current.value});
+                try buf.appendSlice(alloc, s);
+                try helpers.advance(self);
+            },
+
+            else => break,
+        }
+    }
+
+    return buf.toOwnedSlice(alloc);
+}
+
+// ---------------------------------------------------------------------------
+// Public entry point
+// ---------------------------------------------------------------------------
+
+/// Parse attribute list `(key=value, key2=value2, ...)` into `attributes`.
+///
+/// Handles:
+///   - BufferedCode  (=)  → escaped expression
+///   - UnescapedCode (!=) → unescaped expression
+///   - No operator        → boolean attribute (disabled, checked, …)
+///   - Multiline attrs    → newlines inside () are skipped
+pub fn parseAttributes(
+    self: *Parser,
+    attributes: *std.ArrayListUnmanaged(ast.Attribute),
+) !void {
+    const alloc = self.arena.allocator();
     _ = try helpers.expect(self, .LParen);
-
-    // Atributos pueden estar en múltiples líneas
     try helpers.skipNewlines(self);
-
-    var pending_attr_name: ?[]const u8 = null;
 
     while (!helpers.match(self, &.{ .RParen, .Eof })) {
         try helpers.skipNewlines(self);
+        if (helpers.match(self, &.{ .RParen, .Eof })) break;
 
-        // Check for spread attributes: &attributes
-        if (helpers.match(self, &.{.Hash})) {
-            // Skip for now - would need special handling
-            try helpers.advance(self);
-            if (helpers.match(self, &.{.Ident})) {
-                try helpers.advance(self);
-            }
-            continue;
-        }
-
-        // Parse attribute name
-        if (!helpers.match(self, &.{.Ident})) {
-            break;
-        }
-        const name_token = self.current;
+        // ── Attribute name ─────────────────────────────────────────────────
+        if (!helpers.match(self, &.{.Ident})) break;
+        const name = self.current.value;
         try helpers.advance(self);
 
+        // ── Optional value ─────────────────────────────────────────────────
         var value: ?[]const u8 = null;
         var is_unescaped = false;
         var is_expression = false;
 
-        // Parse attribute value
-        if (helpers.match(self, &.{.Assign})) {
-            try helpers.advance(self);
+        if (helpers.match(self, &.{ .BufferedCode, .UnescapedCode })) {
+            is_unescaped = self.current.type == .UnescapedCode;
+            try helpers.advance(self); // consume = or !=
 
-            // Parse value - can be string, number, identifier, or complex expression
-            // First, try simple single-token case for backward compatibility
+            // Determine initial fragment and whether it's an expression
             if (helpers.match(self, &.{.String})) {
-                // Save original value with quotes for potential complex expression
-                const original_str = self.current.value;
+                // Static string — but may continue as expression (e.g. "foo" + bar)
+                const raw = self.current.value; // already stripped by tokenizer
+                try helpers.advance(self);
 
-                // Strip quotes from simple string literals (tokenizer includes them)
-                const str_val = self.current.value;
-                if (str_val.len >= 2 and str_val[0] == '"' and str_val[str_val.len - 1] == '"') {
-                    value = str_val[1 .. str_val.len - 1];
+                if (helpers.match(self, &.{ .Plus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .NotEqual, .And, .Or, .Question })) {
+                    // String is start of a compound expression — re-quote for JS
+                    const quoted = try std.fmt.allocPrint(alloc, "\"{s}\"", .{raw});
+                    value = try parseExprValue(self, quoted);
+                    is_expression = true;
                 } else {
-                    value = str_val;
+                    value = raw; // plain static string
                 }
-                try helpers.advance(self);
-
-                // Check if there are more tokens (operators, method calls, etc.)
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
-                    // Complex expression - add quotes back for JavaScript
-                    var expr_str = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{original_str});
-                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
-
-                    while (true) {
-                        // Stop if we hit comma or newline (attribute separators)
-                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
-                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
-                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
-                        if (helpers.match(self, &.{.Plus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Minus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Dot})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LParen})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
-                            paren_depth += 1; // Entering nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RParen})) {
-                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
-                            paren_depth -= 1; // Exiting nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Greater})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Less})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.GreaterEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LessEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Equal})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.And})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Or})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Question})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Colon})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.String})) {
-                            // Tokenizer strips quotes, need to add them back for JavaScript
-                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Number})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Boolean})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Ident})) {
-                            // Save the identifier value in case we need it for pending attribute
-                            const saved_ident_value = self.current.value;
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            is_expression = true;
-                            try helpers.advance(self);
-
-                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
-                            if (helpers.match(self, &.{.BufferedCode})) {
-                                // This Ident is the start of a new attribute, not part of the expression
-                                // Store it as pending and don't restore current (leave it as BufferedCode)
-                                pending_attr_name = saved_ident_value;
-                                // Remove the Ident we added to expr_str by recalculating without it
-                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
-                                break;
-                            }
-
-                            // Check if next token is an operator that continues the expression
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                    value = expr_str;
-                }
-            } else if (helpers.match(self, &.{.Number})) {
+            } else if (helpers.match(self, &.{.EscapedInterpol})) {
+                // #{expr} — mujs expression
                 value = self.current.value;
-                try helpers.advance(self);
-            } else if (helpers.match(self, &.{.Boolean})) {
-                value = self.current.value;
-                try helpers.advance(self);
-            } else if (helpers.match(self, &.{.Ident})) {
-                var expr_str = self.current.value;
-                is_expression = true; // Identifier = expression to evaluate
-                try helpers.advance(self);
-
-                // Check for complex expressions after identifier (e.g., active ? "yes" : "no", obj.method())
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
-                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
-                    while (true) {
-                        // Stop if we hit comma or newline (attribute separators)
-                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
-                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
-                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
-                        if (helpers.match(self, &.{.Plus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Minus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Dot})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LParen})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
-                            paren_depth += 1; // Entering nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RParen})) {
-                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
-                            paren_depth -= 1; // Exiting nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Greater})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Less})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.GreaterEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LessEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Equal})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.And})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Or})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Question})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Colon})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.String})) {
-                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Number})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Boolean})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Ident})) {
-                            // Save the identifier value in case we need it for pending attribute
-                            const saved_ident_value = self.current.value;
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-
-                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
-                            if (helpers.match(self, &.{.BufferedCode})) {
-                                // This Ident is the start of a new attribute, not part of the expression
-                                // Store it as pending and don't restore current (leave it as BufferedCode)
-                                pending_attr_name = saved_ident_value;
-                                // Remove the Ident we added to expr_str by recalculating without it
-                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
-                                break;
-                            }
-
-                            // Check if next token is an operator that continues the expression
-                            // If not (e.g., next token is BufferedCode for a new attribute), stop here
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                }
-                value = expr_str;
-            }
-        } else if (helpers.match(self, &.{.BufferedCode})) {
-            // Handle = for dynamic values (same as Assign)
-            try helpers.advance(self);
-            is_unescaped = false;
-
-            if (helpers.match(self, &.{.String})) {
-                // Save original value with quotes for potential complex expression
-                const original_str = self.current.value;
-
-                // Strip quotes from simple string literals
-                const str_val = self.current.value;
-                if (str_val.len >= 2 and str_val[0] == '"' and str_val[str_val.len - 1] == '"') {
-                    value = str_val[1 .. str_val.len - 1];
-                } else {
-                    value = str_val;
-                }
-                try helpers.advance(self);
-
-                // Check for operators (complex expression with method calls)
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
-                    // Complex expression - add quotes back for JavaScript
-                    var expr_str = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{original_str});
-                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
-
-                    while (true) {
-                        // Stop if we hit comma or newline (attribute separators)
-                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
-                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
-                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
-                        if (helpers.match(self, &.{.Plus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Minus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Dot})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LParen})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
-                            paren_depth += 1; // Entering nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RParen})) {
-                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
-                            paren_depth -= 1; // Exiting nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Greater})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Less})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.GreaterEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LessEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Equal})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.And})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Or})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Question})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Colon})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
-                            is_expression = true;
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.String})) {
-                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Number})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Boolean})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Ident})) {
-                            // Save the identifier value in case we need it for pending attribute
-                            const saved_ident_value = self.current.value;
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            is_expression = true;
-                            try helpers.advance(self);
-
-                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
-                            if (helpers.match(self, &.{.BufferedCode})) {
-                                // This Ident is the start of a new attribute, not part of the expression
-                                // Store it as pending and don't restore current (leave it as BufferedCode)
-                                pending_attr_name = saved_ident_value;
-                                // Remove the Ident we added to expr_str by recalculating without it
-                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
-                                break;
-                            }
-
-                            // Check if next token is an operator that continues the expression
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                    value = expr_str;
-                }
-            } else if (helpers.match(self, &.{.Ident})) {
-                var expr_str = self.current.value;
                 is_expression = true;
                 try helpers.advance(self);
-
-                // Check for complex expressions after identifier (including method calls)
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
-                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
-                    while (true) {
-                        // Stop if we hit comma or newline (attribute separators)
-                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
-                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
-                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
-                        if (helpers.match(self, &.{.Plus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Minus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Dot})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LParen})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
-                            paren_depth += 1; // Entering nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RParen})) {
-                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
-                            paren_depth -= 1; // Exiting nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Greater})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Less})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.GreaterEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LessEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Equal})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.And})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Or})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Question})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Colon})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.String})) {
-                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Number})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Boolean})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Ident})) {
-                            // Save the identifier value in case we need it for pending attribute
-                            const saved_ident_value = self.current.value;
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-
-                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
-                            if (helpers.match(self, &.{.BufferedCode})) {
-                                // This Ident is the start of a new attribute, not part of the expression
-                                // Store it as pending and don't restore current (leave it as BufferedCode)
-                                pending_attr_name = saved_ident_value;
-                                // Remove the Ident we added to expr_str by recalculating without it
-                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
-                                break;
-                            }
-
-                            // Check if next token is an operator that continues the expression
-                            // If not (e.g., next token is BufferedCode for a new attribute), stop here
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                }
-                value = expr_str;
-            }
-        } else if (helpers.match(self, &.{.UnescapedCode})) {
-            // Handle != for unescaped dynamic values
-            try helpers.advance(self);
-            is_unescaped = true;
-
-            if (helpers.match(self, &.{.String})) {
-                // Strip quotes from simple string literals
-                const str_val = self.current.value;
-                if (str_val.len >= 2 and str_val[0] == '"' and str_val[str_val.len - 1] == '"') {
-                    value = str_val[1 .. str_val.len - 1];
-                } else {
-                    value = str_val;
-                }
-                try helpers.advance(self);
             } else if (helpers.match(self, &.{.Ident})) {
-                var expr_str = self.current.value;
-                is_expression = true;
+                // Identifier or start of complex expression
+                const initial = self.current.value;
                 try helpers.advance(self);
-
-                // Check for complex expressions after identifier (including method calls)
-                if (helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question})) {
-                    var paren_depth: i32 = 0; // Track parenthesis nesting for method calls
-                    while (true) {
-                        // Stop if we hit comma or newline (attribute separators)
-                        if (helpers.match(self, &.{ .Comma, .Eof, .Newline })) break;
-                        // Stop if we hit RParen and we're not inside nested parens (this closes the attributes)
-                        if (helpers.match(self, &.{.RParen}) and paren_depth == 0) break;
-                        if (helpers.match(self, &.{.Plus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "+" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Minus})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "-" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Dot})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "." });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "[" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RBracket})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "]" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LParen})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "(" });
-                            paren_depth += 1; // Entering nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.RParen})) {
-                            // This is a closing paren of a method call (we already checked paren_depth in while condition)
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ")" });
-                            paren_depth -= 1; // Exiting nested parentheses
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Greater})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Less})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.GreaterEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ">=" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.LessEqual})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "<=" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Equal})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "==" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.And})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "&&" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Or})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "||" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Question})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, "?" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Colon})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, ":" });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.String})) {
-                            const str_with_quotes = try std.fmt.allocPrint(arena_allocator, "\"{s}\"", .{self.current.value});
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, str_with_quotes });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Number})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Boolean})) {
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-                        } else if (helpers.match(self, &.{.Ident})) {
-                            // Save the identifier value in case we need it for pending attribute
-                            const saved_ident_value = self.current.value;
-                            expr_str = try std.mem.concat(arena_allocator, u8, &[_][]const u8{ expr_str, self.current.value });
-                            try helpers.advance(self);
-
-                            // Check if next token is BufferedCode (=), which means this Ident is a new attribute
-                            if (helpers.match(self, &.{.BufferedCode})) {
-                                // This Ident is the start of a new attribute, not part of the expression
-                                // Store it as pending and don't restore current (leave it as BufferedCode)
-                                pending_attr_name = saved_ident_value;
-                                // Remove the Ident we added to expr_str by recalculating without it
-                                expr_str = expr_str[0..(expr_str.len - saved_ident_value.len)];
-                                break;
-                            }
-
-                            // Check if next token is an operator that continues the expression
-                            // If not (e.g., next token is BufferedCode for a new attribute), stop here
-                            if (!helpers.match(self, &.{.Plus, .Minus, .Dot, .LBracket, .LParen, .Greater, .Less, .GreaterEqual, .LessEqual, .Equal, .And, .Or, .Question, .Colon})) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                }
-                value = expr_str;
+                value = try parseExprValue(self, initial);
+                is_expression = true;
             }
+            // else: value remains null (malformed, skip gracefully)
         }
-        // If no value, it's a boolean attribute (e.g., checked, disabled)
+        // else: boolean attribute — value stays null
 
-        try attributes.append(arena_allocator, .{
-            .name = name_token.value,
+        try attributes.append(alloc, .{
+            .name = name,
             .value = value,
             .is_unescaped = is_unescaped,
             .is_expression = is_expression,
         });
 
-        // Check if there's a pending attribute from expression parsing
-        if (pending_attr_name) |pending_name| {
-            // Current is BufferedCode (=), parse the value
-            if (!helpers.match(self, &.{.BufferedCode})) {
-                return error.UnexpectedToken;
-            }
-            try helpers.advance(self);
-
-            // Parse the pending attribute's value (simplified - just handle common cases)
-            var pending_value: ?[]const u8 = null;
-            var pending_is_expression = false;
-
-            if (helpers.match(self, &.{.String})) {
-                const str_val = self.current.value;
-                if (str_val.len >= 2 and str_val[0] == '"' and str_val[str_val.len - 1] == '"') {
-                    pending_value = str_val[1 .. str_val.len - 1];
-                } else {
-                    pending_value = str_val;
-                }
-                try helpers.advance(self);
-            } else if (helpers.match(self, &.{.Ident})) {
-                pending_value = self.current.value;
-                pending_is_expression = true;
-                try helpers.advance(self);
-            }
-
-            try attributes.append(arena_allocator, .{
-                .name = pending_name,
-                .value = pending_value,
-                .is_unescaped = false,
-                .is_expression = pending_is_expression,
-            });
-
-            pending_attr_name = null;
-        }
-
         try helpers.skipNewlines(self);
 
-        // Skip comma if present (optional)
+        // Optional comma separator
         if (helpers.match(self, &.{.Comma})) {
             try helpers.advance(self);
             try helpers.skipNewlines(self);

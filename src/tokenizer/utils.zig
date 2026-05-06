@@ -89,10 +89,22 @@ pub fn getKeyword(ident: []const u8) ?TokenType {
         .{ "extends", .Extends },
         .{ "block",   .Block },
         .{ "append",  .Append },
-        .{ "prepend", .Prepend },
-        .{ "doctype", .Doctype },
-        .{ "true",    .Boolean },
-        .{ "false",   .Boolean },
+        .{ "prepend",  .Prepend },
+        .{ "doctype",  .Doctype },
     });
     return map.get(ident);
+}
+
+/// Returns true if the given TokenType is a Pug directive keyword.
+/// Used by the tokenizer to prevent Text activation after keyword lines.
+pub fn isKeywordType(token_type: TokenType) bool {
+    return switch (token_type) {
+        .If, .Else, .Unless,
+        .Each, .While, .In,
+        .Case, .When, .Default,
+        .Mixin, .Include, .Extends,
+        .Block, .Append, .Prepend,
+        .Doctype => true,
+        else => false,
+    };
 }

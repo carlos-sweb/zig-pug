@@ -48,7 +48,8 @@ pub fn scanInterpolation(tokenizer: anytype) !Token {
                 _ = tokenizer.advance(); // }
                 const token_type = if (is_unescaped) TokenType.UnescapedInterpol else TokenType.EscapedInterpol;
 
-                // Interpolations don't change state - they can appear in text or attributes
+                // State restoration is handled by the caller (mod.zig) which
+                // knows whether we were in a text context before the interpolation.
                 return Token.init(token_type, value, start_line, start_col);
             }
         }

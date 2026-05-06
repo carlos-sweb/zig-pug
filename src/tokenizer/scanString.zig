@@ -1,57 +1,50 @@
 //! Scan string literal token
 //!
-//! Reads quoted string (double or single quotes) with escape support.
-//! In attribute context, transitions state back to AttrName after string.
+//! Reads a quoted string (double or single quotes) with escape support.
+//! The tokenizer does not interpret the string content — it captures
+//! everything between the delimiters as-is and passes it to the parser.
 //!
 //! Parameters:
-//! - quote: Opening quote character (' or ")
+//!   quote — opening quote character ('"' or '\'')
 //!
-//! Returns: String token with content between quotes
+//! Returns: String token with content between quotes (quotes not included)
 //!
 //! Errors:
-//! - UnterminatedString: Missing closing quote
+//!   UnterminatedString — closing quote never found
+//!
+//! Escape sequences:
+//!   Any character preceded by \ is included literally.
+//!   This covers \", \', \\, \n, \t and anything else.
 //!
 //! Examples:
-//! ```
-//! "hello"           → String("hello")
-//! 'world'           → String("world")
-//! "it's ok"         → String("it's ok")
-//! "line\nbreak"     → String("line\nbreak") (with escape)
-//! ```
+//!   "hello"            →  String("hello")
+//!   'world'            →  String("world")
+//!   "it's ok"          →  String("it's ok")
+//!   "say \"hi\""       →  String("say \"hi\"")
+//!   'it\'s fine'       →  String("it\'s fine")
+//!   "alert('hi')"      →  String("alert('hi')")
 
-const std = @import("std");
 const Token = @import("Token.zig").Token;
 const TokenType = @import("TokenType.zig").TokenType;
-const TokenizerState = @import("TokenizerState.zig").TokenizerState;
 
 pub fn scanString(tokenizer: anytype, quote: u8) !Token {
     const start_line = tokenizer.line;
     const start_col = tokenizer.column;
-    _ = tokenizer.advance(); // Skip opening quote
+    _ = tokenizer.advance(); // consume opening quote
 
     const start = tokenizer.pos;
+
     while (tokenizer.peekChar()) |ch| {
         if (ch == quote) {
+            // Found closing quote — capture content and consume it
             const value = tokenizer.source[start..tokenizer.pos];
-            _ = tokenizer.advance(); // Skip closing quote
-
-            // State transitions
-            switch (tokenizer.state) {
-                .AttrValue, .AttrString => {
-                    // In attributes, after string we expect comma or closing paren
-                    tokenizer.state = .AttrName;
-                },
-                else => {
-                    // In other contexts, strings don't change state
-                },
-            }
-
+            _ = tokenizer.advance();
             return Token.init(.String, value, start_line, start_col);
         }
         if (ch == '\\') {
-            _ = tokenizer.advance(); // Skip escape
-            if (tokenizer.peekChar()) |_| {
-                _ = tokenizer.advance(); // Skip escaped char
+            _ = tokenizer.advance(); // consume backslash
+            if (tokenizer.peekChar() != null) {
+                _ = tokenizer.advance(); // consume escaped character
             }
         } else {
             _ = tokenizer.advance();

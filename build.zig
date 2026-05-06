@@ -162,26 +162,73 @@ pub fn build(b: *std.Build) void {
     run_example_step.dependOn(&run_example_cmd.step);
 
     // ========================================================================
-    // Example: ScanNumber inspection
-    // Usage: zig build exampleScanNumber
+    // Example:  inspection
+    // Usage: zig build exampleTokenizer
     // No mujs needed — tokenizer only
     // ========================================================================
-    const example_scan_number = b.addExecutable(.{
-        .name = "exampleScanNumber",
+    const example_tokenizer = b.addExecutable(.{
+        .name = "exampleTokenizer",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("exampleScanNumber.zig"),
+            .root_source_file = b.path("exampleTokenizer.zig"),
             .target = exe_target,
             .optimize = optimize,
             .link_libc = true,
         }),
     });
 
-    const run_scan_number_cmd = b.addRunArtifact(example_scan_number);
-    run_scan_number_cmd.step.dependOn(b.getInstallStep());
-    const run_scan_number_step = b.step("exampleScanNumber", "Inspect scanNumber token output");
-    run_scan_number_step.dependOn(&run_scan_number_cmd.step);
+    const run_example_tokenizer_cmd = b.addRunArtifact(example_tokenizer);
+    //run_example_tokenizer_cmd.step.dependOn(b.getInstallStep());
+    const run_example_tokenizer_step = b.step("exampleTokenizer", "Inspect Tokenizer");
+    run_example_tokenizer_step.dependOn(&run_example_tokenizer_cmd.step);
 
     // ========================================================================
+    // Example:  inspection
+    // Usage: zig build exampleParser
+    // No mujs needed — parser only
+    // ========================================================================
+    const example_parser = b.addExecutable(.{
+        .name = "exampleParser",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("exampleParser.zig"),
+            .target = exe_target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+
+    const run_example_parser_cmd = b.addRunArtifact(example_parser);
+    //run_example_parser_cmd.step.dependOn(b.getInstallStep());
+    const run_example_parser_step = b.step("exampleParser", "Inspect Parser");
+    run_example_parser_step.dependOn(&run_example_parser_cmd.step);
+
+    // ========================================================================
+    // ========================================================================
+    // Example:  inspection
+    // Usage: zig build exampleCompiler
+    // No mujs needed — parser only
+    // ========================================================================
+    const example_compiler = b.addExecutable(.{
+        .name = "exampleCompiler",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("exampleCompiler.zig"),
+            .target = exe_target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+
+    // Compile mujs from source for cross-compilation
+    example_compiler.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
+    example_compiler.root_module.addCSourceFile(.{
+        .file = b.path("vendor/mujs-1.3.9/one.c"),
+        .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
+    });
+
+    const run_example_compiler_cmd = b.addRunArtifact(example_compiler);
+    //run_example_compiler_cmd.step.dependOn(b.getInstallStep());
+    const run_example_compiler_step = b.step("exampleCompiler", "Inspect Compiler");
+    run_example_compiler_step.dependOn(&run_example_compiler_cmd.step);
+
     // Global Installation
     // Usage: sudo zig build -p /usr/local install
     // Or on Windows: zig build -p "C:\Program Files\zig-pug" install

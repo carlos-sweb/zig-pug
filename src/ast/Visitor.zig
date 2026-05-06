@@ -1,118 +1,132 @@
-//! Visitor Pattern
+//! AST Visitor Pattern
 //!
-//! Generic visitor pattern implementation for traversing AST nodes.
-//! Useful for implementing custom AST transformations and analysis.
+//! Traversal generico del arbol AST usando el patron Visitor.
+//!
+//! Uso:
+//!   const MyCtx = struct {
+//!       fn visit(ctx: *anyopaque, node: *AstNode) anyerror!VisitAction {
+//!           const self: *@This() = @ptrCast(@alignCast(ctx));
+//!           _ = self;
+//!           _ = node;
+//!           return .Continue;
+//!       }
+//!   };
+//!
+//!   var ctx = MyCtx{};
+//!   var visitor = Visitor{ .context = &ctx, .visitFn = MyCtx.visit };
+//!   _ = try visitor.visit(root);
 
+const std = @import("std");
 const AstNode = @import("AstNode.zig").AstNode;
 
-/// Generic visitor for traversing AST nodes
+/// Accion que controla el traversal despues de visitar un nodo.
+pub const VisitAction = enum {
+    /// Continuar visitando hijos y hermanos normalmente.
+    Continue,
+    /// Visitar hermanos pero no bajar a los hijos de este nodo.
+    SkipChildren,
+    /// Detener el traversal completo inmediatamente.
+    Stop,
+};
+
+/// Visitor generico — recorre el arbol AST en pre-order.
 ///
-/// Implements the visitor pattern for AST traversal. Allows custom
-/// processing of each node while automatically handling tree traversal.
-///
-/// Fields:
-/// - context: Opaque pointer to user-defined context
-/// - visitFn: Function to call for each node
-///
-/// Example:
-/// ```zig
-/// const MyContext = struct {
-///     count: usize,
-///
-///     fn visitNode(ctx: *anyopaque, node: *AstNode) !void {
-///         const self: *MyContext = @ptrCast(@alignCast(ctx));
-///         self.count += 1;
-///     }
-/// };
-///
-/// var ctx = MyContext{ .count = 0 };
-/// var visitor = Visitor{
-///     .context = &ctx,
-///     .visitFn = MyContext.visitNode,
-/// };
-/// try visitor.visit(root_node);
-/// // ctx.count now contains total node count
-/// ```
+/// El campo `visitFn` es llamado antes de descender a los hijos.
+/// El retorno `bool` indica si el traversal debe continuar (false = Stop).
 pub const Visitor = struct {
-    const Self = @This();
-
     context: *anyopaque,
-    visitFn: *const fn (*anyopaque, *AstNode) anyerror!void,
+    visitFn: *const fn (ctx: *anyopaque, node: *AstNode) anyerror!VisitAction,
 
-    /// Visit a node and recursively visit all its children
-    ///
-    /// Calls visitFn for the current node, then recursively visits
-    /// all child nodes in the tree.
-    ///
-    /// Parameters:
-    /// - node: AST node to visit
-    pub fn visit(self: *Self, node: *AstNode) !void {
-        try self.visitFn(self.context, node);
+    /// Visita `node` y su subárbol.
+    /// Retorna `false` si el traversal fue detenido con `.Stop`.
+    pub fn visit(self: *Visitor, node: *AstNode) anyerror!bool {
+        const action = try self.visitFn(self.context, node);
 
+        switch (action) {
+            .Stop        => return false,
+            .SkipChildren => return true,
+            .Continue    => {},
+        }
+
+        // Descender a hijos segun tipo de nodo
         switch (node.data) {
             .Document => |*doc| {
                 for (doc.children.items) |child| {
-                    try self.visit(child);
+                    if (!try self.visit(child)) return false;
                 }
             },
+
             .Tag => |*tag| {
                 for (tag.children.items) |child| {
-                    try self.visit(child);
+                    if (!try self.visit(child)) return false;
                 }
             },
+
             .Conditional => |*cond| {
                 for (cond.then_branch.items) |child| {
-                    try self.visit(child);
+                    if (!try self.visit(child)) return false;
                 }
                 if (cond.else_branch) |*else_br| {
                     for (else_br.items) |child| {
-                        try self.visit(child);
+                        if (!try self.visit(child)) return false;
                     }
                 }
             },
+
             .Loop => |*loop| {
                 for (loop.body.items) |child| {
-                    try self.visit(child);
+                    if (!try self.visit(child)) return false;
                 }
                 if (loop.else_branch) |*else_br| {
                     for (else_br.items) |child| {
-                        try self.visit(child);
+                        if (!try self.visit(child)) return false;
                     }
                 }
             },
+
             .MixinDef => |*mixin| {
                 for (mixin.body.items) |child| {
-                    try self.visit(child);
+                    if (!try self.visit(child)) return false;
                 }
             },
+
             .MixinCall => |*call| {
+                // Nota: call.attributes son Attribute structs, no AstNode.
+                // El compiler los accede directamente via call.attributes.items.
                 if (call.body) |*body| {
                     for (body.items) |child| {
-                        try self.visit(child);
+                        if (!try self.visit(child)) return false;
                     }
                 }
             },
+
             .Block => |*block| {
                 for (block.body.items) |child| {
-                    try self.visit(child);
+                    if (!try self.visit(child)) return false;
                 }
             },
+
             .Case => |*case_node| {
                 for (case_node.cases.items) |when_node| {
-                    try self.visit(when_node);
+                    if (!try self.visit(when_node)) return false;
                 }
-                if (case_node.default) |*def| {
-                    for (def.items) |child| {
-                        try self.visit(child);
+                if (case_node.default) |*default| {
+                    for (default.items) |child| {
+                        if (!try self.visit(child)) return false;
                     }
                 }
             },
+
             .When => |*when| {
                 for (when.body.items) |child| {
-                    try self.visit(child);
+                    if (!try self.visit(child)) return false;
                 }
             },
-            else => {},
+
+            // Nodos hoja — sin hijos que visitar
+            .Text, .Interpolation, .Code, .Comment, .Include, .Extends => {},
         }
+
+        return true;
     }
 };

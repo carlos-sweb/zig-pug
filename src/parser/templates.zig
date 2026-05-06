@@ -97,28 +97,29 @@ pub fn parseExtends(self: *Parser) anyerror!*ast.AstNode {
 }
 
 /// Parse block directive
+/// Parse block/append/prepend directive.
 ///
 /// Defines a content block that can be overridden in child templates.
 ///
 /// Syntax:
 /// ```
-/// block content
+/// block content        → mode = Replace (default)
 ///   p Default content
+///
+/// append scripts       → mode = Append
+///   script(src="x.js")
+///
+/// prepend styles       → mode = Prepend
+///   link(rel="stylesheet")
 /// ```
-pub fn parseBlock(self: *Parser) anyerror!*ast.AstNode {
+///
+/// Note: `mode` is passed by the caller because the dispatch token
+/// (.Block / .Append / .Prepend) is already current when this is called.
+/// Passing it as a parameter avoids re-reading a consumed token.
+pub fn parseBlock(self: *Parser, mode: ast.BlockMode) anyerror!*ast.AstNode {
     const arena_allocator = self.arena.allocator();
     const start_line = self.current.line;
-    try helpers.advance(self); // consume 'block'
-
-    // Determine block mode
-    var mode = ast.BlockMode.Replace;
-    if (helpers.match(self, &.{.Append})) {
-        mode = ast.BlockMode.Append;
-        try helpers.advance(self);
-    } else if (helpers.match(self, &.{.Prepend})) {
-        mode = ast.BlockMode.Prepend;
-        try helpers.advance(self);
-    }
+    try helpers.advance(self); // consume 'block' / 'append' / 'prepend'
 
     // Parse block name
     const name_token = try helpers.expect(self, .Ident);

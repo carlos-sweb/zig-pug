@@ -79,7 +79,24 @@ pub fn parseCode(self: *Parser) anyerror!*ast.AstNode {
     const token = self.current;
     try helpers.advance(self);
 
-    const is_buffered = token.type == .BufferedCode or token.type == .UnescapedCode;
+    // JsStatement already contains the full code as a single token value.
+    // No need to reconstruct token by token — just return it directly.
+    // Example: "- var name = \"Claude\"" → JsStatement("var name = \"Claude\"")
+    if (token.type == .JsStatement) {
+        return try ast.AstNode.create(
+            arena_allocator,
+            .Code,
+            token.line,
+            token.column,
+            .{ .Code = .{
+                .code         = token.value,
+                .is_buffered  = false,
+                .is_unescaped = false,
+            } },
+        );
+    }
+
+    const is_buffered  = token.type == .BufferedCode or token.type == .UnescapedCode;
     const is_unescaped = token.type == .UnescapedCode;
 
     // Collect code until newline

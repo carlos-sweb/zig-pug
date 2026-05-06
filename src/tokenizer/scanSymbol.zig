@@ -1,12 +1,24 @@
-//! Scan symbol or special shorthand token
+//! Scan symbol or operator token
 //!
-//! Handles:
-//! - Shorthand syntax: .class and #id (in tag context)
-//! - Single-character symbols: ( ) [ ] { } , : | . #
-//! - Multi-character operators: != >= <= == && ||
-//! - Code markers: = (buffered), - (unbuffered)
+//! Recognizes single and multi-character punctuation and operators.
+//! Also handles the Pug shorthands:
+//!   .classname  → Class token
+//!   #idname     → Id token
 //!
-//! UTF-8 helpers delegated to utils.zig.
+//! The tokenizer does not track whether it is inside an attribute list
+//! or a JS expression — that context belongs to the parser.
+//!
+//! State transitions:
+//!   After reading plain text content (|, space after tag) → Text state
+//!   Everything else → no state change, stays in Root
+//!
+//! Examples:
+//!   "("   → LParen
+//!   "!="  → NotEqual
+//!   ".foo" → Class("foo")
+//!   "#bar" → Id("bar")
+//!   "."   → Dot  (when not followed by an identifier start)
+//!   "#"   → Hash (when not followed by an identifier start)
 
 const std = @import("std");
 const Token = @import("Token.zig").Token;
@@ -14,7 +26,7 @@ const TokenType = @import("TokenType.zig").TokenType;
 const TokenizerState = @import("TokenizerState.zig").TokenizerState;
 const utils = @import("utils.zig");
 
-/// Scan a class name or id name after . or # has already been consumed
+/// Read a name after . or # has been consumed
 fn scanShorthandName(tokenizer: anytype) []const u8 {
     const start = tokenizer.pos;
     while (tokenizer.peekChar()) |c| {
@@ -35,12 +47,9 @@ fn scanShorthandName(tokenizer: anytype) []const u8 {
     return tokenizer.source[start..tokenizer.pos];
 }
 
-/// Returns true when the current state allows .class / #id shorthand
-fn isTagContext(state: TokenizerState) bool {
-    return switch (state) {
-        .Root, .Indent, .TagStart, .TagClass, .TagId => true,
-        else => false,
-    };
+/// Returns true if the next character can start an identifier
+fn isIdentStart(ch: u8) bool {
+    return std.ascii.isAlphabetic(ch) or ch == '_' or ch == '-' or utils.isUtf8Start(ch);
 }
 
 pub fn scanSymbol(tokenizer: anytype) !Token {
@@ -48,36 +57,61 @@ pub fn scanSymbol(tokenizer: anytype) !Token {
     const start_col = tokenizer.column;
     const ch = tokenizer.peekChar().?;
 
-    // .class shorthand
+    // .classname shorthand — only outside parentheses AND not in keyword context
+    // In keyword lines (if/each/while/...) a dot is always a property accessor (Dot),
+    // never a CSS class shorthand.
     if (ch == '.') {
         _ = tokenizer.advance();
-        if (isTagContext(tokenizer.state)) {
-            if (tokenizer.peekChar()) |next_ch| {
-                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-' or utils.isUtf8Start(next_ch)) {
+        if (tokenizer.paren_depth == 0 and !tokenizer.line_started_with_keyword) {
+            if (tokenizer.peekChar()) |next| {
+                if (isIdentStart(next)) {
                     const value = scanShorthandName(tokenizer);
-                    tokenizer.state = .TagClass;
                     return Token.init(.Class, value, start_line, start_col);
                 }
             }
         }
-        const value = tokenizer.source[tokenizer.pos - 1 .. tokenizer.pos];
-        return Token.init(.Dot, value, start_line, start_col);
+        return Token.init(.Dot, ".", start_line, start_col);
     }
 
-    // #id shorthand
+    // #idname shorthand — only outside parentheses
     if (ch == '#') {
         _ = tokenizer.advance();
-        if (isTagContext(tokenizer.state)) {
-            if (tokenizer.peekChar()) |next_ch| {
-                if (std.ascii.isAlphabetic(next_ch) or next_ch == '_' or next_ch == '-' or utils.isUtf8Start(next_ch)) {
+        if (tokenizer.paren_depth == 0) {
+            if (tokenizer.peekChar()) |next| {
+                if (isIdentStart(next)) {
                     const value = scanShorthandName(tokenizer);
-                    tokenizer.state = .TagId;
                     return Token.init(.Id, value, start_line, start_col);
                 }
             }
         }
-        const value = tokenizer.source[tokenizer.pos - 1 .. tokenizer.pos];
-        return Token.init(.Hash, value, start_line, start_col);
+        return Token.init(.Hash, "#", start_line, start_col);
+    }
+
+    // Digits — read the full sequence and emit as Ident.
+    // The tokenizer does not interpret numeric values.
+    // The parser decides what a digit sequence means in context.
+    //
+    // A dot is consumed only if immediately followed by another digit,
+    // so "0.5" → Ident("0.5") but "3.items" → Ident("3") + Class("items")
+    if (std.ascii.isDigit(ch)) {
+        const start = tokenizer.pos;
+        while (tokenizer.peekChar()) |c| {
+            if (std.ascii.isDigit(c)) {
+                _ = tokenizer.advance();
+            } else if (c == '.') {
+                // Only consume the dot if the next character is a digit
+                const next = tokenizer.peekAhead(1);
+                if (next != null and std.ascii.isDigit(next.?)) {
+                    _ = tokenizer.advance(); // consume dot
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        const value = tokenizer.source[start..tokenizer.pos];
+        return Token.init(.Ident, value, start_line, start_col);
     }
 
     _ = tokenizer.advance();
@@ -85,83 +119,83 @@ pub fn scanSymbol(tokenizer: anytype) !Token {
     // Multi-character operators
     if (ch == '!' and tokenizer.peekChar() == '=') {
         _ = tokenizer.advance();
-        tokenizer.state = .Code;
-        return Token.init(.UnescapedCode, tokenizer.source[tokenizer.pos - 2 .. tokenizer.pos], start_line, start_col);
+        return Token.init(.NotEqual, "!=", start_line, start_col);
     }
     if (ch == '>' and tokenizer.peekChar() == '=') {
         _ = tokenizer.advance();
-        return Token.init(.GreaterEqual, tokenizer.source[tokenizer.pos - 2 .. tokenizer.pos], start_line, start_col);
+        return Token.init(.GreaterEqual, ">=", start_line, start_col);
     }
     if (ch == '<' and tokenizer.peekChar() == '=') {
         _ = tokenizer.advance();
-        return Token.init(.LessEqual, tokenizer.source[tokenizer.pos - 2 .. tokenizer.pos], start_line, start_col);
+        return Token.init(.LessEqual, "<=", start_line, start_col);
     }
     if (ch == '=' and tokenizer.peekChar() == '=') {
         _ = tokenizer.advance();
-        return Token.init(.Equal, tokenizer.source[tokenizer.pos - 2 .. tokenizer.pos], start_line, start_col);
+        return Token.init(.Equal, "==", start_line, start_col);
     }
     if (ch == '&' and tokenizer.peekChar() == '&') {
         _ = tokenizer.advance();
-        return Token.init(.And, tokenizer.source[tokenizer.pos - 2 .. tokenizer.pos], start_line, start_col);
+        return Token.init(.And, "&&", start_line, start_col);
     }
     if (ch == '|' and tokenizer.peekChar() == '|') {
         _ = tokenizer.advance();
-        return Token.init(.Or, tokenizer.source[tokenizer.pos - 2 .. tokenizer.pos], start_line, start_col);
+        return Token.init(.Or, "||", start_line, start_col);
     }
 
-    // State transitions for structural characters
-    switch (ch) {
-        '(' => {
-            if (tokenizer.state == .TagStart or tokenizer.state == .TagClass or tokenizer.state == .TagId) {
-                tokenizer.state = .AttrStart;
-            }
-        },
-        ')' => {
-            if (tokenizer.state == .AttrName or tokenizer.state == .AttrValue or tokenizer.state == .AttrStart) {
-                tokenizer.state = .TagStart;
-            }
-        },
-        '=' => {
-            if (tokenizer.state == .AttrName) {
-                tokenizer.state = .AttrEquals;
-            }
-        },
-        else => {},
+    // Pipe at start of line means plain text block — switch to Text state
+    if (ch == '|') {
+        tokenizer.state = .Text;
+        return Token.init(.Pipe, "|", start_line, start_col);
     }
 
-    const value = tokenizer.source[tokenizer.pos - 1 .. tokenizer.pos];
-
+    // Single-character symbols
     const token_type: TokenType = switch (ch) {
-        '(' => .LParen,
-        ')' => .RParen,
+        '(' => blk: {
+            tokenizer.paren_depth += 1;
+            break :blk .LParen;
+        },
+        ')' => blk: {
+            if (tokenizer.paren_depth > 0) tokenizer.paren_depth -= 1;
+            break :blk .RParen;
+        },
         '[' => .LBracket,
         ']' => .RBracket,
         '{' => .LBrace,
         '}' => .RBrace,
         ',' => .Comma,
         ':' => .Colon,
-        '|' => .Pipe,
-        '?' => .Question,
         '+' => .Plus,
+        '-' => blk: {
+            const is_line_start = switch (tokenizer.last_token_type) {
+                .Newline, .Indent, .Dedent, .Eof => true,
+                else => false,
+            };
+            if (is_line_start) {
+                if (tokenizer.peekChar() == ' ') _ = tokenizer.advance();
+                const stmt_start = tokenizer.pos;
+                while (tokenizer.peekChar()) |c| {
+                    if (c == '\n') break;
+                    _ = tokenizer.advance();
+                }
+                const stmt_value = tokenizer.source[stmt_start..tokenizer.pos];
+                return Token.init(.JsStatement, stmt_value, start_line, start_col);
+            }
+            break :blk .Minus;
+        },
+        '=' => .BufferedCode,
         '>' => .Greater,
         '<' => .Less,
-        '=' => blk: {
-            tokenizer.state = .Code;
-            break :blk .BufferedCode;
-        },
-        '-' => blk: {
-            tokenizer.state = .Code;
-            break :blk .UnbufferedCode;
-        },
-        '&', '!', '@', '$', '%', '^', '~', '`' => .Ident,
+        '?' => .Question,
+        '!' => .Ident, // lone ! without { — parser decides; typically trailing punctuation
         else => {
-            if (tokenizer.state == .TagStart or tokenizer.state == .TagClass or tokenizer.state == .TagId) {
-                return Token.init(.Ident, value, start_line, start_col);
-            }
-            std.debug.print("Unexpected character at {d}:{d}: '{c}' (0x{x})\n", .{ start_line, start_col, ch, ch });
+            std.debug.print(
+                "Unexpected character at {d}:{d}: '{c}' (0x{x})\n",
+                .{ start_line, start_col, ch, ch },
+            );
             return error.UnexpectedCharacter;
         },
     };
 
+    const value = tokenizer.source[tokenizer.pos - 1 .. tokenizer.pos];
     return Token.init(token_type, value, start_line, start_col);
 }

@@ -1,167 +1,253 @@
 //! AST Pretty Printer
 //!
-//! Debug utility for printing AST trees in a readable format.
+//! Debug utility para imprimir el árbol AST en formato indentado legible.
+//! Usa std.debug.print — compatible con Zig 0.16.
+//!
+//! Uso:
+//!   ast.printAst(root, 0);
+//!   ast.printAstDebug(root, 0); // alias
 
 const std = @import("std");
 const AstNode = @import("AstNode.zig").AstNode;
 
-/// Print indentation spaces
-fn printIndent(indent: usize) void {
+fn writeIndent(indent: usize) void {
     var i: usize = 0;
     while (i < indent) : (i += 1) {
         std.debug.print("  ", .{});
     }
 }
 
-/// Pretty-print an AST node and its children
-///
-/// Recursively prints the AST tree structure with indentation
-/// for debugging and visualization.
-///
-/// Parameters:
-/// - node: AST node to print
-/// - indent: Current indentation level (0 for root)
-///
-/// Example:
-/// ```zig
-/// printAst(root_node, 0);
-/// // Output:
-/// // Document (line 1)
-/// //   Tag (line 1)
-/// //     name: div
-/// //     Tag (line 2)
-/// //       name: p
-/// //       Text (line 2)
-/// //         content: "Hello"
-/// ```
 pub fn printAst(node: *AstNode, indent: usize) void {
-    printIndent(indent);
-    std.debug.print("{s} (line {d})\n", .{ @tagName(node.type), node.line });
+    writeIndent(indent);
+    std.debug.print("{s} (line {d}, col {d})\n", .{
+        @tagName(node.type), node.line, node.column,
+    });
 
     switch (node.data) {
         .Document => |*doc| {
-            for (doc.children.items) |child| {
-                printAst(child, indent + 1);
+            writeIndent(indent + 1);
+            if (doc.doctype) |dt| {
+                std.debug.print("doctype: {s}\n", .{dt});
+            } else {
+                std.debug.print("doctype: (none)\n", .{});
             }
+            for (doc.children.items) |child| printAst(child, indent + 1);
         },
-        .Tag => |*tag| {
-            printIndent(indent + 1);
-            std.debug.print("name: {s}\n", .{tag.name});
 
-            // Print attributes if any
+        .Tag => |*tag| {
+            writeIndent(indent + 1);
+            std.debug.print("name: {s}\n", .{tag.name});
+            writeIndent(indent + 1);
+            std.debug.print("self_closing: {}\n", .{tag.is_self_closing});
+            writeIndent(indent + 1);
             if (tag.attributes.items.len > 0) {
-                printIndent(indent + 1);
                 std.debug.print("attributes:\n", .{});
                 for (tag.attributes.items) |attr| {
-                    printIndent(indent + 2);
+                    writeIndent(indent + 2);
                     if (attr.value) |val| {
-                        std.debug.print("{s}=\"{s}\"\n", .{ attr.name, val });
+                        const op: []const u8 = if (attr.is_unescaped) "!=" else "=";
+                        const kind: []const u8 = if (attr.is_expression) " (expr)" else "";
+                        std.debug.print("{s}{s}\"{s}\"{s}\n", .{ attr.name, op, val, kind });
                     } else {
                         std.debug.print("{s} (boolean)\n", .{attr.name});
                     }
                 }
+            } else {
+                std.debug.print("attributes: (none)\n", .{});
             }
+            for (tag.children.items) |child| printAst(child, indent + 1);
+        },
 
-            for (tag.children.items) |child| {
-                printAst(child, indent + 1);
-            }
-        },
         .Text => |*text| {
-            printIndent(indent + 1);
+            writeIndent(indent + 1);
             std.debug.print("content: \"{s}\"\n", .{text.content});
+            writeIndent(indent + 1);
+            std.debug.print("raw: {}\n", .{text.is_raw});
         },
+
         .Interpolation => |*interp| {
-            printIndent(indent + 1);
-            std.debug.print("expr: {s}, unescaped: {}\n", .{ interp.expression, interp.is_unescaped });
+            writeIndent(indent + 1);
+            std.debug.print("expression: {s}\n", .{interp.expression});
+            writeIndent(indent + 1);
+            std.debug.print("unescaped: {}\n", .{interp.is_unescaped});
         },
+
         .Code => |*code| {
-            printIndent(indent + 1);
+            writeIndent(indent + 1);
             std.debug.print("code: {s}\n", .{code.code});
+            writeIndent(indent + 1);
+            std.debug.print("buffered: {}\n", .{code.is_buffered});
+            writeIndent(indent + 1);
+            std.debug.print("unescaped: {}\n", .{code.is_unescaped});
         },
+
         .Comment => |*comment| {
-            printIndent(indent + 1);
-            std.debug.print("comment: {s}\n", .{comment.content});
+            writeIndent(indent + 1);
+            std.debug.print("content: {s}\n", .{comment.content});
+            writeIndent(indent + 1);
+            std.debug.print("buffered: {}\n", .{comment.is_buffered});
         },
+
         .Conditional => |*cond| {
-            printIndent(indent + 1);
+            writeIndent(indent + 1);
             std.debug.print("condition: {s}\n", .{cond.condition});
-            for (cond.then_branch.items) |child| {
-                printAst(child, indent + 1);
-            }
+            writeIndent(indent + 1);
+            std.debug.print("unless: {}\n", .{cond.is_unless});
+            writeIndent(indent + 1);
+            std.debug.print("then:\n", .{});
+            for (cond.then_branch.items) |child| printAst(child, indent + 2);
+            writeIndent(indent + 1);
             if (cond.else_branch) |*else_br| {
-                printIndent(indent + 1);
                 std.debug.print("else:\n", .{});
-                for (else_br.items) |child| {
-                    printAst(child, indent + 1);
-                }
+                for (else_br.items) |child| printAst(child, indent + 2);
+            } else {
+                std.debug.print("else: (none)\n", .{});
             }
         },
+
         .Loop => |*loop| {
-            printIndent(indent + 1);
-            std.debug.print("iterator: {s}, iterable: {s}\n", .{ loop.iterator, loop.iterable });
-            for (loop.body.items) |child| {
-                printAst(child, indent + 1);
+            writeIndent(indent + 1);
+            std.debug.print("while: {}\n", .{loop.is_while});
+            writeIndent(indent + 1);
+            std.debug.print("iterator: {s}\n", .{loop.iterator});
+            writeIndent(indent + 1);
+            if (loop.index) |idx| {
+                std.debug.print("index: {s}\n", .{idx});
+            } else {
+                std.debug.print("index: (none)\n", .{});
+            }
+            writeIndent(indent + 1);
+            std.debug.print("iterable: {s}\n", .{loop.iterable});
+            writeIndent(indent + 1);
+            std.debug.print("body:\n", .{});
+            for (loop.body.items) |child| printAst(child, indent + 2);
+            writeIndent(indent + 1);
+            if (loop.else_branch) |*else_br| {
+                std.debug.print("else:\n", .{});
+                for (else_br.items) |child| printAst(child, indent + 2);
+            } else {
+                std.debug.print("else: (none)\n", .{});
             }
         },
+
         .MixinDef => |*mixin| {
-            printIndent(indent + 1);
-            std.debug.print("name: {s}, params: {d}\n", .{ mixin.name, mixin.params.items.len });
-            if (mixin.rest_param) |rest| {
-                printIndent(indent + 1);
-                std.debug.print("rest: ...{s}\n", .{rest});
-            }
-            for (mixin.body.items) |child| {
-                printAst(child, indent + 1);
-            }
-        },
-        .MixinCall => |*call| {
-            printIndent(indent + 1);
-            std.debug.print("name: {s}, args: {d}\n", .{ call.name, call.args.items.len });
-            if (call.body) |*body| {
-                for (body.items) |child| {
-                    printAst(child, indent + 1);
+            writeIndent(indent + 1);
+            std.debug.print("name: {s}\n", .{mixin.name});
+            writeIndent(indent + 1);
+            if (mixin.params.items.len > 0) {
+                std.debug.print("params:\n", .{});
+                for (mixin.params.items) |param| {
+                    writeIndent(indent + 2);
+                    std.debug.print("- {s}\n", .{param});
                 }
+            } else {
+                std.debug.print("params: (none)\n", .{});
+            }
+            writeIndent(indent + 1);
+            if (mixin.rest_param) |rest| {
+                std.debug.print("rest: ...{s}\n", .{rest});
+            } else {
+                std.debug.print("rest: (none)\n", .{});
+            }
+            for (mixin.body.items) |child| printAst(child, indent + 1);
+        },
+
+        .MixinCall => |*call| {
+            writeIndent(indent + 1);
+            std.debug.print("name: {s}\n", .{call.name});
+            writeIndent(indent + 1);
+            if (call.args.items.len > 0) {
+                std.debug.print("args:\n", .{});
+                for (call.args.items) |arg| {
+                    writeIndent(indent + 2);
+                    std.debug.print("- {s}\n", .{arg});
+                }
+            } else {
+                std.debug.print("args: (none)\n", .{});
+            }
+            writeIndent(indent + 1);
+            if (call.attributes.items.len > 0) {
+                std.debug.print("attributes:\n", .{});
+                for (call.attributes.items) |attr| {
+                    writeIndent(indent + 2);
+                    if (attr.value) |val| {
+                        const op: []const u8 = if (attr.is_unescaped) "!=" else "=";
+                        const kind: []const u8 = if (attr.is_expression) " (expr)" else "";
+                        std.debug.print("{s}{s}\"{s}\"{s}\n", .{ attr.name, op, val, kind });
+                    } else {
+                        std.debug.print("{s} (boolean)\n", .{attr.name});
+                    }
+                }
+            } else {
+                std.debug.print("attributes: (none)\n", .{});
+            }
+            writeIndent(indent + 1);
+            if (call.body) |*body| {
+                std.debug.print("body:\n", .{});
+                for (body.items) |child| printAst(child, indent + 2);
+            } else {
+                std.debug.print("body: (none)\n", .{});
             }
         },
+
         .Include => |*inc| {
-            printIndent(indent + 1);
+            writeIndent(indent + 1);
             std.debug.print("path: {s}\n", .{inc.path});
+            writeIndent(indent + 1);
             if (inc.filter) |filter| {
-                printIndent(indent + 1);
                 std.debug.print("filter: {s}\n", .{filter});
+            } else {
+                std.debug.print("filter: (none)\n", .{});
             }
         },
+
         .Extends => |*ext| {
-            printIndent(indent + 1);
+            writeIndent(indent + 1);
             std.debug.print("path: {s}\n", .{ext.path});
         },
+
         .Block => |*block| {
-            printIndent(indent + 1);
-            std.debug.print("name: {s}, mode: {s}\n", .{ block.name, @tagName(block.mode) });
-            for (block.body.items) |child| {
-                printAst(child, indent + 1);
+            writeIndent(indent + 1);
+            std.debug.print("name: {s}\n", .{block.name});
+            writeIndent(indent + 1);
+            std.debug.print("mode: {s}\n", .{@tagName(block.mode)});
+            if (block.body.items.len > 0) {
+                for (block.body.items) |child| printAst(child, indent + 1);
+            } else {
+                writeIndent(indent + 1);
+                std.debug.print("body: (empty)\n", .{});
             }
         },
+
         .Case => |*case_node| {
-            printIndent(indent + 1);
+            writeIndent(indent + 1);
             std.debug.print("expression: {s}\n", .{case_node.expression});
-            for (case_node.cases.items) |when_node| {
-                printAst(when_node, indent + 1);
-            }
+            for (case_node.cases.items) |when_node| printAst(when_node, indent + 1);
+            writeIndent(indent + 1);
             if (case_node.default) |*default| {
-                printIndent(indent + 1);
                 std.debug.print("default:\n", .{});
-                for (default.items) |child| {
-                    printAst(child, indent + 2);
-                }
+                for (default.items) |child| printAst(child, indent + 2);
+            } else {
+                std.debug.print("default: (none)\n", .{});
             }
         },
+
         .When => |*when| {
-            printIndent(indent + 1);
-            std.debug.print("values: {d}\n", .{when.values.items.len});
-            for (when.body.items) |child| {
-                printAst(child, indent + 1);
+            writeIndent(indent + 1);
+            if (when.values.items.len > 0) {
+                std.debug.print("values:\n", .{});
+                for (when.values.items) |val| {
+                    writeIndent(indent + 2);
+                    std.debug.print("- {s}\n", .{val});
+                }
+            } else {
+                std.debug.print("values: (none)\n", .{});
             }
+            for (when.body.items) |child| printAst(child, indent + 1);
         },
     }
+}
+
+pub fn printAstDebug(node: *AstNode, indent: usize) void {
+    printAst(node, indent);
 }

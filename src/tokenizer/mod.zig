@@ -1,44 +1,44 @@
-//! Tokenizer module - Lexical Analysis
+//! Tokenizer — Lexical Analysis
 //!
-//! Converts Pug template source code into a stream of tokens.
-//! First phase of the compilation pipeline.
+//! Converts Pug template source into a flat stream of tokens.
+//! This is the first phase of the compilation pipeline.
 //!
-//! Flow:
-//! 1. Source code → Tokenizer.init()
-//! 2. Call next() repeatedly to get tokens
-//! 3. Parser consumes tokens to build AST
+//! Responsibilities:
+//!   - Recognize surface syntax: tags, classes, ids, strings, symbols
+//!   - Track indentation and emit Indent/Dedent tokens
+//!   - Recognize Pug keywords
+//!   - Recognize interpolation #{...} and !{...}
+//!   - Recognize comments // and //-
 //!
-//! Example:
-//! ```zig
-//! const source = "div.container\n  p Hello #{name}";
-//! var tokenizer = try Tokenizer.init(allocator, source);
-//! defer tokenizer.deinit();
+//! NOT the tokenizer's responsibility:
+//!   - Understanding attribute context
+//!   - Interpreting JS expressions
+//!   - Deciding what follows = in an attribute
+//!   - Any semantic meaning beyond surface character patterns
 //!
-//! while (true) {
-//!     const token = try tokenizer.next();
-//!     if (token.type == .Eof) break;
-//! }
-//! ```
+//! Usage:
+//!   var tokenizer = try Tokenizer.init(allocator, source);
+//!   defer tokenizer.deinit();
+//!   while (true) {
+//!       const token = try tokenizer.next();
+//!       if (token.type == .Eof) break;
+//!   }
 
 const std = @import("std");
 
-// Public exports
 pub const TokenizerState = @import("TokenizerState.zig").TokenizerState;
-pub const TokenType     = @import("TokenType.zig").TokenType;
-pub const Token         = @import("Token.zig").Token;
+pub const TokenType      = @import("TokenType.zig").TokenType;
+pub const Token          = @import("Token.zig").Token;
 pub const TokenizerError = @import("TokenizerError.zig").TokenizerError;
 
-// Scan functions
-const scanIdentifier   = @import("scanIdentifier.zig").scanIdentifier;
-const scanString       = @import("scanString.zig").scanString;
-const scanNumber       = @import("scanNumber.zig").scanNumber;
-const scanComment      = @import("scanComment.zig").scanComment;
-const skipDocComment   = @import("scanComment.zig").skipDocComment;
+const scanIdentifier    = @import("scanIdentifier.zig").scanIdentifier;
+const scanString        = @import("scanString.zig").scanString;
+const scanComment       = @import("scanComment.zig").scanComment;
+const skipDocComment    = @import("scanComment.zig").skipDocComment;
 const scanInterpolation = @import("scanInterpolation.zig").scanInterpolation;
-const scanSymbol       = @import("scanSymbol.zig").scanSymbol;
-const scanText         = @import("scanText.zig").scanText;
+const scanSymbol        = @import("scanSymbol.zig").scanSymbol;
+const scanText          = @import("scanText.zig").scanText;
 
-// Shared utilities (UTF-8, keyword lookup)
 const utils = @import("utils.zig");
 
 pub const Tokenizer = struct {
@@ -51,18 +51,26 @@ pub const Tokenizer = struct {
     pending_tokens: std.ArrayListUnmanaged(Token),
     at_line_start: bool,
     state: TokenizerState,
+    paren_depth: usize,
+    after_space: bool,              // true when skipWhitespace consumed at least one space
+    last_token_type: TokenType,     // type of the last emitted token
+    line_started_with_keyword: bool, // true when the first token of the line was a keyword
 
     pub fn init(allocator: std.mem.Allocator, source: []const u8) !Tokenizer {
         var tokenizer = Tokenizer{
-            .source        = source,
-            .pos           = 0,
-            .line          = 1,
-            .column        = 1,
-            .allocator     = allocator,
-            .indent_stack   = .empty,
-            .pending_tokens = .empty,
-            .at_line_start  = true,
-            .state         = TokenizerState.Root,
+            .source           = source,
+            .pos              = 0,
+            .line             = 1,
+            .column           = 1,
+            .allocator        = allocator,
+            .indent_stack     = .empty,
+            .pending_tokens   = .empty,
+            .at_line_start    = true,
+            .state            = .Root,
+            .paren_depth      = 0,
+            .after_space      = false,
+            .last_token_type  = .Eof,
+            .line_started_with_keyword = false,
         };
         try tokenizer.indent_stack.append(allocator, 0);
         return tokenizer;
@@ -102,6 +110,7 @@ pub const Tokenizer = struct {
     }
 
     pub fn skipWhitespaceExceptNewline(self: *Tokenizer) void {
+        const pos_before = self.pos;
         while (self.peekChar()) |ch| {
             if (ch == ' ' or ch == '\t' or ch == '\r') {
                 _ = self.advance();
@@ -109,10 +118,11 @@ pub const Tokenizer = struct {
                 break;
             }
         }
+        self.after_space = self.pos > pos_before;
     }
 
     // =========================================================================
-    // Indentation
+    // Indentation — emits Indent/Dedent tokens
     // =========================================================================
 
     fn handleIndentation(self: *Tokenizer) !void {
@@ -138,29 +148,26 @@ pub const Tokenizer = struct {
             }
         }
 
-        const current_indent = self.indent_stack.items[self.indent_stack.items.len - 1];
+        const current = self.indent_stack.items[self.indent_stack.items.len - 1];
 
-        if (indent > current_indent) {
+        if (indent > current) {
             try self.indent_stack.append(self.allocator, indent);
-            // Insertar en orden inverso: se consume con pop() O(1)
             try self.pending_tokens.append(self.allocator, Token.init(.Indent, "", self.line, 1));
-        } else if (indent < current_indent) {
-            // Contar cuántos DEDENTs emitir primero
-            var dedent_count: usize = 0;
+        } else if (indent < current) {
+            var count: usize = 0;
             while (self.indent_stack.items.len > 0 and
                 self.indent_stack.items[self.indent_stack.items.len - 1] > indent)
             {
                 _ = self.indent_stack.pop();
-                dedent_count += 1;
+                count += 1;
             }
             if (self.indent_stack.items.len == 0 or
                 self.indent_stack.items[self.indent_stack.items.len - 1] != indent)
             {
                 return error.InvalidIndentation;
             }
-            // Insertar en orden inverso: el primero que se consume va al final
             var i: usize = 0;
-            while (i < dedent_count) : (i += 1) {
+            while (i < count) : (i += 1) {
                 try self.pending_tokens.append(self.allocator, Token.init(.Dedent, "", self.line, 1));
             }
         }
@@ -169,11 +176,11 @@ pub const Tokenizer = struct {
     }
 
     // =========================================================================
-    // Main dispatch
+    // Main dispatch — 3 states only
     // =========================================================================
 
     pub fn next(self: *Tokenizer) !Token {
-        // Pending INDENT/DEDENT tokens — consumo O(1) con pop()
+        // Pending Indent/Dedent tokens — O(1) with pop()
         if (self.pending_tokens.items.len > 0) {
             return self.pending_tokens.pop().?;
         }
@@ -187,7 +194,7 @@ pub const Tokenizer = struct {
         self.skipWhitespaceExceptNewline();
 
         const ch = self.peekChar() orelse {
-            // Flush remaining DEDENTs at EOF
+            // Flush remaining Dedents at EOF
             if (self.indent_stack.items.len > 1) {
                 _ = self.indent_stack.pop();
                 return Token.init(.Dedent, "", self.line, self.column);
@@ -195,15 +202,19 @@ pub const Tokenizer = struct {
             return Token.init(.Eof, "", self.line, self.column);
         };
 
+        // Newline — reset to Root
         if (ch == '\n') {
             self.at_line_start = true;
             self.state = .Root;
+            self.after_space = false;
+            self.last_token_type = .Newline;
+            self.line_started_with_keyword = false;
             const line = self.line;
             _ = self.advance();
             return Token.init(.Newline, "\n", line, 1);
         }
 
-        // Comments (context-independent)
+        // Comments — context independent
         if (ch == '/' and self.peekAhead(1) == '/') {
             if (self.peekAhead(2) == '!') {
                 skipDocComment(self);
@@ -212,66 +223,97 @@ pub const Tokenizer = struct {
             return scanComment(self);
         }
 
-        // Interpolation (context-independent)
+        // Interpolation — context independent
         if ((ch == '#' or ch == '!') and self.peekAhead(1) == '{') {
-            return scanInterpolation(self);
+            const was_text = self.last_token_type == .Text or
+                self.last_token_type == .EscapedInterpol or
+                self.last_token_type == .UnescapedInterpol;
+            const token = try scanInterpolation(self);
+            self.last_token_type = token.type;
+            // If we were in text context, restore Text state so trailing
+            // content like "!" in "#{name}!" is consumed as text not a symbol.
+            if (was_text) self.state = .Text;
+            return token;
         }
 
         return switch (self.state) {
+
             .Root, .Indent => {
-                if (ch == '"' or ch == '\'') return scanString(self, ch);
-                if (std.ascii.isDigit(ch)) return scanNumber(self);
-                if (std.ascii.isAlphabetic(ch) or ch == '_' or utils.isUtf8Start(ch)) return scanIdentifier(self);
-                return scanSymbol(self);
-            },
-
-            .TagStart, .TagClass, .TagId => {
-                if (ch == '.' or ch == '#' or ch == '(' or ch == '=' or ch == '-') return scanSymbol(self);
-                if (ch == '!') {
-                    if (self.peekAhead(1) == '=') return scanSymbol(self);
-                }
-                if (ch == ' ') {
-                    _ = self.advance();
+                // Space after a tag (Ident/Class/Id) outside parentheses → plain text
+                // Only when the line did NOT start with a keyword — keywords never
+                // introduce text content, they introduce directive arguments.
+                if (self.after_space and
+                    self.paren_depth == 0 and
+                    !self.line_started_with_keyword and
+                    (self.last_token_type == .Ident or
+                     self.last_token_type == .Class or
+                     self.last_token_type == .Id or
+                     self.last_token_type == .RParen))
+                {
                     self.state = .Text;
-                    return self.next();
+                    const token = try scanText(self);
+                    self.last_token_type = token.type;
+                    return token;
                 }
-                self.state = .Text;
-                return scanText(self);
-            },
-
-            .AttrStart, .AttrName, .AttrEquals, .AttrValue, .AttrString, .AttrJS => {
-                if (ch == ')') return scanSymbol(self);
-                if (ch == ',') {
-                    const tok = try scanSymbol(self);
-                    self.state = .AttrName;
-                    return tok;
-                }
-                if (ch == '=') return scanSymbol(self);
                 if (ch == '"' or ch == '\'') {
-                    self.state = .AttrString;
-                    return scanString(self, ch);
+                    const token = try scanString(self, ch);
+                    self.last_token_type = token.type;
+                    return token;
                 }
-                if (std.ascii.isAlphabetic(ch) or ch == '_' or ch == '-' or utils.isUtf8Start(ch)) return scanIdentifier(self);
-                if (std.ascii.isDigit(ch)) return scanNumber(self);
-                return scanSymbol(self);
+
+                // After "in" — capture the rest of the line as Iterable.
+                // Must be checked BEFORE isAlphabetic so simple variable names
+                // like "items" are captured whole, not scanned as Ident.
+                if (self.last_token_type == .In) {
+                    const iter_line = self.line;
+                    const iter_col = self.column;
+                    const iter_start = self.pos;
+                    while (self.peekChar()) |c| {
+                        if (c == '\n') break;
+                        _ = self.advance();
+                    }
+                    const iter_value = self.source[iter_start..self.pos];
+                    self.last_token_type = .Iterable;
+                    return Token.init(.Iterable, iter_value, iter_line, iter_col);
+                }
+
+                // After "include" or "extends" — capture the path as Text.
+                // Paths contain '/' which is not a valid symbol token.
+                // Example: include partials/header → Text("partials/header")
+                if (self.last_token_type == .Include or self.last_token_type == .Extends) {
+                    const path_line = self.line;
+                    const path_col = self.column;
+                    const path_start = self.pos;
+                    while (self.peekChar()) |c| {
+                        if (c == '\n') break;
+                        _ = self.advance();
+                    }
+                    const path_value = self.source[path_start..self.pos];
+                    self.last_token_type = .Text;
+                    return Token.init(.Text, path_value, path_line, path_col);
+                }
+
+                if (std.ascii.isAlphabetic(ch) or ch == '_' or utils.isUtf8Start(ch)) {
+                    const token = try scanIdentifier(self);
+                    self.last_token_type = token.type;
+                    // Track if the first token of this line was a keyword
+                    if (!self.line_started_with_keyword) {
+                        self.line_started_with_keyword = utils.isKeywordType(token.type);
+                    }
+                    return token;
+                }
+
+                const token = try scanSymbol(self);
+                self.last_token_type = token.type;
+                return token;
             },
 
-            .Text => return scanText(self),
-
-            .Code => {
-                if (ch == '"' or ch == '\'') return scanString(self, ch);
-                if (std.ascii.isDigit(ch)) return scanNumber(self);
-                if (std.ascii.isAlphabetic(ch) or ch == '_' or utils.isUtf8Start(ch)) return scanIdentifier(self);
-                return scanSymbol(self);
+            .Text => {
+                const token = try scanText(self);
+                self.last_token_type = token.type;
+                return token;
             },
 
-            .Loop => {
-                if (ch == '"' or ch == '\'') return scanString(self, ch);
-                if (std.ascii.isDigit(ch)) return scanNumber(self);
-                if (std.ascii.isAlphabetic(ch) or ch == '_' or utils.isUtf8Start(ch)) return scanIdentifier(self);
-                if (ch == ',') return scanSymbol(self);
-                return scanSymbol(self);
-            },
         };
     }
 };

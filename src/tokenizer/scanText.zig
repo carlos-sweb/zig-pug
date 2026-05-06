@@ -27,7 +27,8 @@ pub fn scanText(tokenizer: anytype) !Token {
             break;
         }
 
-        // Stop at interpolation start
+        // Stop at interpolation start — but only if actually followed by '{'
+        // A lone '!' or '#' without '{' is plain text and must be consumed here.
         if (ch == '#' and tokenizer.peekAhead(1) == '{') {
             break;
         }
@@ -51,5 +52,5 @@ pub fn scanText(tokenizer: anytype) !Token {
         tokenizer.state = .Root;
     }
 
-    return Token.init(.Ident, value, start_line, start_col);
+    return Token.init(.Text, value, start_line, start_col);
 }

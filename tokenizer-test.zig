@@ -12,15 +12,25 @@ pub fn isAlphanumeric(ch: u8) bool {
 }
 
 pub fn main() !void {
-    const input: []const u8 = "      div#main.class1.class2(some-attr='aaa')\n";
+    const input: []const u8 = "      div#main.class1.class2(  some-attr='aaa')\n";
     var i: usize = 0;
     sw: switch (input[i]) {
         ' ' => {
-            const start: usize = i;
-            while (i < input.len and input[i] == ' ') {
-                i += 1;
+            const start:usize = i;
+            if( i == 0){
+                while (i < input.len and input[i] == ' ') {
+                    i += 1;
+                }
+                std.debug.print(
+                    "Largo Sangria => {d}\n",
+                    .{input[start..i].len});
+            }else{
+                while( i < input.len and input[i] == ' ' ){
+                    i+=1;
+                }
+                std.debug.print(
+                    "Simple Espacio => {d}\n",.{input[start..i].len});
             }
-            std.debug.print("Largo Sangria => {d}\n", .{input[start..i].len});
             continue :sw input[i];
         },
         'a'...'z' => {
