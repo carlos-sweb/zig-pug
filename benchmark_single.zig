@@ -17,76 +17,6 @@ const Parser = @import("src/parser/mod.zig").Parser;
 const Compiler = @import("src/compiler/mod.zig").Compiler;
 const runtime = @import("src/runtime.zig");
 
-const TEMPLATE =
-    \\doctype html
-    \\html(lang="es")
-    \\  head
-    \\    meta(charset="UTF-8")
-    \\    meta(name="viewport" content="width=device-width, initial-scale=1.0")
-    \\    title #{pageTitle} — #{siteName}
-    \\    link(rel="stylesheet" href="/css/main.css")
-    \\  body
-    \\    header.site-header
-    \\      nav.navbar
-    \\        a.brand(href="/") #{siteName}
-    \\        ul.nav-links
-    \\          each link in navLinks
-    \\            li
-    \\              a(href=link.href) #{link.label}
-    \\        if user
-    \\          div.user-menu
-    \\            span Hola, #{user}
-    \\        else
-    \\          a(href="/login") Iniciar sesion
-    \\    main.container
-    \\      section.stats-grid
-    \\        each stat in stats
-    \\          div.stat-card
-    \\            span.stat-value #{stat.value}
-    \\            span.stat-label #{stat.label}
-    \\      section.products
-    \\        h2 #{productsTitle}
-    \\        div.product-grid
-    \\          each product in products
-    \\            div.product-card
-    \\              h3 #{product.name}
-    \\              p #{product.description}
-    \\              span.price $#{product.price}
-    \\              div.product-stock
-    \\                case product.stock
-    \\                  when "in_stock"
-    \\                    span.stock-ok En stock
-    \\                  when "low_stock"
-    \\                    span.stock-low Pocas unidades
-    \\                  default
-    \\                    span.stock-out Agotado
-    \\              unless product.discontinued
-    \\                button.btn-cart Agregar
-    \\      section.blog
-    \\        h2 Ultimas entradas
-    \\        div.blog-grid
-    \\          each post in blogPosts
-    \\            article.post-card
-    \\              h3
-    \\                a(href=post.url) #{post.title}
-    \\              p #{post.excerpt}
-    \\              div.post-tags
-    \\                each tag in post.tags
-    \\                  span.tag #{tag}
-    \\      section.faq
-    \\        h2 Preguntas frecuentes
-    \\        div.faq-list
-    \\          each item in faq
-    \\            div.faq-item
-    \\              h4 #{item.question}
-    \\              if item.open
-    \\                p #{item.answer}
-    \\      unless user
-    \\        section.newsletter
-    \\          h2 Suscribete
-    \\    footer.site-footer
-    \\      p &copy; #{year} #{siteName}
-;
 
 const CONTEXT_JS =
     \\var pageTitle = "Tienda Online";
@@ -146,6 +76,7 @@ const CONTEXT_JS =
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.gpa;
+    const content_pug_template = try std.Io.Dir.cwd().readFileAlloc(init.io,"benchmark.pug", allocator, .limited(10 * 1024 * 1024));
 
     // 1. Init runtime
     var js_rt = try runtime.JsRuntime.init(allocator);
@@ -155,7 +86,7 @@ pub fn main(init: std.process.Init) !void {
     _ = try js_rt.eval(CONTEXT_JS);
 
     // 3. Parse
-    var parser = try Parser.init(allocator, TEMPLATE);
+    var parser = try Parser.init(allocator, content_pug_template );
     defer parser.deinit();
     const root = try parser.parse();
 
