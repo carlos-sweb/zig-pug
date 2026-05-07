@@ -1,0 +1,170 @@
+doctype html
+html(lang="es")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title #{pageTitle} — #{siteName}
+    link(rel="stylesheet" href="/css/main.css")
+    link(rel="stylesheet" href="/css/components.css")
+  body
+    //- Header
+    header.site-header
+      nav.navbar
+        a.brand(href="/") #{siteName}
+        ul.nav-links
+          each link in navLinks
+            li
+              a(href=link.href,class=link.active ? "active" : "") #{link.label}
+        if user
+          div.user-menu
+            span Hola, #{user.name}
+            a(href="/logout") Salir
+        else
+          div.auth-links
+            a(href="/login") Iniciar sesion
+            a(href="/register") Registrarse
+
+    //- Hero
+    if hero
+      section.hero(class=hero.theme)
+        div.hero-content
+          h1 #{hero.title}
+          p.lead #{hero.subtitle}
+          if hero.cta
+            a.btn.btn-primary(href=hero.cta.url) #{hero.cta.label}
+
+    //- Main content
+    main.container
+      //- Alerts
+      if alerts
+        div.alerts
+          each alert in alerts
+            div.alert(class="alert-" + alert.type)
+              strong #{alert.title}
+              p #{alert.message}
+
+      //- Stats
+      section.stats-grid
+        each stat in stats
+          div.stat-card
+            span.stat-value #{stat.value}
+            span.stat-label #{stat.label}
+            if stat.trend
+              span.trend(class=stat.trend > 0 ? "up" : "down") #{stat.trend}
+
+      //- Products
+      section.products
+        h2 #{productsTitle}
+        div.filters
+          each category in categories
+            button.filter-btn(class=category.active ? "active" : "",data-cat=category.id) #{category.name}
+
+        div.product-grid
+          each product in products
+            div.product-card(class=product.featured ? "featured" : "",data-id=product.id)
+              if product.badge
+                span.badge(class="badge-" + product.badge) #{product.badge}
+              img.product-img(src=product.image,alt=product.name)
+              div.product-body
+                h3.product-name #{product.name}
+                p.product-desc #{product.description}
+                div.product-meta
+                  span.price $#{product.price}
+                  if product.originalPrice
+                    span.original-price $#{product.originalPrice}
+                    span.discount -#{product.discount}%
+                div.product-rating
+                  each i in [1,2,3,4,5]
+                    span(class=i <= product.rating ? "star filled" : "star") ★
+                  span.rating-count (#{product.reviewCount})
+                div.product-stock
+                  case product.stock
+                    when "in_stock"
+                      span.stock-ok En stock
+                    when "low_stock"
+                      span.stock-low Pocas unidades
+                    when "out_of_stock"
+                      span.stock-out Agotado
+                    default
+                      span.stock-unknown Consultar
+                unless product.discontinued
+                  div.product-actions
+                    button.btn-cart(data-id=product.id) Agregar al carrito
+                    if product.wishlist
+                      button.btn-wish.active ♥
+                    else
+                      button.btn-wish ♡
+
+      //- Team
+      section.team
+        h2 Nuestro equipo
+        div.team-grid
+          each member in team
+            div.team-card
+              img.avatar(src=member.avatar,alt=member.name)
+              h4 #{member.name}
+              p.role #{member.role}
+              if member.bio
+                p.bio #{member.bio}
+              div.social-links
+                each social in member.socials
+                  a.social-link(href=social.url,target="_blank",rel="noopener") #{social.platform}
+
+      //- Blog
+      section.blog
+        h2 Ultimas entradas
+        div.blog-grid
+          each post in blogPosts
+            article.post-card(class=post.featured ? "featured" : "")
+              if post.image
+                img.post-img(src=post.image,alt=post.title)
+              div.post-body
+                div.post-meta
+                  span.category #{post.category}
+                  span.date #{post.date}
+                  if post.readTime
+                    span.read-time #{post.readTime} min
+                h3.post-title
+                  a(href=post.url) #{post.title}
+                p.post-excerpt #{post.excerpt}
+                div.post-footer
+                  div.post-tags
+                    each tag in post.tags
+                      span.tag #{tag}
+                  a.read-more(href=post.url) Leer mas
+
+      //- FAQ
+      section.faq
+        h2 Preguntas frecuentes
+        div.faq-list
+          each item in faq
+            div.faq-item(class=item.open ? "open" : "")
+              h4.faq-question #{item.question}
+              if item.open
+                div.faq-answer
+                  p #{item.answer}
+
+      //- Newsletter
+      unless user
+        section.newsletter
+          h2 Suscribete
+          p Recibe las ultimas novedades
+          form.newsletter-form(action="/subscribe" method="POST")
+            input(type="email" name="email" placeholder="tu@email.com" required)
+            button(type="submit") Suscribirse
+
+    //- Footer
+    footer.site-footer
+      div.footer-grid
+        each column in footerColumns
+          div.footer-col
+            h5 #{column.title}
+            ul
+              each link in column.links
+                li
+                  a(href=link.href) #{link.label}
+      div.footer-bottom
+        p &copy; #{year} #{siteName}. Todos los derechos reservados.
+        div.footer-legal
+          each link in legalLinks
+            a(href=link.href) #{link.label}

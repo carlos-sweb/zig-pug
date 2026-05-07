@@ -1,0 +1,2 @@
+a(href=link.href class=link.active ? "active" : "") #{link.label}
+span.trend(class=stat.trend > 0 ? "up" : "down") #{stat.trend}%

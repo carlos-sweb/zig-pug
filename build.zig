@@ -205,7 +205,7 @@ pub fn build(b: *std.Build) void {
     // ========================================================================
     // Example:  inspection
     // Usage: zig build exampleCompiler
-    // No mujs needed — parser only
+    // mujs needed
     // ========================================================================
     const example_compiler = b.addExecutable(.{
         .name = "exampleCompiler",
@@ -228,6 +228,33 @@ pub fn build(b: *std.Build) void {
     //run_example_compiler_cmd.step.dependOn(b.getInstallStep());
     const run_example_compiler_step = b.step("exampleCompiler", "Inspect Compiler");
     run_example_compiler_step.dependOn(&run_example_compiler_cmd.step);
+
+    // ========================================================================
+    // ========================================================================
+    // Example:  inspection
+    // Usage: zig build benchmark
+    // mujs needed
+    // ========================================================================
+    const example_benchmark = b.addExecutable(.{
+        .name = "benchmark",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("benchmark_single.zig"),
+            .target = exe_target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+
+    // Compile mujs from source for cross-compilation
+    example_benchmark.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
+    example_benchmark.root_module.addCSourceFile(.{
+        .file = b.path("vendor/mujs-1.3.9/one.c"),
+        .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
+    });
+
+    const install_benchmark = b.addInstallArtifact(example_benchmark, .{});
+    const benchmark_step = b.step("benchmark_single", "Build benchmark executable");
+    benchmark_step.dependOn(&install_benchmark.step);
 
     // Global Installation
     // Usage: sudo zig build -p /usr/local install

@@ -292,7 +292,7 @@ export function compile(template, variables = {}, options = {}) {
  * @returns {string} - Compiled HTML
  */
 export function compileFile(filename, variables = {}, options = {}) {
-    const template = fs.readFileSync(filename, 'utf8');
+    const template = readFileSync(filename, 'utf8');
     return compile(template, variables, options);
 }
 

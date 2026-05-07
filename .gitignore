@@ -28,3 +28,4 @@ tests/cli/output/
 
 # NPM test directory for manual package testing
 npm-test/
+node_modules/

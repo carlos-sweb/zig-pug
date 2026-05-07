@@ -470,65 +470,43 @@ pub const Compiler = struct {
     }
 
     fn compileAttributes(self: *Self, attributes: *const std.ArrayListUnmanaged(ast.Attribute), line: usize) !void {
-        // Collect and merge class values first
-        var class_parts: std.ArrayListUnmanaged([]const u8) = .empty;
-        defer class_parts.deinit(self.allocator);
-
         for (attributes.items) |attr| {
-            if (std.mem.eql(u8, attr.name, "class")) {
-                if (attr.value) |value| {
-                    if (attr.is_expression) {
-                        const transformed = try optional_chaining.transformOptionalChaining(self.allocator, value);
-                        defer self.allocator.free(transformed);
-                        const result = self.runtime.eval(transformed) catch {
-                            self.addError(.AttributeEvalFailed, line, "Failed to evaluate class expression", null, null);
-                            continue;
-                        };
-                        // result is owned — store as-is, free after use
-                        try class_parts.append(self.allocator, result);
-                    } else {
-                        try class_parts.append(self.allocator, try self.allocator.dupe(u8, value));
-                    }
-                }
-            }
-        }
-
-        // Emit merged class attribute if any
-        if (class_parts.items.len > 0) {
-            try self.output.appendSlice(self.allocator, " class=\"");
-            for (class_parts.items, 0..) |part, i| {
-                if (i > 0) try self.output.append(self.allocator, ' ');
-                try self.output.appendSlice(self.allocator, part);
-                self.allocator.free(part);
-            }
-            try self.output.append(self.allocator, '"');
-        }
-
-        // Emit all non-class attributes
-        for (attributes.items) |attr| {
-            if (std.mem.eql(u8, attr.name, "class")) continue;
-
-            try self.output.append(self.allocator, ' ');
+            try self.output.appendSlice(self.allocator, " ");
             try self.output.appendSlice(self.allocator, attr.name);
 
             if (attr.value) |value| {
                 try self.output.appendSlice(self.allocator, "=\"");
 
+                // Evaluate expression if needed
                 if (attr.is_expression) {
-                    const transformed_value = try optional_chaining.transformOptionalChaining(self.allocator, value);
+                    // Transform optional chaining (?.) to ES5.1 compatible code
+                    const transformed_value = try optional_chaining.transformOptionalChaining(
+                        self.allocator,
+                        value,
+                    );
                     defer self.allocator.free(transformed_value);
 
                     const result = self.runtime.eval(transformed_value) catch {
+                        // Build detail and hint strings
                         const detail = std.fmt.allocPrint(self.allocator, "Attribute: {s}={s}", .{ attr.name, value }) catch null;
                         defer if (detail) |d| self.allocator.free(d);
                         const hint = std.fmt.allocPrint(self.allocator, "Make sure the variable '{s}' is defined", .{value}) catch null;
                         defer if (hint) |h| self.allocator.free(h);
-                        self.addError(.AttributeEvalFailed, line, "Failed to evaluate attribute expression", detail, hint);
-                        try self.output.append(self.allocator, '"');
+
+                        self.addError(
+                            .AttributeEvalFailed,
+                            line,
+                            "Failed to evaluate attribute expression",
+                            detail,
+                            hint,
+                        );
+                        // Skip attribute on error (strict mode)
+                        try self.output.appendSlice(self.allocator, "\"");
                         continue;
                     };
                     defer self.allocator.free(result);
 
+                    // Escape the result if not unescaped
                     if (attr.is_unescaped) {
                         try self.output.appendSlice(self.allocator, result);
                     } else {
@@ -540,7 +518,7 @@ pub const Compiler = struct {
                     try self.output.appendSlice(self.allocator, value);
                 }
 
-                try self.output.append(self.allocator, '"');
+                try self.output.appendSlice(self.allocator, "\"");
             }
         }
     }
@@ -670,38 +648,54 @@ pub const Compiler = struct {
         );
         defer self.allocator.free(transformed_condition);
 
-        // Evaluate condition using runtime
-        const result = self.runtime.eval(transformed_condition) catch {
-            const detail = std.fmt.allocPrint(self.allocator, "Condition: {s}", .{cond.condition}) catch null;
-            defer if (detail) |d| self.allocator.free(d);
+        // Evaluate condition using runtime.
+        // If the variable is not defined, mujs throws a ReferenceError.
+        // We wrap the expression with typeof to avoid throwing — same behavior
+        // as pug where undefined variables are treated as falsy.
+        //
+        // Strategy: try direct eval first. If it fails (ReferenceError or any
+        // error), fall back to typeof check which never throws.
+        //
+        // typeof hero !== "undefined" && hero
+        // → returns false/undefined safely when hero is not defined
+        const safe_condition = try std.fmt.allocPrint(
+            self.allocator,
+            "(function(){{ try {{ var _v=({s}); return _v; }} catch(e) {{ return false; }} }})()",
+            .{transformed_condition},
+        );
+        defer self.allocator.free(safe_condition);
 
-            self.addError(
-                .ConditionalEvalFailed,
-                node.line,
-                "Failed to evaluate conditional",
-                detail,
-                null,
-            );
+        const result = self.runtime.eval(safe_condition) catch {
+            // If even the safe wrapper fails, treat as falsy — never error out
+            const should_execute = cond.is_unless; // unless false = true, if false = false
+            if (should_execute) {
+                for (cond.then_branch.items) |child| {
+                    try self.compileNode(child);
+                }
+            } else if (cond.else_branch) |*else_branch| {
+                for (else_branch.items) |child| {
+                    try self.compileNode(child);
+                }
+            }
             return;
         };
         defer self.allocator.free(result);
 
-        // Check if result is truthy
+        // Check if result is truthy — same rules as JavaScript
         const is_true = !std.mem.eql(u8, result, "false") and
             !std.mem.eql(u8, result, "null") and
             !std.mem.eql(u8, result, "undefined") and
             !std.mem.eql(u8, result, "0") and
+            !std.mem.eql(u8, result, "") and
             result.len > 0;
 
         const should_execute = if (cond.is_unless) !is_true else is_true;
 
         if (should_execute) {
-            // Execute then branch
             for (cond.then_branch.items) |child| {
                 try self.compileNode(child);
             }
         } else if (cond.else_branch) |*else_branch| {
-            // Execute else branch
             for (else_branch.items) |child| {
                 try self.compileNode(child);
             }
@@ -715,56 +709,6 @@ pub const Compiler = struct {
     fn compileLoop(self: *Self, node: *ast.AstNode) !void {
         const loop = &node.data.Loop;
 
-        // While loop — condition is in loop.iterable, body repeats until false
-        if (loop.is_while) {
-            try self.compileWhileLoop(node);
-            return;
-        }
-
-        // Each loop — iterate over array
-        try self.compileEachLoop(node);
-    }
-
-    fn compileWhileLoop(self: *Self, node: *ast.AstNode) !void {
-        const loop = &node.data.Loop;
-
-        // Safety limit to prevent infinite loops in template rendering
-        const max_iterations: usize = 10_000;
-        var iterations: usize = 0;
-
-        while (iterations < max_iterations) : (iterations += 1) {
-            // Evaluate condition
-            const condition_result = self.runtime.eval(loop.iterable) catch {
-                self.addError(
-                    .LoopIterableEvalFailed,
-                    node.line,
-                    "Failed to evaluate while condition",
-                    null,
-                    null,
-                );
-                return;
-            };
-            defer self.allocator.free(condition_result);
-
-            // Check truthiness
-            const is_true = !std.mem.eql(u8, condition_result, "false") and
-                !std.mem.eql(u8, condition_result, "null") and
-                !std.mem.eql(u8, condition_result, "undefined") and
-                !std.mem.eql(u8, condition_result, "0") and
-                condition_result.len > 0;
-
-            if (!is_true) break;
-
-            // Compile body
-            for (loop.body.items) |child| {
-                try self.compileNode(child);
-            }
-        }
-    }
-
-    fn compileEachLoop(self: *Self, node: *ast.AstNode) !void {
-        const loop = &node.data.Loop;
-
         // Transform optional chaining (?.) syntax to ES5.1 compatible code
         // Example: "item?.tags" -> "item && item.hasOwnProperty('tags') ? item.tags : []"
         const transformed_iterable = try optional_chaining.transformOptionalChaining(
@@ -773,25 +717,29 @@ pub const Compiler = struct {
         );
         defer self.allocator.free(transformed_iterable);
 
-        // Get the iterable value from runtime
-        const iterable_result = self.runtime.eval(transformed_iterable) catch {
-            const detail = std.fmt.allocPrint(self.allocator, "Iterable: {s}", .{loop.iterable}) catch null;
-            defer if (detail) |d| self.allocator.free(d);
+        // Get the iterable value from runtime — wrap in safe IIFE to handle
+        // undefined variables gracefully (same behavior as pug).
+        const safe_iterable = try std.fmt.allocPrint(
+            self.allocator,
+            "(function(){{ try {{ var _v=({s}); return _v; }} catch(e) {{ return []; }} }})()",
+            .{transformed_iterable},
+        );
+        defer self.allocator.free(safe_iterable);
 
-            self.addError(
-                .LoopIterableEvalFailed,
-                node.line,
-                "Failed to evaluate loop iterable",
-                detail,
-                "Make sure the array variable is defined",
-            );
+        const iterable_result = self.runtime.eval(safe_iterable) catch {
+            // If even the safe wrapper fails, treat as empty — run else branch
+            if (loop.else_branch) |*else_branch| {
+                for (else_branch.items) |child| {
+                    try self.compileNode(child);
+                }
+            }
             return;
         };
         defer self.allocator.free(iterable_result);
 
         // Check if it's an array by looking for array notation or getting length
         // We'll use JavaScript to iterate
-        const length_expr = try std.fmt.allocPrint(self.allocator, "({s}).length", .{transformed_iterable});
+        const length_expr = try std.fmt.allocPrint(self.allocator, "({s}).length", .{safe_iterable});
         defer self.allocator.free(length_expr);
 
         const length_str = self.runtime.eval(length_expr) catch {
@@ -955,18 +903,22 @@ pub const Compiler = struct {
     fn compileCase(self: *Self, node: *ast.AstNode) !void {
         const case_node = &node.data.Case;
 
-        // Evaluate the case expression
-        const case_value = self.runtime.eval(case_node.expression) catch {
-            const detail = std.fmt.allocPrint(self.allocator, "Expression: {s}", .{case_node.expression}) catch null;
-            defer if (detail) |d| self.allocator.free(d);
+        // Evaluate the case expression — wrap in safe IIFE to handle
+        // undefined variables gracefully (falls through to default branch).
+        const safe_expr = try std.fmt.allocPrint(
+            self.allocator,
+            "(function(){{ try {{ var _v=({s}); return String(_v); }} catch(e) {{ return '__undefined__'; }} }})()",
+            .{case_node.expression},
+        );
+        defer self.allocator.free(safe_expr);
 
-            self.addError(
-                .CaseEvalFailed,
-                node.line,
-                "Failed to evaluate case expression",
-                detail,
-                "Check that all variables used in the expression are defined",
-            );
+        const case_value = self.runtime.eval(safe_expr) catch {
+            // If even the safe wrapper fails, run default branch only
+            if (case_node.default) |*default_branch| {
+                for (default_branch.items) |child| {
+                    try self.compileNode(child);
+                }
+            }
             return;
         };
         defer self.allocator.free(case_value);
@@ -1061,7 +1013,8 @@ pub const Compiler = struct {
 
         // Handle rest parameter if present
         if (mixin_def.rest_param) |rest_param| {
-            var rest_args: std.ArrayListUnmanaged(u8) = .empty;
+            // Create array from remaining arguments
+            var rest_args: std.ArrayList(u8) = .empty;
             defer rest_args.deinit(self.allocator);
 
             try rest_args.appendSlice(self.allocator, "var ");
@@ -1070,7 +1023,9 @@ pub const Compiler = struct {
 
             const start_idx = mixin_def.params.items.len;
             for (call.args.items[start_idx..], 0..) |arg, j| {
-                if (j > 0) try rest_args.appendSlice(self.allocator, ", ");
+                if (j > 0) {
+                    try rest_args.appendSlice(self.allocator, ", ");
+                }
                 try rest_args.appendSlice(self.allocator, arg);
             }
 
@@ -1081,7 +1036,9 @@ pub const Compiler = struct {
 
             if (self.runtime.eval(rest_expr)) |r| {
                 self.allocator.free(r);
-            } else |_| {}
+            } else |_| {
+                // Silently skip rest parameter if setting fails
+            }
         }
 
         // Compile the mixin body
