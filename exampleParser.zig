@@ -20,10 +20,27 @@ const CasesJson = []CaseJson;
 // Runner
 // ---------------------------------------------------------------------------
 
-pub fn main() !void {
-    var gpa: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+
+    // Parsear filtro -e:N o -e:N,M,K
+    var filter: std.ArrayList(usize) = .empty;
+    defer filter.deinit(allocator);
+
+    var args_it = try init.minimal.args.iterateAllocator(allocator);
+    defer args_it.deinit();
+    _ = args_it.next(); // skip argv[0] (nombre del ejecutable)
+
+    while (args_it.next()) |arg| {
+        if (std.mem.startsWith(u8, arg, "-e:")) {
+            var it = std.mem.splitScalar(u8, arg[3..], ',');
+            while (it.next()) |num_str| {
+                const n = try std.fmt.parseInt(usize, num_str, 10);
+                try filter.append(allocator, n);
+            }
+        }
+    }
+
     // yq -o=json pug_cases.yaml > pug_cases.json
     const CaseParsed = try std.json.parseFromSlice(CasesJson, allocator, @embedFile("./pug_cases.json"), .{ .ignore_unknown_fields = true });
     defer CaseParsed.deinit();
@@ -31,7 +48,16 @@ pub fn main() !void {
     var passed: usize = 0;
     var failed: usize = 0;
 
-    for (CaseParsed.value) |case| {
+    for (CaseParsed.value, 0..) |case, i| {
+        const example_num = i + 1;
+
+        if (filter.items.len > 0) {
+            const included = for (filter.items) |n| {
+                if (n == example_num) break true;
+            } else false;
+            if (!included) continue;
+        }
+
         const sep = "═" ** 46;
         print("\n{s}\n", .{sep});
         print("  {s}\n", .{case.label});
