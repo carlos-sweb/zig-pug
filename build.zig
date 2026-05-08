@@ -177,6 +177,9 @@ pub fn build(b: *std.Build) void {
     });
 
     const run_example_tokenizer_cmd = b.addRunArtifact(example_tokenizer);
+    if (b.args) |args| {
+        run_example_tokenizer_cmd.addArgs(args);
+    }
     //run_example_tokenizer_cmd.step.dependOn(b.getInstallStep());
     const run_example_tokenizer_step = b.step("exampleTokenizer", "Inspect Tokenizer");
     run_example_tokenizer_step.dependOn(&run_example_tokenizer_cmd.step);
@@ -197,6 +200,9 @@ pub fn build(b: *std.Build) void {
     });
 
     const run_example_parser_cmd = b.addRunArtifact(example_parser);
+    if (b.args) |args| {
+        run_example_parser_cmd.addArgs(args);
+    }
     //run_example_parser_cmd.step.dependOn(b.getInstallStep());
     const run_example_parser_step = b.step("exampleParser", "Inspect Parser");
     run_example_parser_step.dependOn(&run_example_parser_cmd.step);
@@ -225,6 +231,9 @@ pub fn build(b: *std.Build) void {
     });
 
     const run_example_compiler_cmd = b.addRunArtifact(example_compiler);
+    if (b.args) |args| {
+        run_example_compiler_cmd.addArgs(args);
+    }
     //run_example_compiler_cmd.step.dependOn(b.getInstallStep());
     const run_example_compiler_step = b.step("exampleCompiler", "Inspect Compiler");
     run_example_compiler_step.dependOn(&run_example_compiler_cmd.step);

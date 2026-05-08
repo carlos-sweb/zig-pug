@@ -1,0 +1,347 @@
+# Tags básicos
+- label: tag simple
+  source: "div"
+  expected: "<div></div>"
+
+- label: tag con texto
+  source: "p Hello world"
+  expected: "<p>Hello world</p>"
+
+- label: tag anidado
+  source: |
+    div
+      p Hello
+  expected: "<div><p>Hello</p></div>"
+
+- label: tag 3 niveles
+  source: |
+    div
+      section
+        p Contenido
+  expected: "<div><section><p>Contenido</p></section></div>"
+
+# Clases e IDs
+- label: clase simple
+  source: "div.container"
+  expected: '<div class="container"></div>'
+
+- label: multiples clases fusionadas
+  source: "div.box.highlight Content"
+  expected: '<div class="box highlight">Content</div>'
+
+- label: clase e id
+  source: "div.container#main"
+  expected: '<div class="container" id="main"></div>'
+
+# Atributos
+- label: atributo string estatico
+  source: 'a(href="/home") Inicio'
+  expected: '<a href="/home">Inicio</a>'
+
+- label: multiples atributos
+  source: 'input(type="text" placeholder="Nombre" required)'
+  expected: '<input type="text" placeholder="Nombre" required>'
+
+- label: atributo boolean
+  source: "input(disabled)"
+  expected: "<input disabled>"
+
+- label: atributo expresion
+  source: |
+    - var cls = "primary"
+    button(class=cls) Click
+  expected: '<button class="primary">Click</button>'
+
+- label: atributo ternario
+  source: |
+    - var active = true
+    div(class=active ? "active" : "inactive")
+  expected: '<div class="active"></div>'
+
+# Void elements
+- label: br void
+  source: "br"
+  expected: "<br>"
+
+- label: input void
+  source: 'input(type="text")'
+  expected: '<input type="text">'
+
+- label: meta void
+  source: 'meta(charset="UTF-8")'
+  expected: '<meta charset="UTF-8">'
+
+- label: img void
+  source: 'img(src="logo.png" alt="Logo")'
+  expected: '<img src="logo.png" alt="Logo">'
+
+# Doctype
+- label: doctype html
+  source: |
+    doctype html
+    html
+      head
+        title Test
+      body
+        p Hola
+  expected: "<!DOCTYPE html><html><head><title>Test</title></head><body><p>Hola</p></body></html>"
+
+# JsStatement / Code
+- label: var y uso
+  source: |
+    - var name = "Carlos"
+    p Hola #{name}
+  expected: "<p>Hola Carlos</p>"
+
+- label: var numero
+  source: |
+    - var x = 10
+    - var y = 20
+    p #{x + y}
+  expected: "<p>30</p>"
+
+- label: var array
+  source: |
+    - var fruits = ["banana", "apple"]
+    p #{fruits[0]}
+  expected: "<p>banana</p>"
+
+- label: var objeto
+  source: |
+    - var user = { name: "Ana" }
+    p #{user.name}
+  expected: "<p>Ana</p>"
+
+# Interpolacion
+- label: interpolacion escapada
+  source: "p Hola #{name}"
+  context:
+    - name: name
+      value:
+        string: Carlos
+  expected: "<p>Hola Carlos</p>"
+
+- label: interpolacion escapa XSS
+  source: "p #{content}"
+  context:
+    - name: content
+      value:
+        string: "<script>alert('xss')</script>"
+  expected: "<p>&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;</p>"
+
+- label: interpolacion no escapada
+  source: "p !{html}"
+  context:
+    - name: html
+      value:
+        string: "<strong>Bold</strong>"
+  expected: "<p><strong>Bold</strong></p>"
+
+- label: interpolacion con expresion
+  source: |
+    - var price = 10
+    - var qty = 3
+    p Total: #{price * qty}
+  expected: "<p>Total: 30</p>"
+
+- label: interpolacion multiple
+  source: |
+    - var a = "Hola"
+    - var b = "mundo"
+    p #{a} #{b}!
+  expected: "<p>Hola mundo!</p>"
+
+# if / else / unless
+- label: if true
+  source: |
+    if isAdmin
+      p Admin
+  context:
+    - name: isAdmin
+      value:
+        boolean: true
+  expected: "<p>Admin</p>"
+
+- label: if false
+  source: |
+    if isAdmin
+      p Admin
+  context:
+    - name: isAdmin
+      value:
+        boolean: false
+  expected: ""
+
+- label: if else
+  source: |
+    if isAdmin
+      p Admin
+    else
+      p Usuario
+  context:
+    - name: isAdmin
+      value:
+        boolean: false
+  expected: "<p>Usuario</p>"
+
+- label: unless false renderiza
+  source: |
+    unless isGuest
+      p Bienvenido
+  context:
+    - name: isGuest
+      value:
+        boolean: false
+  expected: "<p>Bienvenido</p>"
+
+- label: unless true no renderiza
+  source: |
+    unless isGuest
+      p Bienvenido
+  context:
+    - name: isGuest
+      value:
+        boolean: true
+  expected: ""
+
+- label: if else if encadenado
+  source: |
+    - var role = "user"
+    if role == "admin"
+      p Admin
+    else
+      if role == "user"
+        p Usuario
+      else
+        p Invitado
+  expected: "<p>Usuario</p>"
+
+# each
+- label: each simple
+  source: |
+    - var items = ["a","b","c"]
+    ul
+      each item in items
+        li #{item}
+  expected: "<ul><li>a</li><li>b</li><li>c</li></ul>"
+
+- label: each array literal
+  source: |
+    each n in [1,2,3]
+      p #{n}
+  expected: "<p>1</p><p>2</p><p>3</p>"
+
+- label: each con indice
+  source: |
+    - var items = ["x","y"]
+    each item, i in items
+      p #{i}:#{item}
+  expected: "<p>0:x</p><p>1:y</p>"
+
+- label: each anidado
+  source: |
+    - var rows = [[1,2],[3,4]]
+    each row in rows
+      each cell in row
+        span #{cell}
+  expected: "<span>1</span><span>2</span><span>3</span><span>4</span>"
+
+# while
+- label: while simple
+  source: |
+    - var i = 0
+    while i < 3
+      p #{i}
+      - i++
+  expected: "<p>0</p><p>1</p><p>2</p>"
+
+# case / when / default
+- label: case match
+  source: |
+    - var role = "admin"
+    case role
+      when "admin"
+        p Admin
+      when "user"
+        p Usuario
+      default
+        p Invitado
+  expected: "<p>Admin</p>"
+
+- label: case default
+  source: |
+    - var role = "guest"
+    case role
+      when "admin"
+        p Admin
+      default
+        p Invitado
+  expected: "<p>Invitado</p>"
+
+# mixin
+- label: mixin sin params
+  source: |
+    mixin divider
+      hr
+    +divider
+  expected: "<hr>"
+
+- label: mixin con params
+  source: |
+    mixin greet(name)
+      p Hola #{name}
+    +greet("Carlos")
+  expected: "<p>Hola Carlos</p>"
+
+- label: mixin multiple llamadas
+  source: |
+    mixin btn(label)
+      button #{label}
+    +btn("Guardar")
+    +btn("Cancelar")
+  expected: "<button>Guardar</button><button>Cancelar</button>"
+
+# Comentarios
+- label: comentario unbuffered no emite
+  source: |
+    //- Solo para devs
+    p Visible
+  expected: "<p>Visible</p>"
+
+# Combinaciones reales
+- label: js + each + if
+  source: |
+    - var items = [1,2,3]
+    ul
+      each item in items
+        if item > 1
+          li #{item}
+  expected: "<ul><li>2</li><li>3</li></ul>"
+
+- label: js + unless
+  source: |
+    - var loggedIn = false
+    unless loggedIn
+      p Por favor inicia sesion
+  expected: "<p>Por favor inicia sesion</p>"
+
+- label: template mini completo
+  source: |
+    doctype html
+    html(lang="es")
+      head
+        meta(charset="UTF-8")
+        title Mi Pagina
+      body
+        h1 Bienvenido
+        p Hola mundo
+  expected: '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Mi Pagina</title></head><body><h1>Bienvenido</h1><p>Hola mundo</p></body></html>'
+
+- label: mixin + each complejo
+  source: |
+    mixin item(label)
+      li.item #{label}
+    ul
+      each fruit in ["banana","apple"]
+        +item(fruit)
+  expected: '<ul><li class="item">banana</li><li class="item">apple</li></ul>'
