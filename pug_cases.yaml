@@ -1,4 +1,19 @@
 # Tags básicos
+- label: 01-basic.zpug
+  source: |
+    doctype html
+    html(lang="en")
+      head
+        meta(charset="UTF-8")
+        title My First Page
+      body
+        h1 Welcome to zig-pug
+        p This is a simple paragraph
+        p.destacado This paragraph has a class
+        p#importante This paragraph has an ID
+        .container
+          p Content inside a div
+  expected : <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>My First Page</title></head><body><h1>Welcome to zig-pug</h1><p>This is a simple paragraph</p><p class="destacado">This paragraph has a class</p><p id="importante">This paragraph has an ID</p><div class="container"><p>Content inside a div</p></div></body></html>
 - label: tag simple
   source: "div"
   expected: "<div></div>"

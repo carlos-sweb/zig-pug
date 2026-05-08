@@ -1,5 +1,10 @@
 [
   {
+    "label": "01-basic.zpug",
+    "source": "doctype html\nhtml(lang=\"en\")\n  head\n    meta(charset=\"UTF-8\")\n    title My First Page\n  body\n    h1 Welcome to zig-pug\n    p This is a simple paragraph\n    p.destacado This paragraph has a class\n    p#importante This paragraph has an ID\n    .container\n      p Content inside a div\n",
+    "expected": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>My First Page</title></head><body><h1>Welcome to zig-pug</h1><p>This is a simple paragraph</p><p class=\"destacado\">This paragraph has a class</p><p id=\"importante\">This paragraph has an ID</p><div class=\"container\"><p>Content inside a div</p></div></body></html>"
+  },
+  {
     "label": "tag simple",
     "source": "div",
     "expected": "<div></div>"

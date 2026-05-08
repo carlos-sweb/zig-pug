@@ -146,7 +146,7 @@ pub fn main(init: std.process.Init) !void {
         };
         defer allocator.free(html);
 
-        print("HTML: {s}\n", .{html});
+        print("HTML:\n{s}\n", .{html});
 
         // Validate if expected is set
         if (case.expected) |expected| {
@@ -155,8 +155,8 @@ pub fn main(init: std.process.Init) !void {
                 passed += 1;
             } else {
                 print("✗ FAIL\n", .{});
-                print("  expected: {s}\n", .{expected});
-                print("  got:      {s}\n", .{html});
+                print("  expected:\n{s}\n", .{expected});
+                print("  got:\n{s}\n", .{html});
                 failed += 1;
             }
         } else {
