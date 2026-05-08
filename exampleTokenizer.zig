@@ -43,9 +43,9 @@ pub fn main(init: std.process.Init) !void {
         print("\n", .{});
         print("══════════════════════════════════════════════\n", .{});
         print("  [{d}] {s}\n", .{ example_num, case.label });
-        print("  source: {s}\n", .{case.source});
+        print("  source:\n{s}\n", .{case.source});
         print("══════════════════════════════════════════════\n", .{});
-        print("{s:<22} {s:<30} {s}\n", .{ "TOKEN TYPE", "VALUE", "LINE:COL" });
+        print("{s:<15} {s:<30} {s}\n", .{ "TOKEN TYPE", "VALUE", "LINE:COL" });
         print("──────────────────────────────────────────────\n", .{});
 
         var tokenizer = try Tokenizer.init(allocator, case.source);
