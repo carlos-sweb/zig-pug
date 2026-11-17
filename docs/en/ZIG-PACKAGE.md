@@ -4,7 +4,7 @@ zig-pug is configured to work with the Zig Package Manager.
 
 ## Requirements
 
-- **Zig 0.13.0** or higher (recommended: 0.15.2)
+- **Zig 0.17.0** or higher
 
 ## Installation
 
@@ -314,7 +314,7 @@ exe.linkLibC();
 
 If you have problems using zig-pug as a dependency:
 
-1. Verify that you are using Zig 0.13.0+
+1. Verify that you are using Zig 0.17.0+
 2. Check that the hash is correct
 3. Open an issue on GitHub with the complete error
 

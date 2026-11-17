@@ -30,7 +30,7 @@ pub const Color = enum(c_int) {
 pub fn printError(comptime fmt: []const u8, args: anytype) void {
     const msg = std.fmt.allocPrint(std.heap.page_allocator, fmt, args) catch return;
     defer std.heap.page_allocator.free(msg);
-    const c_msg = std.heap.page_allocator.dupeZ(u8, msg) catch return;
+    const c_msg = std.heap.page_allocator.dupeSentinel(u8, msg, 0) catch return;
     defer std.heap.page_allocator.free(c_msg);
     c.c_print_color(c_msg.ptr, @intFromEnum(Color.red));
 }
@@ -38,7 +38,7 @@ pub fn printError(comptime fmt: []const u8, args: anytype) void {
 pub fn printWarning(comptime fmt: []const u8, args: anytype) void {
     const msg = std.fmt.allocPrint(std.heap.page_allocator, fmt, args) catch return;
     defer std.heap.page_allocator.free(msg);
-    const c_msg = std.heap.page_allocator.dupeZ(u8, msg) catch return;
+    const c_msg = std.heap.page_allocator.dupeSentinel(u8, msg, 0) catch return;
     defer std.heap.page_allocator.free(c_msg);
     c.c_print_color(c_msg.ptr, @intFromEnum(Color.yellow));
 }
@@ -46,7 +46,7 @@ pub fn printWarning(comptime fmt: []const u8, args: anytype) void {
 pub fn printSuccess(comptime fmt: []const u8, args: anytype) void {
     const msg = std.fmt.allocPrint(std.heap.page_allocator, fmt, args) catch return;
     defer std.heap.page_allocator.free(msg);
-    const c_msg = std.heap.page_allocator.dupeZ(u8, msg) catch return;
+    const c_msg = std.heap.page_allocator.dupeSentinel(u8, msg, 0) catch return;
     defer std.heap.page_allocator.free(c_msg);
     c.c_print_color(c_msg.ptr, @intFromEnum(Color.green));
 }
@@ -54,7 +54,7 @@ pub fn printSuccess(comptime fmt: []const u8, args: anytype) void {
 pub fn printInfo(comptime fmt: []const u8, args: anytype) void {
     const msg = std.fmt.allocPrint(std.heap.page_allocator, fmt, args) catch return;
     defer std.heap.page_allocator.free(msg);
-    const c_msg = std.heap.page_allocator.dupeZ(u8, msg) catch return;
+    const c_msg = std.heap.page_allocator.dupeSentinel(u8, msg, 0) catch return;
     defer std.heap.page_allocator.free(c_msg);
     c.c_print_color(c_msg.ptr, @intFromEnum(Color.cyan));
 }

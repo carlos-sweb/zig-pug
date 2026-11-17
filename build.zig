@@ -5,7 +5,7 @@ pub fn build(b: *std.Build) void {
     // Force ReleaseFast because mujs requires optimization to work correctly
     // Debug and ReleaseSafe builds crash due to mujs internal issues with pointer arithmetic
     const user_optimize = b.standardOptimizeOption(.{});
-    const optimize: std.builtin.OptimizeMode = if (user_optimize == .Debug) .ReleaseFast else user_optimize;
+    const optimize: std.lang.Optimize = if (user_optimize == .debug) .fast else user_optimize;
 
     // ========================================================================
     // Module Export - For use as a Zig dependency
@@ -131,9 +131,7 @@ pub fn build(b: *std.Build) void {
     // Run command
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    run_cmd.addPassthruArgs();
     const run_step = b.step("run", "Run the CLI app");
     run_step.dependOn(&run_cmd.step);
 
@@ -177,9 +175,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const run_example_tokenizer_cmd = b.addRunArtifact(example_tokenizer);
-    if (b.args) |args| {
-        run_example_tokenizer_cmd.addArgs(args);
-    }
+    run_example_tokenizer_cmd.addPassthruArgs();
     //run_example_tokenizer_cmd.step.dependOn(b.getInstallStep());
     const run_example_tokenizer_step = b.step("exampleTokenizer", "Inspect Tokenizer");
     run_example_tokenizer_step.dependOn(&run_example_tokenizer_cmd.step);
@@ -200,9 +196,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const run_example_parser_cmd = b.addRunArtifact(example_parser);
-    if (b.args) |args| {
-        run_example_parser_cmd.addArgs(args);
-    }
+    run_example_parser_cmd.addPassthruArgs();
     //run_example_parser_cmd.step.dependOn(b.getInstallStep());
     const run_example_parser_step = b.step("exampleParser", "Inspect Parser");
     run_example_parser_step.dependOn(&run_example_parser_cmd.step);
@@ -231,9 +225,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const run_example_compiler_cmd = b.addRunArtifact(example_compiler);
-    if (b.args) |args| {
-        run_example_compiler_cmd.addArgs(args);
-    }
+    run_example_compiler_cmd.addPassthruArgs();
     //run_example_compiler_cmd.step.dependOn(b.getInstallStep());
     const run_example_compiler_step = b.step("exampleCompiler", "Inspect Compiler");
     run_example_compiler_step.dependOn(&run_example_compiler_cmd.step);
@@ -264,6 +256,24 @@ pub fn build(b: *std.Build) void {
     const install_benchmark = b.addInstallArtifact(example_benchmark, .{});
     const benchmark_step = b.step("benchmark_single", "Build benchmark executable");
     benchmark_step.dependOn(&install_benchmark.step);
+
+    const loop_benchmark = b.addExecutable(.{
+        .name = "benchmark_loop",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("benchmark_loop.zig"),
+            .target = exe_target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    loop_benchmark.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
+    loop_benchmark.root_module.addCSourceFile(.{
+        .file = b.path("vendor/mujs-1.3.9/one.c"),
+        .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
+    });
+    const run_loop_benchmark = b.addRunArtifact(loop_benchmark);
+    const loop_benchmark_step = b.step("loop-bench", "Time each-loop compilation");
+    loop_benchmark_step.dependOn(&run_loop_benchmark.step);
 
     // Global Installation
     // Usage: sudo zig build -p /usr/local install
@@ -301,7 +311,7 @@ pub fn build(b: *std.Build) void {
             .root_module = b.createModule(.{
                 .root_source_file = b.path("src/cli.zig"),
                 .target = b.resolveTargetQuery(cross_target),
-                .optimize = .ReleaseFast,
+                .optimize = .fast,
                 .link_libc = true, // 0.16 version zig
             }),
         });

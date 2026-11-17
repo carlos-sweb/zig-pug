@@ -21,7 +21,7 @@ const VERSION = "4.0.0";
 fn printError(comptime fmt: []const u8, args: anytype) void {
     const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
     defer std.heap.c_allocator.free(msg);
-    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    const c_msg = std.heap.c_allocator.dupeSentinel(u8, msg, 0) catch return;
     defer std.heap.c_allocator.free(c_msg);
     c_print.c.c_print_color(c_msg.ptr, 31); // COLOR_RED
 }
@@ -29,7 +29,7 @@ fn printError(comptime fmt: []const u8, args: anytype) void {
 fn printWarning(comptime fmt: []const u8, args: anytype) void {
     const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
     defer std.heap.c_allocator.free(msg);
-    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    const c_msg = std.heap.c_allocator.dupeSentinel(u8, msg, 0) catch return;
     defer std.heap.c_allocator.free(c_msg);
     c_print.c.c_print_color(c_msg.ptr, 33); // COLOR_YELLOW
 }
@@ -37,7 +37,7 @@ fn printWarning(comptime fmt: []const u8, args: anytype) void {
 fn printSuccess(comptime fmt: []const u8, args: anytype) void {
     const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
     defer std.heap.c_allocator.free(msg);
-    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    const c_msg = std.heap.c_allocator.dupeSentinel(u8, msg, 0) catch return;
     defer std.heap.c_allocator.free(c_msg);
     c_print.c.c_print_color(c_msg.ptr, 32); // COLOR_GREEN
 }
@@ -45,7 +45,7 @@ fn printSuccess(comptime fmt: []const u8, args: anytype) void {
 fn printInfo(comptime fmt: []const u8, args: anytype) void {
     const msg = std.fmt.allocPrint(std.heap.c_allocator, fmt, args) catch return;
     defer std.heap.c_allocator.free(msg);
-    const c_msg = std.heap.c_allocator.dupeZ(u8, msg) catch return;
+    const c_msg = std.heap.c_allocator.dupeSentinel(u8, msg, 0) catch return;
     defer std.heap.c_allocator.free(c_msg);
     c_print.c.c_print_color(c_msg.ptr, 36); // COLOR_CYAN
 }

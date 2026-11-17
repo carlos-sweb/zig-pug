@@ -103,6 +103,7 @@ pub const Compiler = struct {
     child_blocks: std.StringHashMap(ChildBlockInfo), // Blocks from child template
     has_errors: bool, // Track if any compilation errors occurred (for strict mode)
     errors: std.ArrayList(CompilationError), // Accumulated compilation errors
+    loop_depth: usize, // Unique temps for nested each loops
 
     /// Add a compilation error to the errors list
     fn addError(
@@ -116,9 +117,9 @@ pub const Compiler = struct {
         const err = CompilationError{
             .type = error_type,
             .line = line,
-            .message = self.allocator.dupeZ(u8, message) catch return,
-            .detail = if (detail) |d| self.allocator.dupeZ(u8, d) catch null else null,
-            .hint = if (hint) |h| self.allocator.dupeZ(u8, h) catch null else null,
+            .message = self.allocator.dupeSentinel(u8, message, 0) catch return,
+            .detail = if (detail) |d| self.allocator.dupeSentinel(u8, d, 0) catch null else null,
+            .hint = if (hint) |h| self.allocator.dupeSentinel(u8, h, 0) catch null else null,
         };
         self.errors.append(self.allocator, err) catch return;
         self.has_errors = true;
@@ -153,6 +154,7 @@ pub const Compiler = struct {
             .template_cache = null,
             .child_blocks = std.StringHashMap(ChildBlockInfo).init(allocator),
             .errors = .empty,
+            .loop_depth = 0,
         };
         return compiler;
     }
@@ -708,6 +710,17 @@ pub const Compiler = struct {
 
     fn compileLoop(self: *Self, node: *ast.AstNode) !void {
         const loop = &node.data.Loop;
+        const depth = self.loop_depth;
+        self.loop_depth += 1;
+        defer self.loop_depth -= 1;
+
+        const arr_name = try std.fmt.allocPrint(self.allocator, "__zpug_a{d}", .{depth});
+        defer self.allocator.free(arr_name);
+        const idx_name = try std.fmt.allocPrint(self.allocator, "__zpug_i{d}", .{depth});
+        defer self.allocator.free(idx_name);
+        // The array must not stay reachable after the loop, including on error.
+        defer self.runtime.deleteGlobal(arr_name);
+        defer self.runtime.deleteGlobal(idx_name);
 
         // Transform optional chaining (?.) syntax to ES5.1 compatible code
         // Example: "item?.tags" -> "item && item.hasOwnProperty('tags') ? item.tags : []"
@@ -717,17 +730,17 @@ pub const Compiler = struct {
         );
         defer self.allocator.free(transformed_iterable);
 
-        // Get the iterable value from runtime — wrap in safe IIFE to handle
-        // undefined variables gracefully (same behavior as pug).
-        const safe_iterable = try std.fmt.allocPrint(
+        // Evaluate the iterable once and keep the value. Later iterations
+        // only read that value by index, so the expression is not compiled
+        // or executed again on every item.
+        const bind_expr = try std.fmt.allocPrint(
             self.allocator,
-            "(function(){{ try {{ var _v=({s}); return _v; }} catch(e) {{ return []; }} }})()",
-            .{transformed_iterable},
+            "var {s} = (function(){{ try {{ var _v=({s}); return _v; }} catch(e) {{ return []; }} }})()",
+            .{ arr_name, transformed_iterable },
         );
-        defer self.allocator.free(safe_iterable);
+        defer self.allocator.free(bind_expr);
 
-        const iterable_result = self.runtime.eval(safe_iterable) catch {
-            // If even the safe wrapper fails, treat as empty — run else branch
+        const bound = self.runtime.eval(bind_expr) catch {
             if (loop.else_branch) |*else_branch| {
                 for (else_branch.items) |child| {
                     try self.compileNode(child);
@@ -735,15 +748,12 @@ pub const Compiler = struct {
             }
             return;
         };
-        defer self.allocator.free(iterable_result);
+        self.allocator.free(bound);
 
-        // Check if it's an array by looking for array notation or getting length
-        // We'll use JavaScript to iterate
-        const length_expr = try std.fmt.allocPrint(self.allocator, "({s}).length", .{safe_iterable});
+        const length_expr = try std.fmt.allocPrint(self.allocator, "{s}.length", .{arr_name});
         defer self.allocator.free(length_expr);
 
         const length_str = self.runtime.eval(length_expr) catch {
-            // Not an array or no length, try else branch
             if (loop.else_branch) |*else_branch| {
                 for (else_branch.items) |child| {
                     try self.compileNode(child);
@@ -754,7 +764,6 @@ pub const Compiler = struct {
         defer self.allocator.free(length_str);
 
         const length = std.fmt.parseInt(usize, length_str, 10) catch {
-            // Invalid length, try else branch
             if (loop.else_branch) |*else_branch| {
                 for (else_branch.items) |child| {
                     try self.compileNode(child);
@@ -763,7 +772,6 @@ pub const Compiler = struct {
             return;
         };
 
-        // If empty array, execute else branch
         if (length == 0) {
             if (loop.else_branch) |*else_branch| {
                 for (else_branch.items) |child| {
@@ -773,35 +781,33 @@ pub const Compiler = struct {
             return;
         }
 
-        // Iterate over array
+        // Stable source: the index arrives as a number, not as text spliced
+        // into a new program on every iteration.
+        const set_item_expr = try std.fmt.allocPrint(
+            self.allocator,
+            "var {s} = {s}[{s}]",
+            .{ loop.iterator, arr_name, idx_name },
+        );
+        defer self.allocator.free(set_item_expr);
+
+        const set_index_expr = if (loop.index) |index_name|
+            try std.fmt.allocPrint(self.allocator, "var {s} = {s}", .{ index_name, idx_name })
+        else
+            null;
+        defer if (set_index_expr) |expr| self.allocator.free(expr);
+
         var i: usize = 0;
         while (i < length) : (i += 1) {
-            // Set iterator variable: item = array[i]
-            const set_item_expr = try std.fmt.allocPrint(
-                self.allocator,
-                "var {s} = ({s})[{d}]",
-                .{ loop.iterator, transformed_iterable, i },
-            );
-            defer self.allocator.free(set_item_expr);
+            try self.runtime.setNumber(idx_name, @floatFromInt(i));
 
-            _ = self.runtime.eval(set_item_expr) catch {
-                // Skip this iteration if variable setting fails
-                continue;
-            };
+            const assigned = self.runtime.eval(set_item_expr) catch continue;
+            self.allocator.free(assigned);
 
-            // Set index variable if specified
-            if (loop.index) |index_name| {
-                const set_index_expr = try std.fmt.allocPrint(
-                    self.allocator,
-                    "var {s} = {d}",
-                    .{ index_name, i },
-                );
-                defer self.allocator.free(set_index_expr);
-
-                _ = self.runtime.eval(set_index_expr) catch {};
+            if (set_index_expr) |expr| {
+                const index_assigned = self.runtime.eval(expr) catch null;
+                if (index_assigned) |value| self.allocator.free(value);
             }
 
-            // Compile loop body
             for (loop.body.items) |child| {
                 try self.compileNode(child);
             }

@@ -14,6 +14,12 @@ const runtime = @import("src/runtime.zig");
 
 const print = std.debug.print;
 
+fn repeat(comptime s: []const u8, comptime n: usize) [s.len * n]u8 {
+    var buf: [s.len * n]u8 = undefined;
+    for (0..n) |i| @memcpy(buf[i * s.len ..][0..s.len], s);
+    return buf;
+}
+
 // ---------------------------------------------------------------------------
 // Caso de prueba
 // ---------------------------------------------------------------------------
@@ -79,7 +85,7 @@ pub fn main(init: std.process.Init) !void {
             if (!included) continue;
         }
 
-        const sep = "═" ** 50;
+        const sep = repeat("═", 50);
         print("\n{s}\n [{d}] {s}\n", .{ sep, i + 1, case.label });
 
         // Print source
@@ -89,7 +95,7 @@ pub fn main(init: std.process.Init) !void {
             print("  {d:>2}: {s}\n", .{ ln, line });
             ln += 1;
         }
-        print("{s}\n", .{"─" ** 50});
+        print("{s}\n", .{repeat("─", 50)});
 
         // Parse
         var parser = Parser.init(allocator, case.source) catch |err| {
@@ -164,12 +170,12 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    print("\n{s}\n", .{"═" ** 50});
+    print("\n{s}\n", .{repeat("═", 50)});
     print("  {d}/{d} casos exitosos", .{ passed, passed + failed });
     if (failed > 0) {
         print("  ({d} errores)\n", .{failed});
     } else {
         print("  ✓\n", .{});
     }
-    print("{s}\n", .{"═" ** 50});
+    print("{s}\n", .{repeat("═", 50)});
 }

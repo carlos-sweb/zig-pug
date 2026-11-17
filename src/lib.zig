@@ -78,7 +78,7 @@ export fn zigpug_compile(ctx: ?*ZigPugContext, pug_source: [*:0]const u8) ?[*:0]
     const html = context.compile(source) catch return null;
 
     // Allocate null-terminated string for C
-    const result = context.allocator.dupeZ(u8, html) catch {
+    const result = context.allocator.dupeSentinel(u8, html, 0) catch {
         context.allocator.free(html);
         return null;
     };
@@ -256,7 +256,7 @@ export fn zigpug_pretty_print(html: [*:0]const u8, include_comments: c_int) ?[*:
 
     const formatted = prettyPrintHtmlWithComments(allocator, html_str, include_comments != 0) catch return null;
 
-    const result = allocator.dupeZ(u8, formatted) catch {
+    const result = allocator.dupeSentinel(u8, formatted, 0) catch {
         allocator.free(formatted);
         return null;
     };
@@ -275,7 +275,7 @@ export fn zigpug_minify(html: [*:0]const u8) ?[*:0]u8 {
 
     const minified = formatter.minifyHtml(allocator, html_str) catch return null;
 
-    const result = allocator.dupeZ(u8, minified) catch {
+    const result = allocator.dupeSentinel(u8, minified, 0) catch {
         allocator.free(minified);
         return null;
     };

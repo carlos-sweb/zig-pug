@@ -323,6 +323,11 @@ pub const JsRuntime = struct {
         try self.mujs_runtime.setNumber(key, value);
     }
 
+    /// Remove a global binding. Does nothing if the name is absent.
+    pub fn deleteGlobal(self: *Self, key: []const u8) void {
+        self.mujs_runtime.deleteGlobal(key);
+    }
+
     /// Set a boolean variable in the JavaScript scope
     ///
     /// Creates or updates a global variable with a boolean value.

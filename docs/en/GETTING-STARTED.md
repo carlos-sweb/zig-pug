@@ -6,7 +6,7 @@ This guide will take you step by step from installation to creating your first t
 
 Before you begin, make sure you have:
 
-- **Zig 0.16.0** installed ([download here](https://ziglang.org/download/))
+- **Zig 0.17.0** installed ([download here](https://ziglang.org/download/))
 - Terminal/command line
 - Text editor (VS Code, Vim, etc.)
 
@@ -14,7 +14,7 @@ Before you begin, make sure you have:
 
 ```bash
 zig version
-# Expected output: 0.16.0
+# Expected output: 0.17.0
 ```
 
 ## Step 1: Clone and Install

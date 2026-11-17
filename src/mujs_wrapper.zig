@@ -26,6 +26,11 @@ pub extern fn js_dostring(J: ?*MuJsState, source: [*:0]const u8) c_int;
 // Protected versions (return error code instead of throwing)
 pub extern fn js_ploadstring(J: ?*MuJsState, filename: [*:0]const u8, source: [*:0]const u8) c_int;
 pub extern fn js_pcall(J: ?*MuJsState, n: c_int) c_int;
+pub extern fn js_ref(J: ?*MuJsState) [*:0]const u8;
+pub extern fn js_unref(J: ?*MuJsState, ref: [*:0]const u8) void;
+pub extern fn js_getregistry(J: ?*MuJsState, name: [*:0]const u8) void;
+pub extern fn js_iscallable(J: ?*MuJsState, idx: c_int) c_int;
+pub extern fn js_delglobal(J: ?*MuJsState, name: [*:0]const u8) void;
 
 // ============================================================================
 // Stack operations
@@ -87,6 +92,9 @@ pub extern fn js_setproperty(J: ?*MuJsState, idx: c_int, name: [*:0]const u8) vo
 pub const JsRuntime = struct {
     state: *MuJsState,
     allocator: std.mem.Allocator,
+    /// Expresión ya compilada → referencia viva en el registry de mujs.
+    /// La función se vuelve a llamar; no se vuelve a parsear.
+    compiled: std.StringHashMap([*:0]const u8),
 
     const Self = @This();
 
@@ -102,7 +110,12 @@ pub const JsRuntime = struct {
         runtime.* = .{
             .state = state,
             .allocator = allocator,
+            .compiled = std.StringHashMap([*:0]const u8).init(allocator),
         };
+        errdefer {
+            runtime.compiled.deinit();
+            js_freestate(state);
+        }
 
         // Setup basic console.log functionality
         try runtime.setupConsole();
@@ -112,6 +125,9 @@ pub const JsRuntime = struct {
 
     /// Free the JavaScript runtime and all associated resources
     pub fn deinit(self: *Self) void {
+        var it = self.compiled.iterator();
+        while (it.next()) |entry| self.allocator.free(entry.key_ptr.*);
+        self.compiled.deinit();
         js_freestate(self.state);
         self.allocator.destroy(self);
     }
@@ -131,13 +147,16 @@ pub const JsRuntime = struct {
         js_pop(self.state, 1); // Pop result
     }
 
-    /// Evaluate a JavaScript expression and return the result as a string
+    /// Evaluate a JavaScript expression and return the result as a string.
+    /// The same source is compiled once and stored in the mujs registry.
     pub fn eval(self: *Self, expr: []const u8) ![]const u8 {
-        // Create null-terminated string for the expression
-        const expr_z = try self.allocator.dupeZ(u8, expr);
+        if (self.compiled.get(expr)) |ref| {
+            return self.callCompiled(expr, ref);
+        }
+
+        const expr_z = try self.allocator.dupeSentinel(u8, expr, 0);
         defer self.allocator.free(expr_z);
 
-        // Load and compile the code
         if (js_ploadstring(self.state, "[eval]", expr_z) != 0) {
             const err_msg = js_trystring(self.state, -1, "unknown compile error");
             std.debug.print("mujs compile error: {s}\n", .{err_msg});
@@ -145,7 +164,27 @@ pub const JsRuntime = struct {
             return error.CompileError;
         }
 
-        // Call with no arguments (pushundefined is 'this')
+        if (self.allocator.dupe(u8, expr)) |owned| {
+            js_copy(self.state, -1);
+            const ref = js_ref(self.state);
+            self.compiled.put(owned, ref) catch {
+                self.allocator.free(owned);
+                js_unref(self.state, ref);
+            };
+        } else |_| {}
+        return self.finishCall(expr);
+    }
+
+    fn callCompiled(self: *Self, expr: []const u8, ref: [*:0]const u8) ![]const u8 {
+        js_getregistry(self.state, ref);
+        if (js_iscallable(self.state, -1) == 0) {
+            js_pop(self.state, 1);
+            return error.RuntimeError;
+        }
+        return self.finishCall(expr);
+    }
+
+    fn finishCall(self: *Self, expr: []const u8) ![]const u8 {
         js_pushundefined(self.state);
         if (js_pcall(self.state, 0) != 0) {
             const err_msg = js_trystring(self.state, -1, "unknown runtime error");
@@ -154,20 +193,28 @@ pub const JsRuntime = struct {
             return error.RuntimeError;
         }
 
-        // Get the result as string
         const result_cstr = js_tostring(self.state, -1);
-        const result = try self.allocator.dupe(u8, std.mem.span(result_cstr));
+        const result = self.allocator.dupe(u8, std.mem.span(result_cstr)) catch {
+            js_pop(self.state, 1);
+            return error.OutOfMemory;
+        };
         js_pop(self.state, 1);
-
         return result;
+    }
+
+    /// Drop a global. Missing names are ignored. Used to release loop temps.
+    pub fn deleteGlobal(self: *Self, key: []const u8) void {
+        const key_z = self.allocator.dupeSentinel(u8, key, 0) catch return;
+        defer self.allocator.free(key_z);
+        js_delglobal(self.state, key_z);
     }
 
     /// Set a string variable in the global scope
     pub fn setString(self: *Self, key: []const u8, value: []const u8) !void {
-        const key_z = try self.allocator.dupeZ(u8, key);
+        const key_z = try self.allocator.dupeSentinel(u8, key, 0);
         defer self.allocator.free(key_z);
 
-        const value_z = try self.allocator.dupeZ(u8, value);
+        const value_z = try self.allocator.dupeSentinel(u8, value, 0);
         defer self.allocator.free(value_z);
 
         js_pushstring(self.state, value_z);
@@ -176,7 +223,7 @@ pub const JsRuntime = struct {
 
     /// Set a number variable in the global scope
     pub fn setNumber(self: *Self, key: []const u8, value: f64) !void {
-        const key_z = try self.allocator.dupeZ(u8, key);
+        const key_z = try self.allocator.dupeSentinel(u8, key, 0);
         defer self.allocator.free(key_z);
 
         js_pushnumber(self.state, value);
@@ -185,7 +232,7 @@ pub const JsRuntime = struct {
 
     /// Set a boolean variable in the global scope
     pub fn setBool(self: *Self, key: []const u8, value: bool) !void {
-        const key_z = try self.allocator.dupeZ(u8, key);
+        const key_z = try self.allocator.dupeSentinel(u8, key, 0);
         defer self.allocator.free(key_z);
 
         js_pushboolean(self.state, if (value) 1 else 0);
@@ -194,7 +241,7 @@ pub const JsRuntime = struct {
 
     /// Set an object variable in the global scope
     pub fn setObject(self: *Self, key: []const u8, properties: anytype) !void {
-        const key_z = try self.allocator.dupeZ(u8, key);
+        const key_z = try self.allocator.dupeSentinel(u8, key, 0);
         defer self.allocator.free(key_z);
 
         // Create new object
@@ -207,14 +254,14 @@ pub const JsRuntime = struct {
         }
 
         inline for (info.Struct.fields) |field| {
-            const prop_name_z = try self.allocator.dupeZ(u8, field.name);
+            const prop_name_z = try self.allocator.dupeSentinel(u8, field.name, 0);
             defer self.allocator.free(prop_name_z);
 
             const value = @field(properties, field.name);
             const ValueType = @TypeOf(value);
 
             if (ValueType == []const u8) {
-                const value_z = try self.allocator.dupeZ(u8, value);
+                const value_z = try self.allocator.dupeSentinel(u8, value, 0);
                 defer self.allocator.free(value_z);
                 js_pushstring(self.state, value_z);
             } else if (ValueType == f64 or ValueType == comptime_int or ValueType == comptime_float) {

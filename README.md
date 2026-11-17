@@ -37,7 +37,7 @@ html(lang="en")
 - ✅ **C API** - Full C-compatible API for FFI integration
 - ✅ **C++ API** - Modern C++ wrapper with RAII, exceptions, STL (C++11/17)
 - ✅ **Editor support** - VS Code, Sublime Text, CodeMirror
-- ✅ **No dependencies** - Only Zig 0.16.0 and embedded mujs
+- ✅ **No dependencies** - Only Zig 0.17.0 and embedded mujs
 - ⚡ **Fast** - Native compilation in Zig with optimizations
 - **Secure** - HTML escaping and XSS prevention
 - **Works on Termux/Android** (CLI binary)
@@ -54,7 +54,7 @@ html(lang="en")
 
 ### Requirements
 
-- **Zig 0.16.0** ([download](https://ziglang.org/download/))
+- **Zig 0.17.0** ([download](https://ziglang.org/download/))
 
 ### Clone and build
 
@@ -919,4 +919,4 @@ MIT License - see [LICENSE](LICENSE) for details
 
 ---
 
-**Made with ❤️ using Zig 0.16.0 and mujs**
+**Made with ❤️ using Zig 0.17.0 and mujs**

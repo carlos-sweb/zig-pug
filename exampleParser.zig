@@ -13,6 +13,12 @@ const ast = @import("src/ast/mod.zig");
 
 const print = std.debug.print;
 
+fn repeat(comptime s: []const u8, comptime n: usize) [s.len * n]u8 {
+    var buf: [s.len * n]u8 = undefined;
+    for (0..n) |i| @memcpy(buf[i * s.len ..][0..s.len], s);
+    return buf;
+}
+
 const CaseJson = struct { label: []const u8, source: []const u8 };
 const CasesJson = []CaseJson;
 
@@ -58,7 +64,7 @@ pub fn main(init: std.process.Init) !void {
             if (!included) continue;
         }
 
-        const sep = "═" ** 46;
+        const sep = repeat("═", 46);
         print("\n{s}\n", .{sep});
         print("  {s}\n", .{case.label});
         print("  source:\n", .{});
@@ -70,7 +76,7 @@ pub fn main(init: std.process.Init) !void {
             print("    {d:>2}: {s}\n", .{ ln, line });
             ln += 1;
         }
-        print("{s}\n", .{"─" ** 46});
+        print("{s}\n", .{repeat("─", 46)});
 
         var parser = Parser.init(allocator, case.source) catch |err| {
             print("[INIT ERROR] {}\n", .{err});
@@ -90,12 +96,12 @@ pub fn main(init: std.process.Init) !void {
     }
 
     const total = passed + failed;
-    print("\n{s}\n", .{"═" ** 46});
+    print("\n{s}\n", .{repeat("═", 46)});
     print("  {d}/{d} casos exitosos", .{ passed, total });
     if (failed > 0) {
         print("  ({d} errores)\n", .{failed});
     } else {
         print("  ✓\n", .{});
     }
-    print("{s}\n", .{"═" ** 46});
+    print("{s}\n", .{repeat("═", 46)});
 }
