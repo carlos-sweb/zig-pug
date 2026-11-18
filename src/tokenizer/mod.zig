@@ -202,8 +202,15 @@ pub const Tokenizer = struct {
             return Token.init(.Eof, "", self.line, self.column);
         };
 
-        // Newline — reset to Root
+        // A newline inside () is attribute whitespace, not a new indented line.
         if (ch == '\n') {
+            if (self.paren_depth > 0) {
+                _ = self.advance();
+                self.at_line_start = false;
+                self.after_space = true;
+                self.state = .Root;
+                return self.next();
+            }
             self.at_line_start = true;
             self.state = .Root;
             self.after_space = false;

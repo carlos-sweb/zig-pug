@@ -240,8 +240,7 @@ pub const Compiler = struct {
             .Text => try self.compileText(node),
             .Interpolation => try self.compileInterpolation(node),
             .Code => try self.compileCode(node),
-            //.Comment => try self.compileComment(node),
-            .Comment => {},
+            .Comment => try self.compileComment(node),
             .Conditional => try self.compileConditional(node),
             .Loop => try self.compileLoop(node),
             .MixinDef => try self.registerMixin(node),
@@ -634,6 +633,19 @@ pub const Compiler = struct {
             }
         }
         // If unbuffered, we just executed it but don't output
+    }
+
+    /// Buffered comments (//) become HTML comments. Unbuffered (//-) stay out.
+    /// "--" is already broken up by escapeComment so the comment cannot close early.
+    fn compileComment(self: *Self, node: *ast.AstNode) !void {
+        const comment = &node.data.Comment;
+        if (!comment.is_buffered) return;
+
+        const escaped = try escaping.escapeComment(self.allocator, comment.content);
+        defer self.allocator.free(escaped);
+        try self.output.appendSlice(self.allocator, "<!-- ");
+        try self.output.appendSlice(self.allocator, escaped);
+        try self.output.appendSlice(self.allocator, " -->");
     }
 
     // ========================================================================

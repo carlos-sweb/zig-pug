@@ -9,27 +9,32 @@ const helpers = @import("helpers.zig");
 /// Parser forward declaration
 pub const Parser = @import("mod.zig").Parser;
 
+/// Spaces that skipWhitespaceExceptNewline dropped between two tokens.
+/// last_end is the exclusive end column of the previous token, or 0 at the start of the line.
+fn appendColumnGap(buffer: *std.ArrayList(u8), allocator: std.mem.Allocator, column: usize, last_end: usize) !void {
+    if (last_end == 0 or column <= last_end) return;
+    var gap = column - last_end;
+    while (gap > 0) : (gap -= 1) {
+        try buffer.append(allocator, ' ');
+    }
+}
+
 pub fn parseInlineText(self: *Parser) anyerror!std.ArrayListUnmanaged(*ast.AstNode) {
     const arena_allocator = self.arena.allocator();
     var nodes: std.ArrayListUnmanaged(*ast.AstNode) = .empty;
     var text_buffer: std.ArrayList(u8) = .empty;
     const start_line = self.current.line;
     var last_token_end_col: usize = 0;
-    var has_content = false; // Track if we've processed any content
 
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
         if (helpers.match(self, &.{ .EscapedInterpol, .UnescapedInterpol })) {
-            // Add space before interpolation if there was previous content
-            //if (has_content and text_buffer.items.len == 0) {
-            // Previous content was an interpolation, add space
-            //try text_buffer.append(arena_allocator, ' ');
-            //}
+            // A space between #{a} and #{b} never becomes a token. Recover it from columns.
+            if (text_buffer.items.len == 0) {
+                try appendColumnGap(&text_buffer, arena_allocator, self.current.column, last_token_end_col);
+            }
 
             // Flush accumulated text as a Text node
             if (text_buffer.items.len > 0) {
-                // Add trailing space before interpolation
-                //try text_buffer.append(arena_allocator, ' ');
-
                 const text_node = try ast.AstNode.create(
                     arena_allocator,
                     .Text,
@@ -63,7 +68,6 @@ pub fn parseInlineText(self: *Parser) anyerror!std.ArrayListUnmanaged(*ast.AstNo
                 } },
             );
             try nodes.append(arena_allocator, interp_node);
-            has_content = true; // Mark that we have content
         } else {
             // Skip empty tokens (can occur when EOF is reached without newline)
             if (self.current.value.len == 0) {
@@ -71,16 +75,14 @@ pub fn parseInlineText(self: *Parser) anyerror!std.ArrayListUnmanaged(*ast.AstNo
                 continue;
             }
 
-            // Add space before token if we've already processed content
-            // This preserves spacing between words/interpolations
-            //if (has_content) {
-            //try text_buffer.append(arena_allocator, ' ');
-            //}
+            // Space after an interpolation was skipped before this text token.
+            if (text_buffer.items.len == 0) {
+                try appendColumnGap(&text_buffer, arena_allocator, self.current.column, last_token_end_col);
+            }
 
             // Accumulate text
             try text_buffer.appendSlice(arena_allocator, self.current.value);
             last_token_end_col = self.current.column + self.current.value.len;
-            has_content = true; // Mark that we have content
             try helpers.advance(self);
         }
     }
@@ -124,21 +126,15 @@ pub fn parsePipeText(self: *Parser) anyerror!*ast.AstNode {
     var text_buffer: std.ArrayList(u8) = .empty;
     const start_line = self.current.line;
     var last_token_end_col: usize = 0;
-    var has_content = false; // Track if we've processed any content
 
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
         if (helpers.match(self, &.{ .EscapedInterpol, .UnescapedInterpol })) {
-            // Add space before interpolation if there was previous content
-            if (has_content and text_buffer.items.len == 0) {
-                // Previous content was an interpolation, add space
-                try text_buffer.append(arena_allocator, ' ');
+            if (text_buffer.items.len == 0) {
+                try appendColumnGap(&text_buffer, arena_allocator, self.current.column, last_token_end_col);
             }
 
-            // Flush accumulated text as a Text node
+            // Flush accumulated text as a Text node. The space before #{ is already in the text token.
             if (text_buffer.items.len > 0) {
-                // Add trailing space before interpolation
-                try text_buffer.append(arena_allocator, ' ');
-
                 const text_node = try ast.AstNode.create(
                     arena_allocator,
                     .Text,
@@ -172,7 +168,6 @@ pub fn parsePipeText(self: *Parser) anyerror!*ast.AstNode {
                 } },
             );
             try nodes.append(arena_allocator, interp_node);
-            has_content = true; // Mark that we have content
         } else {
             // Skip empty tokens (can occur when EOF is reached without newline)
             if (self.current.value.len == 0) {
@@ -180,16 +175,13 @@ pub fn parsePipeText(self: *Parser) anyerror!*ast.AstNode {
                 continue;
             }
 
-            // Add space before token if we've already processed content
-            // This preserves spacing between words/interpolations
-            if (has_content) {
-                try text_buffer.append(arena_allocator, ' ');
+            if (text_buffer.items.len == 0) {
+                try appendColumnGap(&text_buffer, arena_allocator, self.current.column, last_token_end_col);
             }
 
             // Accumulate text
             try text_buffer.appendSlice(arena_allocator, self.current.value);
             last_token_end_col = self.current.column + self.current.value.len;
-            has_content = true; // Mark that we have content
             try helpers.advance(self);
         }
     }

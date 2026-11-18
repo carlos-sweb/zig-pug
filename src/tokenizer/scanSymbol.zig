@@ -119,6 +119,12 @@ pub fn scanSymbol(tokenizer: anytype) !Token {
     // Multi-character operators
     if (ch == '!' and tokenizer.peekChar() == '=') {
         _ = tokenizer.advance();
+        // div!= html is an unescaped code marker. a != b stays a comparison.
+        const after_tag = tokenizer.paren_depth == 0 and !tokenizer.line_started_with_keyword and switch (tokenizer.last_token_type) {
+            .Ident, .Class, .Id, .RParen => true,
+            else => false,
+        };
+        if (after_tag) return Token.init(.UnescapedCode, "!=", start_line, start_col);
         return Token.init(.NotEqual, "!=", start_line, start_col);
     }
     if (ch == '>' and tokenizer.peekChar() == '=') {

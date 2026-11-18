@@ -492,13 +492,15 @@ test "parser - multiple interpolations" {
     try std.testing.expectEqual(ast.NodeType.Interpolation, tag.data.Tag.children.items[0].type);
     try std.testing.expectEqualStrings("greeting", tag.data.Tag.children.items[0].data.Interpolation.expression);
 
-    // Second: Interpolation
-    try std.testing.expectEqual(ast.NodeType.Interpolation, tag.data.Tag.children.items[1].type);
-    try std.testing.expectEqualStrings("name", tag.data.Tag.children.items[1].data.Interpolation.expression);
+    // The space between #{greeting} and #{name} is its own text node.
+    try std.testing.expectEqual(ast.NodeType.Text, tag.data.Tag.children.items[1].type);
+    try std.testing.expectEqualStrings(" ", tag.data.Tag.children.items[1].data.Text.content);
 
-    // Third: Text
-    try std.testing.expectEqual(ast.NodeType.Text, tag.data.Tag.children.items[2].type);
-    try std.testing.expectEqualStrings("!", tag.data.Tag.children.items[2].data.Text.content);
+    try std.testing.expectEqual(ast.NodeType.Interpolation, tag.data.Tag.children.items[2].type);
+    try std.testing.expectEqualStrings("name", tag.data.Tag.children.items[2].data.Interpolation.expression);
+
+    try std.testing.expectEqual(ast.NodeType.Text, tag.data.Tag.children.items[3].type);
+    try std.testing.expectEqualStrings("!", tag.data.Tag.children.items[3].data.Text.content);
 }
 
 test "parser - unescaped interpolation" {

@@ -23,8 +23,24 @@ pub fn parseInclude(self: *Parser) anyerror!*ast.AstNode {
     var path: std.ArrayList(u8) = .empty;
     var filter: ?[]const u8 = null;
 
-    // Check for filter (e.g., include:markdown file.md)
-    if (helpers.match(self, &.{.Colon})) {
+    // The tokenizer keeps the rest of an include line as one Text token.
+    // include:markdown content.md arrives as ":markdown content.md".
+    if (helpers.match(self, &.{.Text})) {
+        const raw = std.mem.trim(u8, self.current.value, " \t");
+        try helpers.advance(self);
+        if (raw.len > 0 and raw[0] == ':') {
+            const body = std.mem.trim(u8, raw[1..], " \t");
+            if (std.mem.indexOfAny(u8, body, " \t")) |sep| {
+                filter = body[0..sep];
+                const path_raw = std.mem.trim(u8, body[sep + 1 ..], " \t");
+                try path.appendSlice(arena_allocator, path_raw);
+            } else {
+                filter = body;
+            }
+        } else {
+            try path.appendSlice(arena_allocator, raw);
+        }
+    } else if (helpers.match(self, &.{.Colon})) {
         try helpers.advance(self);
         if (helpers.match(self, &.{.Ident})) {
             filter = self.current.value;
@@ -32,8 +48,8 @@ pub fn parseInclude(self: *Parser) anyerror!*ast.AstNode {
         }
     }
 
-    // Parse path (rest of the line)
-    while (!helpers.match(self, &.{ .Newline, .Eof })) {
+    // Parse path (rest of the line) when it was not a single Text token.
+    while (!helpers.match(self, &.{ .Newline, .Eof, .Text })) {
         if (self.current.type == .Class) {
             try path.append(arena_allocator, '.');
         } else if (path.items.len > 0) {
@@ -121,6 +137,19 @@ pub fn parseBlock(self: *Parser, mode: ast.BlockMode) anyerror!*ast.AstNode {
     const start_line = self.current.line;
     try helpers.advance(self); // consume 'block' / 'append' / 'prepend'
 
+    // block append scripts / block prepend head. The mode word is an Ident
+    // because append and prepend are keywords only at the start of the line.
+    var resolved_mode = mode;
+    if (mode == .Replace and helpers.match(self, &.{.Ident})) {
+        if (std.mem.eql(u8, self.current.value, "append")) {
+            resolved_mode = .Append;
+            try helpers.advance(self);
+        } else if (std.mem.eql(u8, self.current.value, "prepend")) {
+            resolved_mode = .Prepend;
+            try helpers.advance(self);
+        }
+    }
+
     // Parse block name
     const name_token = try helpers.expect(self, .Ident);
     const name = name_token.value;
@@ -143,7 +172,7 @@ pub fn parseBlock(self: *Parser, mode: ast.BlockMode) anyerror!*ast.AstNode {
         1,
         .{ .Block = .{
             .name = name,
-            .mode = mode,
+            .mode = resolved_mode,
             .body = body,
         } },
     );
