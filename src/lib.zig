@@ -91,10 +91,7 @@ export fn zigpug_compile(ctx: ?*ZigPugContext, pug_source: [*:0]const u8) ?[*:0]
 /// Returns: Number of errors, or 0 if no errors or no compilation has been done
 export fn zigpug_get_error_count(ctx: ?*ZigPugContext) usize {
     const context: *Context = @ptrCast(@alignCast(ctx orelse return 0));
-    if (context.last_compiler) |comp| {
-        return comp.errors.items.len;
-    }
-    return 0;
+    return context.last_errors.items.len;
 }
 
 /// Get a specific compilation error by index
@@ -115,17 +112,14 @@ export fn zigpug_get_error(
     hint_out: ?*?[*:0]const u8,
 ) bool {
     const context: *Context = @ptrCast(@alignCast(ctx orelse return false));
-    if (context.last_compiler) |comp| {
-        if (index >= comp.errors.items.len) return false;
+    if (index >= context.last_errors.items.len) return false;
 
-        const err = &comp.errors.items[index];
-        if (line_out) |l| l.* = err.line;
-        if (message_out) |m| m.* = err.message.ptr;
-        if (detail_out) |d| d.* = if (err.detail) |detail| detail.ptr else null;
-        if (hint_out) |h| h.* = if (err.hint) |hint| hint.ptr else null;
-        return true;
-    }
-    return false;
+    const err = &context.last_errors.items[index];
+    if (line_out) |l| l.* = err.line;
+    if (message_out) |m| m.* = err.message.ptr;
+    if (detail_out) |d| d.* = if (err.detail) |detail| detail.ptr else null;
+    if (hint_out) |h| h.* = if (err.hint) |hint| hint.ptr else null;
+    return true;
 }
 
 /// Set a string variable in the context
@@ -548,7 +542,9 @@ export fn zigpug_set_object(ctx: ?*ZigPugContext, key: [*:0]const u8, obj: ?*Obj
 const Context = struct {
     allocator: std.mem.Allocator,
     runtime: *runtime.JsRuntime,
-    last_compiler: ?*compiler.Compiler, // Store compiler to access errors
+    // Owned copies of the last compile's errors. The compiler is freed
+    // before the C API reads them, so the list has to outlive that call.
+    last_errors: std.ArrayList(compiler.CompilationError),
     io_threaded: std.Io.Threaded,
 
     fn init(allocator: std.mem.Allocator) !Context {
@@ -556,34 +552,49 @@ const Context = struct {
         return Context{
             .allocator = allocator,
             .runtime = rt,
-            .last_compiler = null,
+            .last_errors = .empty,
             .io_threaded = .init(allocator, .{}),
         };
     }
 
     fn deinit(self: *Context) void {
+        self.clearErrors();
+        self.last_errors.deinit(self.allocator);
         self.runtime.deinit();
         self.io_threaded.deinit();
-        // Note: last_compiler is not owned, it's just a reference
+    }
+
+    fn clearErrors(self: *Context) void {
+        for (self.last_errors.items) |*err| err.deinit(self.allocator);
+        self.last_errors.clearRetainingCapacity();
+    }
+
+    /// Move the compiler's error strings here and leave it an empty list
+    /// so Compiler.deinit does not free them.
+    fn takeErrors(self: *Context, comp: *compiler.Compiler) void {
+        self.clearErrors();
+        self.last_errors.deinit(self.allocator);
+        self.last_errors = comp.errors;
+        comp.errors = .empty;
     }
 
     fn compile(self: *Context, source: []const u8) ![]const u8 {
-        // Parse
+        self.clearErrors();
         const io = self.io_threaded.io();
         var pars = try parser.Parser.init(self.allocator, source);
         defer pars.deinit();
 
         const tree = try pars.parse();
 
-        // Compile
         var comp = try compiler.Compiler.init(io, self.allocator, self.runtime);
         defer comp.deinit();
 
-        // Store compiler reference for error access
-        self.last_compiler = comp;
-        defer self.last_compiler = null;
-
-        return try comp.compile(tree);
+        const html = comp.compile(tree) catch |err| {
+            self.takeErrors(comp);
+            return err;
+        };
+        self.takeErrors(comp);
+        return html;
     }
 };
 

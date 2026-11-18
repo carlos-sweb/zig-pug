@@ -233,7 +233,7 @@ class PugCompiler {
         }
 
         let html = binding.compile(this.context, template);
-        if (!html) {
+        if (html == null) {
             throw new Error('Failed to compile template');
         }
 

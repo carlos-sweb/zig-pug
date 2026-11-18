@@ -104,6 +104,16 @@ pub fn parseCode(self: *Parser) anyerror!*ast.AstNode {
     var last_token_type: ?TokenType = null;
 
     while (!helpers.match(self, &.{ .Newline, .Eof })) {
+        // .name is a Class token whose value dropped the dot. Put it back
+        // so `p= user.name` stays `user.name` and not `user name`.
+        if (self.current.type == .Class or self.current.type == .Id) {
+            try code.append(arena_allocator, '.');
+            try code.appendSlice(arena_allocator, self.current.value);
+            last_token_type = self.current.type;
+            try helpers.advance(self);
+            continue;
+        }
+
         // Smart spacing: only add space if needed between tokens
         if (code.items.len > 0 and last_token_type != null) {
             const needs_space = needsSpaceAfter(last_token_type.?) and
