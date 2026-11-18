@@ -2,9 +2,10 @@
 //! Plantilla: each de 200 productos, dos interpolaciones y un if por ítem.
 
 const std = @import("std");
-const Parser = @import("src/parser/mod.zig").Parser;
-const Compiler = @import("src/compiler/mod.zig").Compiler;
-const runtime = @import("src/runtime.zig");
+const zpug = @import("zig_pug");
+const Parser = zpug.Parser;
+const Compiler = zpug.Compiler;
+const runtime = zpug.runtime;
 
 const products: usize = 200;
 const repeats: usize = 30;

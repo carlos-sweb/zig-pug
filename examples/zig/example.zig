@@ -1,8 +1,5 @@
 const std = @import("std");
-const parser = @import("src/parser/mod.zig");
-const compiler = @import("src/compiler/mod.zig");
-const runtime = @import("src/runtime.zig");
-const formatter = @import("src/formatter.zig");
+const zpug = @import("zig_pug");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -11,7 +8,7 @@ pub fn main(init: std.process.Init) !void {
     const allocator = gpa.allocator();
 
     // Create JavaScript runtime
-    var js_runtime = try runtime.JsRuntime.init(allocator);
+    var js_runtime = try zpug.runtime.JsRuntime.init(allocator);
     defer js_runtime.deinit();
 
     // Set variables
@@ -28,17 +25,17 @@ pub fn main(init: std.process.Init) !void {
         \\    p Age: #{age}
     ;
 
-    var pars = try parser.Parser.init(allocator, source);
+    var pars = try zpug.Parser.init(allocator, source);
     defer pars.deinit();
     const tree = try pars.parse();
 
     // Compile to HTML
-    var comp = try compiler.Compiler.init(io, allocator, js_runtime);
+    var comp = try zpug.Compiler.init(io, allocator, js_runtime);
     defer comp.deinit();
     const html = try comp.compile(tree);
     defer allocator.free(html);
 
-    const pretty_html = try formatter.prettyPrintHtml(allocator, html);
+    const pretty_html = try zpug.formatter.prettyPrintHtml(allocator, html);
     defer allocator.free(pretty_html);
 
     std.debug.print("{s}\n", .{html});

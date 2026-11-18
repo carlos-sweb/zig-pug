@@ -5,10 +5,10 @@ const std = @import("std");
 const tokenizer = @import("tokenizer/mod.zig");
 const parser = @import("parser/mod.zig");
 const compiler = @import("compiler/mod.zig");
-const runtime = @import("runtime.zig");
-const ast = @import("ast/mod.zig");
+pub const runtime = @import("runtime.zig");
+pub const ast = @import("ast/mod.zig");
 const cache_mod = @import("cache.zig");
-const formatter = @import("formatter.zig");
+pub const formatter = @import("formatter.zig");
 
 // Export all modules for Zig users
 pub const Tokenizer = tokenizer.Tokenizer;

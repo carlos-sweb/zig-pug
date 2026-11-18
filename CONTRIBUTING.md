@@ -190,7 +190,7 @@ bun test-pretty.js
 bun test-arrays-objects.js
 
 # Run CLI tests
-./check-links.sh  # Check documentation links
+./scripts/check-links.sh  # Check documentation links
 ```
 
 ### Writing Tests

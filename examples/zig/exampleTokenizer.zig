@@ -1,5 +1,5 @@
 const std = @import("std");
-const Tokenizer = @import("src/tokenizer/mod.zig").Tokenizer;
+const Tokenizer = @import("zig_pug").Tokenizer;
 const print = std.debug.print;
 
 const CaseJson = struct { label: []const u8, source: []const u8 };
@@ -27,7 +27,9 @@ pub fn main(init: std.process.Init) !void {
     }
 
     // yq -o=json pug_cases.yaml > pug_cases.json
-    const CaseParsed = try std.json.parseFromSlice(CasesJson, allocator, @embedFile("./pug_cases.json"), .{ .ignore_unknown_fields = true });
+    const cases_bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, "tests/cases/pug_cases.json", allocator, .limited(10 * 1024 * 1024));
+    defer allocator.free(cases_bytes);
+    const CaseParsed = try std.json.parseFromSlice(CasesJson, allocator, cases_bytes, .{ .ignore_unknown_fields = true });
     defer CaseParsed.deinit();
 
     for (CaseParsed.value, 0..) |case, i| {

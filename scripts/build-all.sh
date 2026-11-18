@@ -31,8 +31,9 @@ NC='\033[0m' # Sin color
 # Configuración
 VERSION="0.4.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"
-NODEJS_DIR="$SCRIPT_DIR/nodejs"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+NODEJS_DIR="$PROJECT_ROOT/nodejs"
 PREBUILTS_DIR="$NODEJS_DIR/prebuilts"
 NODE_BINARIES_DIR="$NODEJS_DIR/prebuilt-binaries"
 

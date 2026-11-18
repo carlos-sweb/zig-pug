@@ -1,7 +1,7 @@
 // benchmark_single.js — un solo render completo
 // hyperfine lo llama N veces desde afuera
 //const pug  = require("pug");
-const pug = require("./nodejs/index.js");
+const pug = require("../nodejs/index.js");
 const path = require("path");
 
 const context = {

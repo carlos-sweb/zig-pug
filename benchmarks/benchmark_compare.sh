@@ -11,6 +11,9 @@
 
 set -e
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
 SEP="══════════════════════════════════════════════════"
 RUNS=1000
 WARMUP=20
@@ -55,8 +58,8 @@ if [ "$HAS_BUN" -eq 1 ]; then
         --runs   $RUNS \
         --export-markdown benchmark_results.md \
         --export-json     benchmark_results.json \
-        --command-name "pug + Node.js" "node benchmark_single.js" \
-        --command-name "pug + Bun"     "bun  benchmark_single.js" \
+        --command-name "pug + Node.js" "node benchmarks/benchmark_single.js" \
+        --command-name "pug + Bun"     "bun  benchmarks/benchmark_single.js" \
         --command-name "zig-pug"       "$BINARY"
 else
     hyperfine \
@@ -64,7 +67,7 @@ else
         --runs   $RUNS \
         --export-markdown benchmark_results.md \
         --export-json     benchmark_results.json \
-        --command-name "pug + Node.js" "node benchmark_single.js" \
+        --command-name "pug + Node.js" "node benchmarks/benchmark_single.js" \
         --command-name "zig-pug"       "$BINARY"
 fi
 

@@ -3,6 +3,8 @@
 
 set -e
 
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 # Colores
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -50,7 +52,7 @@ zig build lib-static -Doptimize=ReleaseFast
 
 if [ ! -d "nodejs/prebuilts" ]; then
     echo -e "${YELLOW}⚠️  Static libraries not found. Building them first...${NC}"
-    ./build-all.sh --nodejs-only
+    ./scripts/build-all.sh --nodejs-only
 fi
 echo -e "${GREEN}✓ Static library ready${NC}"
 echo ""

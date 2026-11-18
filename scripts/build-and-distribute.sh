@@ -4,6 +4,8 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Colores
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -19,7 +21,7 @@ echo ""
 # PASO 1: Construir todos los binarios
 echo -e "${BLUE}PASO 1/2: Construyendo todos los binarios...${NC}"
 echo ""
-./build-all.sh "$@"
+"$SCRIPT_DIR/build-all.sh" "$@"
 
 echo ""
 echo ""
@@ -27,7 +29,7 @@ echo ""
 # PASO 2: Organizar para distribución
 echo -e "${BLUE}PASO 2/2: Organizando para distribución...${NC}"
 echo ""
-./organize-distribution.sh
+"$SCRIPT_DIR/organize-distribution.sh"
 
 echo ""
 echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"

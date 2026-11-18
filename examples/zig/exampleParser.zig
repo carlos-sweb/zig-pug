@@ -8,8 +8,9 @@
 //!   zig build exampleParser
 
 const std = @import("std");
-const Parser = @import("src/parser/mod.zig").Parser;
-const ast = @import("src/ast/mod.zig");
+const zpug = @import("zig_pug");
+const Parser = zpug.Parser;
+const ast = zpug.ast;
 
 const print = std.debug.print;
 
@@ -48,7 +49,9 @@ pub fn main(init: std.process.Init) !void {
     }
 
     // yq -o=json pug_cases.yaml > pug_cases.json
-    const CaseParsed = try std.json.parseFromSlice(CasesJson, allocator, @embedFile("./pug_cases.json"), .{ .ignore_unknown_fields = true });
+    const cases_bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, "tests/cases/pug_cases.json", allocator, .limited(10 * 1024 * 1024));
+    defer allocator.free(cases_bytes);
+    const CaseParsed = try std.json.parseFromSlice(CasesJson, allocator, cases_bytes, .{ .ignore_unknown_fields = true });
     defer CaseParsed.deinit();
 
     var passed: usize = 0;

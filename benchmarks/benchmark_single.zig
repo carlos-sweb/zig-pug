@@ -13,9 +13,10 @@
 //!   // mismo linkado que el CLI (mujs, libc, etc.)
 
 const std = @import("std");
-const Parser = @import("src/parser/mod.zig").Parser;
-const Compiler = @import("src/compiler/mod.zig").Compiler;
-const runtime = @import("src/runtime.zig");
+const zpug = @import("zig_pug");
+const Parser = zpug.Parser;
+const Compiler = zpug.Compiler;
+const runtime = zpug.runtime;
 
 
 const CONTEXT_JS =
@@ -76,7 +77,7 @@ const CONTEXT_JS =
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.gpa;
-    const content_pug_template = try std.Io.Dir.cwd().readFileAlloc(init.io,"benchmark.pug", allocator, .limited(10 * 1024 * 1024));
+    const content_pug_template = @embedFile("benchmark.pug");
 
     // 1. Init runtime
     var js_rt = try runtime.JsRuntime.init(allocator);

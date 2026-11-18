@@ -141,13 +141,14 @@ pub fn build(b: *std.Build) void {
     const example = b.addExecutable(.{
         .name = "example",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("example.zig"),
+            .root_source_file = b.path("examples/zig/example.zig"),
             .target = exe_target,
             .optimize = optimize,
             .link_libc = true,
         }),
     });
 
+    example.root_module.addImport("zig_pug", zigpug_module);
     example.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
     example.root_module.addCSourceFile(.{
         .file = b.path("vendor/mujs-1.3.9/one.c"),
@@ -167,11 +168,18 @@ pub fn build(b: *std.Build) void {
     const example_tokenizer = b.addExecutable(.{
         .name = "exampleTokenizer",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("exampleTokenizer.zig"),
+            .root_source_file = b.path("examples/zig/exampleTokenizer.zig"),
             .target = exe_target,
             .optimize = optimize,
             .link_libc = true,
         }),
+    });
+
+    example_tokenizer.root_module.addImport("zig_pug", zigpug_module);
+    example_tokenizer.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
+    example_tokenizer.root_module.addCSourceFile(.{
+        .file = b.path("vendor/mujs-1.3.9/one.c"),
+        .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
 
     const run_example_tokenizer_cmd = b.addRunArtifact(example_tokenizer);
@@ -188,11 +196,18 @@ pub fn build(b: *std.Build) void {
     const example_parser = b.addExecutable(.{
         .name = "exampleParser",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("exampleParser.zig"),
+            .root_source_file = b.path("examples/zig/exampleParser.zig"),
             .target = exe_target,
             .optimize = optimize,
             .link_libc = true,
         }),
+    });
+
+    example_parser.root_module.addImport("zig_pug", zigpug_module);
+    example_parser.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
+    example_parser.root_module.addCSourceFile(.{
+        .file = b.path("vendor/mujs-1.3.9/one.c"),
+        .flags = &.{ "-std=c99", "-O2", "-DHAVE_STRLCPY=0" },
     });
 
     const run_example_parser_cmd = b.addRunArtifact(example_parser);
@@ -210,13 +225,14 @@ pub fn build(b: *std.Build) void {
     const example_compiler = b.addExecutable(.{
         .name = "exampleCompiler",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("exampleCompiler.zig"),
+            .root_source_file = b.path("examples/zig/exampleCompiler.zig"),
             .target = exe_target,
             .optimize = optimize,
             .link_libc = true,
         }),
     });
 
+    example_compiler.root_module.addImport("zig_pug", zigpug_module);
     // Compile mujs from source for cross-compilation
     example_compiler.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
     example_compiler.root_module.addCSourceFile(.{
@@ -239,13 +255,14 @@ pub fn build(b: *std.Build) void {
     const example_benchmark = b.addExecutable(.{
         .name = "benchmark",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("benchmark_single.zig"),
+            .root_source_file = b.path("benchmarks/benchmark_single.zig"),
             .target = exe_target,
             .optimize = optimize,
             .link_libc = true,
         }),
     });
 
+    example_benchmark.root_module.addImport("zig_pug", zigpug_module);
     // Compile mujs from source for cross-compilation
     example_benchmark.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
     example_benchmark.root_module.addCSourceFile(.{
@@ -260,12 +277,13 @@ pub fn build(b: *std.Build) void {
     const loop_benchmark = b.addExecutable(.{
         .name = "benchmark_loop",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("benchmark_loop.zig"),
+            .root_source_file = b.path("benchmarks/benchmark_loop.zig"),
             .target = exe_target,
             .optimize = optimize,
             .link_libc = true,
         }),
     });
+    loop_benchmark.root_module.addImport("zig_pug", zigpug_module);
     loop_benchmark.root_module.addIncludePath(b.path("vendor/mujs-1.3.9"));
     loop_benchmark.root_module.addCSourceFile(.{
         .file = b.path("vendor/mujs-1.3.9/one.c"),

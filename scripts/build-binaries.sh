@@ -3,6 +3,8 @@
 
 set -e
 
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 echo "🚀 Building zig-pug for multiple platforms..."
 echo ""
 

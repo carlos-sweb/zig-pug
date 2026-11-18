@@ -862,7 +862,7 @@ zig-pug uses [**mujs**](https://mujs.com/) as its JavaScript engine:
 
 ### 📋 Roadmap
 
-See [PLAN.md](PLAN.md) for the complete development plan.
+See [PLAN.md](docs/archive/PLAN.md) for the complete development plan.
 
 ## 📚 Documentation
 

@@ -14,7 +14,8 @@ NC='\033[0m'
 # Configuración
 VERSION="0.4.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
 BIN_DIR="$PROJECT_ROOT/bin"
 NODEJS_DIR="$PROJECT_ROOT/nodejs"
 
